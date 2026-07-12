@@ -3,26 +3,73 @@ hacks:
     display-name: "Meteor Client"
     key: "key.meteor-client.open-gui"
     mode: METEOR
+    match: "meteor"
+
+  meteor-category:
+    display-name: "Meteor Client (category)"
+    key: "key.category.meteor-client.meteor-client"
+    mode: TRANSLATE
+    match: "meteor"
 
   liquidbounce:
     display-name: "LiquidBounce"
     key: "liquidbounce.module.killaura.name"
     mode: TRANSLATE
+    match: "killaura,kill aura,liquid"
 
   freecam:
-    display-name: "Freecam"
+    display-name: "FreeCam"
     key: "key.freecam.toggle"
-    mode: KEYBIND
+    mode: TRANSLATE
+    match: "free,cam"
 
-  wurst:
-    display-name: "Wurst Client (-1.21)"
-    key: "key.wurst.zoom"
-    mode: KEYBIND
+  zergatul-freecam:
+    display-name: "Zergatul FreeCam"
+    key: "key.zergatul.freecam.toggle"
+    mode: TRANSLATE
+    match: "free,cam,zergatul"
+
+  easy-freecam:
+    display-name: "Easy Freecam"
+    key: "key.easy-freecam.toggle_freecam"
+    mode: TRANSLATE
+    match: "free,cam"
+
+  spectator-freecam:
+    display-name: "Spectator Freecam"
+    key: "key.freecam.toggle_freecam"
+    mode: TRANSLATE
+    match: "free,cam,spectat"
+
+  tweakeroo:
+    display-name: "Tweakeroo"
+    key: "tweakeroo.config.feature_toggle.prettyName.tweakFreeCamera"
+    mode: TRANSLATE
+    match: "free,camera"
+
+  baritone:
+    display-name: "Baritone"
+    key: "key.baritone.cancel"
+    mode: TRANSLATE
+    match: "baritone,cancel"
+
+  cheatutils:
+    display-name: "CheatUtils"
+    key: "key.zergatul.cheatutils.reserved0"
+    mode: TRANSLATE
+    match: "reserved 0"
 
   xray-fabric:
     display-name: "XRay (Fabric)"
     key: "xray.config.toggle"
-    mode: KEYBIND
+    mode: TRANSLATE
+    match: "xray,x-ray"
+
+  xray-ate48:
+    display-name: "X-Ray (ATE48)"
+    key: "x13.mod.fullbright"
+    mode: TRANSLATE
+    match: "fullbright,full bright"
 
   chestesp:
     display-name: "ChestESP"
@@ -84,12 +131,30 @@ hacks:
     key: "key.auto-clicker_.toggle"
     mode: KEYBIND
 
+  wurst:
+    display-name: "Wurst Client (-1.21)"
+    key: "key.wurst.zoom"
+    mode: KEYBIND
+
+  nochatreports:
+    display-name: "NoChatReports"
+    key: "gui.nochatreports.no_reporting"
+    mode: TRANSLATE
+    match: "no chat reports,courtesy of"
+
 default-check-hacks:
   - meteor-client
+  - meteor-category
   - liquidbounce
   - freecam
-  - wurst
+  - zergatul-freecam
+  - easy-freecam
+  - spectator-freecam
+  - tweakeroo
+  - baritone
+  - cheatutils
   - xray-fabric
+  - xray-ate48
   - chestesp
   - killaura-fabric
   - autofish
@@ -102,20 +167,25 @@ default-check-hacks:
   - autoclicker-fabric
   - antiafk
   - auto-clicker-mc
+  - wurst
+  - nochatreports
 
 auto-check-on-join:
   enabled: false
   only-first-join: false
   hacks:
     - meteor-client
+    - meteor-category
     - liquidbounce
     - freecam
-    - wurst
+    - zergatul-freecam
+    - baritone
     - bleachhack
     - aristois
     - world-downloader
     - autoclicker-fabric
     - antiafk
+    - nochatreports
 
 detect-flag:
   enabled: false
@@ -128,13 +198,15 @@ detect-flag:
     - meteor-client
     - liquidbounce
     - freecam
+    - zergatul-freecam
+    - baritone
     - wurst
     - bleachhack
     - aristois
     - world-downloader
     - autoclicker-fabric
     - antiafk
-    - baritone
+    - nochatreports
 
 command-if-positive:
   enabled: false
@@ -148,5 +220,4 @@ command-if-clean:
   enabled: false
   command: "give %player% diamond 1"
 
-timeout-ticks: 200
-between-sign-ticks: 20
+timeout-ticks: 100
