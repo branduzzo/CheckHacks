@@ -54,13 +54,32 @@ public class ConfigManager {
             } catch (IllegalArgumentException e) {
                 mode = DetectionMode.TRANSLATE;
             }
-            hacks.put(id, new HackDefinition(id, displayName, key, mode));
+            List<String> match = parseMatchKeywords(section, id);
+            hacks.put(id, new HackDefinition(id, displayName, key, mode, match));
         }
         plugin.getLogger().info("Loaded " + hacks.size() + " hacks.");
     }
 
-    public Map<String, HackDefinition> getHacks()     { return hacks; }
-    public HackDefinition getHack(String id)           { return hacks.get(id); }
+    private List<String> parseMatchKeywords(ConfigurationSection section, String id) {
+        List<String> list = section.getStringList(id + ".match");
+        if (!list.isEmpty()) return list;
+        String csv = section.getString(id + ".match", "");
+        if (csv == null || csv.isBlank()) return List.of();
+        List<String> out = new ArrayList<>();
+        for (String part : csv.split(",")) {
+            String t = part.trim();
+            if (!t.isEmpty()) out.add(t);
+        }
+        return out;
+    }
+
+    public Map<String, HackDefinition> getHacks() {
+        return Collections.unmodifiableMap(hacks);
+    }
+
+    public HackDefinition getHack(String id) {
+        return hacks.get(id);
+    }
 
     public List<HackDefinition> getDefaultCheckHacks() { return resolveHackList("default-check-hacks"); }
     public List<HackDefinition> getJoinCheckHacks()    { return resolveHackList("auto-check-on-join.hacks"); }
@@ -109,16 +128,15 @@ public class ConfigManager {
     public boolean isJoinCheckEnabled()  { return hacksConfig.getBoolean("auto-check-on-join.enabled", false); }
     public boolean isOnlyFirstJoin()     { return hacksConfig.getBoolean("auto-check-on-join.only-first-join", false); }
 
-    public int getTimeoutTicks()      { return hacksConfig.getInt("timeout-ticks", 200); }
-    public int getBetweenSignTicks()  { return hacksConfig.getInt("between-sign-ticks", 20); }
+    public int getTimeoutTicks() { return hacksConfig.getInt("timeout-ticks", 100); }
 
     public Map<String, String> getLanguages() {
         Map<String, String> langs = new LinkedHashMap<>();
         ConfigurationSection section = langConfig.getConfigurationSection("languages");
-        if (section == null) return langs;
+        if (section == null) return Map.of();
         for (String key : section.getKeys(false))
             langs.put(key, section.getString(key, ""));
-        return langs;
+        return Collections.unmodifiableMap(langs);
     }
 
     public boolean isLangJoinCheckEnabled() { return langConfig.getBoolean("auto-check-on-join.enabled", false); }

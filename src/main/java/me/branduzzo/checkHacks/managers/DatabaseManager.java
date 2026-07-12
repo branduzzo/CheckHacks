@@ -1,20 +1,60 @@
 package me.branduzzo.checkHacks.managers;
 
 import me.branduzzo.checkHacks.CheckHacksPlugin;
+import me.branduzzo.checkHacks.model.EditorTokenInfo;
+import me.branduzzo.checkHacks.model.HackResultRow;
+import me.branduzzo.checkHacks.model.LangResultRow;
+import me.branduzzo.checkHacks.model.ScanRecord;
 
 import java.io.File;
-import java.sql.*;
-import java.util.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import me.branduzzo.checkHacks.utils.FoliaScheduler;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class DatabaseManager {
 
     private final CheckHacksPlugin plugin;
     private Connection connection;
+    private final AtomicInteger inflight = new AtomicInteger();
 
     public DatabaseManager(CheckHacksPlugin plugin) {
         this.plugin = plugin;
         connect();
         createTables();
+    }
+
+    public void runAsync(Runnable task) {
+        inflight.incrementAndGet();
+        FoliaScheduler.runAsync(plugin, () -> {
+            try {
+                task.run();
+            } finally {
+                inflight.decrementAndGet();
+            }
+        });
+    }
+
+    public void awaitIdle(long timeoutMs) {
+        long deadline = System.currentTimeMillis() + Math.max(0L, timeoutMs);
+        while (inflight.get() > 0 && System.currentTimeMillis() < deadline) {
+            try {
+                Thread.sleep(20L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
     }
 
     private synchronized void connect() {
@@ -78,9 +118,75 @@ public class DatabaseManager {
         }
     }
 
-    public synchronized long saveScan(String type, String targetName, String targetUUID,
-                                      String checkerName, String reason, boolean hasDetected) {
+    public synchronized long saveHackScan(String targetName, String targetUUID,
+                                          String checkerName, String reason,
+                                          boolean hasDetected, List<HackResultRow> results) {
         if (connection == null) return -1;
+        try {
+            connection.setAutoCommit(false);
+            long scanId = insertScan("hack", targetName, targetUUID, checkerName, reason, hasDetected);
+            if (scanId < 0) {
+                connection.rollback();
+                return -1;
+            }
+            if (results != null) {
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "INSERT INTO hack_results (scan_id,hack_id,hack_name,result) VALUES (?,?,?,?)")) {
+                    for (HackResultRow row : results) {
+                        ps.setLong(1, scanId);
+                        ps.setString(2, row.hackId());
+                        ps.setString(3, row.hackName());
+                        ps.setString(4, row.result());
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+            }
+            connection.commit();
+            return scanId;
+        } catch (SQLException e) {
+            rollbackQuietly();
+            plugin.getLogger().warning("Failed to save hack scan: " + e.getMessage());
+            return -1;
+        } finally {
+            restoreAutoCommit();
+        }
+    }
+
+    public synchronized long saveLangScan(String targetName, String targetUUID,
+                                          String checkerName, String reason,
+                                          boolean hasDetected, LangResultRow result) {
+        if (connection == null) return -1;
+        try {
+            connection.setAutoCommit(false);
+            long scanId = insertScan("lang", targetName, targetUUID, checkerName, reason, hasDetected);
+            if (scanId < 0) {
+                connection.rollback();
+                return -1;
+            }
+            if (result != null) {
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "INSERT INTO lang_results (scan_id,language,response) VALUES (?,?,?)")) {
+                    ps.setLong(1, scanId);
+                    ps.setString(2, result.language());
+                    ps.setString(3, result.response());
+                    ps.executeUpdate();
+                }
+            }
+            connection.commit();
+            return scanId;
+        } catch (SQLException e) {
+            rollbackQuietly();
+            plugin.getLogger().warning("Failed to save lang scan: " + e.getMessage());
+            return -1;
+        } finally {
+            restoreAutoCommit();
+        }
+    }
+
+    private long insertScan(String type, String targetName, String targetUUID,
+                            String checkerName, String reason, boolean hasDetected)
+            throws SQLException {
         String sql = "INSERT INTO scans (type,target_name,target_uuid,checker_name,reason,timestamp,has_detected) VALUES (?,?,?,?,?,?,?)";
         try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, type);
@@ -94,168 +200,155 @@ public class DatabaseManager {
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) return rs.getLong(1);
             }
-        } catch (SQLException e) {
-            plugin.getLogger().warning("Failed to save scan: " + e.getMessage());
         }
         return -1;
     }
 
-    public synchronized void saveHackResult(long scanId, String hackId, String hackName, String result) {
-        if (connection == null) return;
-        try (PreparedStatement ps = connection.prepareStatement(
-                "INSERT INTO hack_results (scan_id,hack_id,hack_name,result) VALUES (?,?,?,?)")) {
-            ps.setLong(1, scanId);
-            ps.setString(2, hackId);
-            ps.setString(3, hackName);
-            ps.setString(4, result);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            plugin.getLogger().warning("Failed to save hack result: " + e.getMessage());
-        }
-    }
-
-    public synchronized void saveLangResult(long scanId, String language, String response) {
-        if (connection == null) return;
-        try (PreparedStatement ps = connection.prepareStatement(
-                "INSERT INTO lang_results (scan_id,language,response) VALUES (?,?,?)")) {
-            ps.setLong(1, scanId);
-            ps.setString(2, language);
-            ps.setString(3, response);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            plugin.getLogger().warning("Failed to save lang result: " + e.getMessage());
-        }
-    }
-
-    public synchronized List<Map<String, Object>> getRecentScans(String type, int limit) {
-        List<Map<String, Object>> list = new ArrayList<>();
+    public synchronized List<ScanRecord> getRecentScans(String type, int limit) {
+        List<ScanRecord> list = new ArrayList<>();
         if (connection == null) return list;
-
-        List<Long> ids = new ArrayList<>();
-        List<Map<String, Object>> rows = new ArrayList<>();
 
         String sql = type != null
                 ? "SELECT * FROM scans WHERE type=? ORDER BY timestamp DESC LIMIT ?"
                 : "SELECT * FROM scans ORDER BY timestamp DESC LIMIT ?";
+        List<ScanRecord> rows = new ArrayList<>();
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            if (type != null) { ps.setString(1, type); ps.setInt(2, limit); }
-            else ps.setInt(1, limit);
+            if (type != null) {
+                ps.setString(1, type);
+                ps.setInt(2, limit);
+            } else {
+                ps.setInt(1, limit);
+            }
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    Map<String, Object> row = rowToMap(rs);
-                    rows.add(row);
-                    ids.add(((Number) row.get("id")).longValue());
-                }
+                while (rs.next()) rows.add(readScan(rs));
             }
         } catch (SQLException e) {
             plugin.getLogger().warning("getRecentScans: " + e.getMessage());
             return list;
         }
-
-        for (int i = 0; i < rows.size(); i++) {
-            Map<String, Object> row = rows.get(i);
-            long id = ids.get(i);
-            String t = (String) row.get("type");
-            row.put("results", "hack".equals(t) ? getHackResultsInternal(id) : getLangResultsInternal(id));
-            list.add(row);
-        }
-        return list;
+        return attachResults(rows);
     }
 
-    public synchronized Map<String, Object> getScan(long id) {
+    public synchronized ScanRecord getScan(long id) {
         if (connection == null) return null;
-        Map<String, Object> row = null;
+        ScanRecord row = null;
         try (PreparedStatement ps = connection.prepareStatement("SELECT * FROM scans WHERE id=?")) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) row = rowToMap(rs);
+                if (rs.next()) row = readScan(rs);
             }
         } catch (SQLException e) {
             plugin.getLogger().warning("getScan: " + e.getMessage());
             return null;
         }
         if (row == null) return null;
-        String type = (String) row.get("type");
-        row.put("results", "hack".equals(type) ? getHackResultsInternal(id) : getLangResultsInternal(id));
-        return row;
+        List<ScanRecord> attached = attachResults(List.of(row));
+        return attached.isEmpty() ? row : attached.getFirst();
     }
 
-    private List<Map<String, Object>> getHackResultsInternal(long scanId) {
-        List<Map<String, Object>> list = new ArrayList<>();
-        try (PreparedStatement ps = connection.prepareStatement(
-                "SELECT hack_name, result FROM hack_results WHERE scan_id=? ORDER BY id ASC")) {
-            ps.setLong(1, scanId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    Map<String, Object> r = new LinkedHashMap<>();
-                    r.put("hack_name", rs.getString("hack_name"));
-                    r.put("result",    rs.getString("result"));
-                    list.add(r);
-                }
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().warning("getHackResults: " + e.getMessage());
-        }
-        return list;
-    }
-
-    private List<Map<String, Object>> getLangResultsInternal(long scanId) {
-        List<Map<String, Object>> list = new ArrayList<>();
-        try (PreparedStatement ps = connection.prepareStatement(
-                "SELECT language, response FROM lang_results WHERE scan_id=? ORDER BY id ASC")) {
-            ps.setLong(1, scanId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    Map<String, Object> r = new LinkedHashMap<>();
-                    r.put("language", rs.getString("language"));
-                    r.put("response", rs.getString("response"));
-                    list.add(r);
-                }
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().warning("getLangResults: " + e.getMessage());
-        }
-        return list;
-    }
-
-    public synchronized List<Map<String, Object>> getPlayerScans(String playerName) {
-        List<Map<String, Object>> list = new ArrayList<>();
+    public synchronized List<ScanRecord> getPlayerScans(String playerName) {
+        List<ScanRecord> list = new ArrayList<>();
         if (connection == null) return list;
 
-        List<Long> ids = new ArrayList<>();
-        List<Map<String, Object>> rows = new ArrayList<>();
-
+        List<ScanRecord> rows = new ArrayList<>();
         try (PreparedStatement ps = connection.prepareStatement(
                 "SELECT * FROM scans WHERE LOWER(target_name)=LOWER(?) ORDER BY timestamp DESC LIMIT 100")) {
             ps.setString(1, playerName);
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    Map<String, Object> row = rowToMap(rs);
-                    rows.add(row);
-                    ids.add(((Number) row.get("id")).longValue());
-                }
+                while (rs.next()) rows.add(readScan(rs));
             }
         } catch (SQLException e) {
             plugin.getLogger().warning("getPlayerScans: " + e.getMessage());
             return list;
         }
+        return attachResults(rows);
+    }
 
-        for (int i = 0; i < rows.size(); i++) {
-            Map<String, Object> row = rows.get(i);
-            long id = ids.get(i);
-            String type = (String) row.get("type");
-            row.put("results", "hack".equals(type) ? getHackResultsInternal(id) : getLangResultsInternal(id));
-            list.add(row);
+    private List<ScanRecord> attachResults(List<ScanRecord> rows) {
+        if (rows.isEmpty()) return rows;
+        List<Long> hackIds = new ArrayList<>();
+        List<Long> langIds = new ArrayList<>();
+        for (ScanRecord row : rows) {
+            if ("hack".equals(row.type())) hackIds.add(row.id());
+            else langIds.add(row.id());
         }
-        return list;
+        Map<Long, List<HackResultRow>> hackByScan = loadHackResults(hackIds);
+        Map<Long, List<LangResultRow>> langByScan = loadLangResults(langIds);
+
+        List<ScanRecord> out = new ArrayList<>(rows.size());
+        for (ScanRecord row : rows) {
+            if ("hack".equals(row.type())) {
+                out.add(row.withResults(hackByScan.getOrDefault(row.id(), List.of())));
+            } else {
+                out.add(row.withResults(langByScan.getOrDefault(row.id(), List.of())));
+            }
+        }
+        return out;
+    }
+
+    private Map<Long, List<HackResultRow>> loadHackResults(List<Long> scanIds) {
+        Map<Long, List<HackResultRow>> map = new HashMap<>();
+        if (scanIds.isEmpty()) return map;
+        String placeholders = String.join(",", scanIds.stream().map(id -> "?").toList());
+        String sql = "SELECT scan_id, hack_id, hack_name, result FROM hack_results WHERE scan_id IN ("
+                + placeholders + ") ORDER BY id ASC";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (int i = 0; i < scanIds.size(); i++) ps.setLong(i + 1, scanIds.get(i));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    long scanId = rs.getLong("scan_id");
+                    map.computeIfAbsent(scanId, k -> new ArrayList<>()).add(
+                            new HackResultRow(
+                                    rs.getString("hack_id"),
+                                    rs.getString("hack_name"),
+                                    rs.getString("result")));
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("loadHackResults: " + e.getMessage());
+        }
+        return map;
+    }
+
+    private Map<Long, List<LangResultRow>> loadLangResults(List<Long> scanIds) {
+        Map<Long, List<LangResultRow>> map = new HashMap<>();
+        if (scanIds.isEmpty()) return map;
+        String placeholders = String.join(",", scanIds.stream().map(id -> "?").toList());
+        String sql = "SELECT scan_id, language, response FROM lang_results WHERE scan_id IN ("
+                + placeholders + ") ORDER BY id ASC";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (int i = 0; i < scanIds.size(); i++) ps.setLong(i + 1, scanIds.get(i));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    long scanId = rs.getLong("scan_id");
+                    map.computeIfAbsent(scanId, k -> new ArrayList<>()).add(
+                            new LangResultRow(rs.getString("language"), rs.getString("response")));
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("loadLangResults: " + e.getMessage());
+        }
+        return map;
+    }
+
+    private ScanRecord readScan(ResultSet rs) throws SQLException {
+        return new ScanRecord(
+                rs.getLong("id"),
+                rs.getString("type"),
+                rs.getString("target_name"),
+                rs.getString("target_uuid"),
+                rs.getString("checker_name"),
+                rs.getString("reason"),
+                rs.getLong("timestamp"),
+                rs.getInt("has_detected") != 0,
+                null);
     }
 
     public synchronized boolean deleteScan(long id) {
         if (connection == null) return false;
         try (PreparedStatement ps = connection.prepareStatement("DELETE FROM scans WHERE id=?")) {
             ps.setLong(1, id);
-            int affected = ps.executeUpdate();
-            return affected > 0;
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             plugin.getLogger().warning("deleteScan: " + e.getMessage());
             return false;
@@ -265,7 +358,7 @@ public class DatabaseManager {
     public synchronized String saveToken(String playerUUID, String playerName, int expireMinutes) {
         if (connection == null) return null;
         String token = UUID.randomUUID().toString().replace("-", "");
-        long now     = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
         long expires = now + (expireMinutes * 60_000L);
         try {
             try (PreparedStatement ps = connection.prepareStatement(
@@ -289,11 +382,12 @@ public class DatabaseManager {
             }
         } catch (SQLException e) {
             plugin.getLogger().warning("saveToken: " + e.getMessage());
+            return null;
         }
         return token;
     }
 
-    public synchronized Map<String, String> validateToken(String token) {
+    public synchronized EditorTokenInfo validateToken(String token) {
         if (connection == null || token == null) return null;
         try (PreparedStatement ps = connection.prepareStatement(
                 "SELECT player_uuid, player_name FROM editor_tokens WHERE token=? AND expires_at>?")) {
@@ -301,10 +395,7 @@ public class DatabaseManager {
             ps.setLong(2, System.currentTimeMillis());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    Map<String, String> info = new LinkedHashMap<>();
-                    info.put("player_uuid", rs.getString("player_uuid"));
-                    info.put("player_name", rs.getString("player_name"));
-                    return info;
+                    return new EditorTokenInfo(rs.getString("player_uuid"), rs.getString("player_name"));
                 }
             }
         } catch (SQLException e) {
@@ -313,12 +404,16 @@ public class DatabaseManager {
         return null;
     }
 
-    private Map<String, Object> rowToMap(ResultSet rs) throws SQLException {
-        Map<String, Object> row = new LinkedHashMap<>();
-        ResultSetMetaData meta = rs.getMetaData();
-        for (int i = 1; i <= meta.getColumnCount(); i++)
-            row.put(meta.getColumnName(i), rs.getObject(i));
-        return row;
+    private void rollbackQuietly() {
+        try {
+            if (connection != null) connection.rollback();
+        } catch (SQLException ignored) {}
+    }
+
+    private void restoreAutoCommit() {
+        try {
+            if (connection != null) connection.setAutoCommit(true);
+        } catch (SQLException ignored) {}
     }
 
     public synchronized void close() {
