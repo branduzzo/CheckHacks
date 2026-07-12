@@ -1,4 +1,4 @@
-name: Maven Package
+name: Gradle Package
 
 on:
   push:
@@ -20,17 +20,16 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          server-id: github
-          settings-path: ${{ github.workspace }}
-          cache: maven
+          cache: gradle
 
-      - name: Show Java version
-        run: mvn -version
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Build with Maven
-        run: mvn -B clean package --file pom.xml
+      - name: Build with Gradle
+        run: ./gradlew clean build
 
       - name: Publish to GitHub Packages
-        run: mvn -B deploy -s "$GITHUB_WORKSPACE/settings.xml"
+        run: ./gradlew publish
         env:
+          GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ github.token }}

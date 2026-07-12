@@ -1,0 +1,74 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'me.branduzzo'
+version = '1.2.1'
+description = 'CheckHacks Minecraft anticheat plugin'
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.papermc.io/repository/maven-public/' }
+    maven { url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
+}
+
+dependencies {
+    compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
+    compileOnly 'me.clip:placeholderapi:2.11.6'
+
+    implementation 'org.xerial:sqlite-jdbc:3.45.3.0'
+    implementation 'com.google.code.gson:gson:2.10.1'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+processResources {
+    def properties = [version: project.version]
+    inputs.properties properties
+    filteringCharset = 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand properties
+    }
+}
+
+shadowJar {
+    archiveClassifier = ''
+}
+
+jar {
+    archiveClassifier = 'plain'
+}
+
+build {
+    dependsOn shadowJar
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact shadowJar
+            artifactId = 'checkhacks'
+        }
+    }
+    repositories {
+        maven {
+            name = 'GitHubPackages'
+            url = uri('https://maven.pkg.github.com/branduzzo/CheckHacks')
+            credentials {
+                username = System.getenv('GITHUB_ACTOR')
+                password = System.getenv('GITHUB_TOKEN')
+            }
+        }
+    }
+}
