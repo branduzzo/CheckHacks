@@ -107,6 +107,10 @@ public final class FoliaScheduler {
         return c.getMethod(name, params);
     }
 
+    /* ===========================================================
+     *                       Global / main
+     * =========================================================== */
+
     public static WrappedTask runGlobal(Plugin plugin, Runnable task) {
         if (!FOLIA) return wrap(Bukkit.getScheduler().runTask(plugin, task));
         try {
@@ -143,6 +147,10 @@ public final class FoliaScheduler {
         }
     }
 
+    /* ===========================================================
+     *                       Entity-bound
+     * =========================================================== */
+
     public static WrappedTask runAtEntity(Plugin plugin, Entity entity, Runnable task) {
         if (!FOLIA) return wrap(Bukkit.getScheduler().runTask(plugin, task));
         try {
@@ -168,6 +176,10 @@ public final class FoliaScheduler {
             throw new RuntimeException(t);
         }
     }
+
+    /* ===========================================================
+     *                      Location / region
+     * =========================================================== */
 
     public static WrappedTask runAtLocation(Plugin plugin, Location loc, Runnable task) {
         if (!FOLIA) return wrap(Bukkit.getScheduler().runTask(plugin, task));
@@ -196,6 +208,10 @@ public final class FoliaScheduler {
         }
     }
 
+    /* ===========================================================
+     *                            Async
+     * =========================================================== */
+
     public static WrappedTask runAsync(Plugin plugin, Runnable task) {
         if (!FOLIA) return wrap(Bukkit.getScheduler().runTaskAsynchronously(plugin, task));
         try {
@@ -205,6 +221,10 @@ public final class FoliaScheduler {
             throw new RuntimeException(t);
         }
     }
+
+    /* ===========================================================
+     *                          internals
+     * =========================================================== */
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static Consumer asConsumer(Runnable task) {
