@@ -3,7 +3,6 @@ package me.branduzzo.checkHacks.listeners;
 import me.branduzzo.checkHacks.CheckHacksPlugin;
 import me.branduzzo.checkHacks.HackDefinition;
 import me.branduzzo.checkHacks.utils.FoliaScheduler;
-import me.branduzzo.checkHacks.utils.MessageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -22,7 +21,7 @@ public class AntiCheatListener implements Listener {
             "ac.grim.grimac.api.events.FlagEvent",
             "ac.grim.grimac.events.FlagEvent"
     };
-    private static final String VULCAN_CLASS  = "me.frep.vulcan.spigot.events.PlayerFlagEvent";
+    private static final String VULCAN_CLASS = "me.frep.vulcan.spigot.events.PlayerFlagEvent";
     private static final String SPARTAN_CLASS = "me.vagdedes.spartan.api.PlayerViolationEvent";
 
     public AntiCheatListener(CheckHacksPlugin plugin) {
@@ -34,16 +33,24 @@ public class AntiCheatListener implements Listener {
 
         if (plugin.getConfigManager().isGrimEnabled()) {
             boolean ok = false;
-            for (String cls : GRIM_CLASSES)
-                if (tryRegister(cls, "Grim", true)) { ok = true; break; }
+            for (String cls : GRIM_CLASSES) {
+                if (tryRegister(cls, "Grim", true)) {
+                    ok = true;
+                    break;
+                }
+            }
             if (!ok) plugin.getLogger().info("[CheckHacks] Grim not found, skipping.");
         }
-        if (plugin.getConfigManager().isVulcanEnabled())
-            if (!tryRegister(VULCAN_CLASS, "Vulcan", false))
+        if (plugin.getConfigManager().isVulcanEnabled()) {
+            if (!tryRegister(VULCAN_CLASS, "Vulcan", false)) {
                 plugin.getLogger().info("[CheckHacks] Vulcan not found, skipping.");
-        if (plugin.getConfigManager().isSpartanEnabled())
-            if (!tryRegister(SPARTAN_CLASS, "Spartan", false))
+            }
+        }
+        if (plugin.getConfigManager().isSpartanEnabled()) {
+            if (!tryRegister(SPARTAN_CLASS, "Spartan", false)) {
                 plugin.getLogger().info("[CheckHacks] Spartan not found, skipping.");
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -68,11 +75,13 @@ public class AntiCheatListener implements Listener {
         Player player = extractPlayer(event, isGrim, acName);
         if (player == null) return;
         if (!plugin.getCheckManager().canAutoCheck(player.getUniqueId())) return;
-        if (plugin.getCheckManager().isChecking(player.getUniqueId())) return;
+        if (plugin.hasActiveSignSession(player.getUniqueId())) return;
 
-        plugin.getLogger().info("[CheckHacks] " + acName + " flagged " + player.getName() + " — queuing check.");
-        MessageUtil.broadcastAlerts(plugin,
-                MessageUtil.parse(plugin, "anticheat-trigger", Map.of("player", player.getName())));
+        plugin.getLogger().info("[CheckHacks] " + acName + " flagged " + player.getName()
+                + " — queuing check.");
+        plugin.getMessageManager().broadcastAlerts(
+                plugin.getMessageManager().get("anticheat-trigger",
+                        Map.of("player", player.getName())));
 
         List<HackDefinition> hacks = plugin.getConfigManager().getFlagCheckHacks();
         if (hacks.isEmpty()) return;

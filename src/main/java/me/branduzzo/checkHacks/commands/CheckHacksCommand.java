@@ -3,8 +3,6 @@ package me.branduzzo.checkHacks.commands;
 import me.branduzzo.checkHacks.CheckHacksPlugin;
 import me.branduzzo.checkHacks.HackDefinition;
 import me.branduzzo.checkHacks.utils.FoliaScheduler;
-import me.branduzzo.checkHacks.utils.MessageUtil;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -28,11 +26,11 @@ public class CheckHacksCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.hasPermission("checkhacks.check")) {
-            sender.sendMessage(MessageUtil.parse(plugin, "no-permission", Map.of()));
+            sender.sendMessage(plugin.getMessageManager().get("no-permission"));
             return true;
         }
         if (args.length < 1) {
-            sender.sendMessage(MiniMessage.miniMessage().deserialize(
+            sender.sendMessage(plugin.getMessageManager().deserialize(
                     plugin.getConfigManager().getPrefix()
                             + "<red>Usage: /checkhacks <player> [hack1,hack2,...]"));
             return true;
@@ -40,12 +38,12 @@ public class CheckHacksCommand implements CommandExecutor, TabCompleter {
 
         Player target = Bukkit.getPlayerExact(args[0]);
         if (target == null) {
-            sender.sendMessage(MessageUtil.parse(plugin, "player-not-found",
+            sender.sendMessage(plugin.getMessageManager().get("player-not-found",
                     Map.of("player", args[0])));
             return true;
         }
-        if (plugin.getCheckManager().isChecking(target.getUniqueId())) {
-            sender.sendMessage(MessageUtil.parse(plugin, "already-checking",
+        if (plugin.hasActiveSignSession(target.getUniqueId())) {
+            sender.sendMessage(plugin.getMessageManager().get("already-checking",
                     Map.of("player", target.getName())));
             return true;
         }
@@ -56,7 +54,7 @@ public class CheckHacksCommand implements CommandExecutor, TabCompleter {
             for (String id : args[1].split(",")) {
                 HackDefinition h = plugin.getConfigManager().getHack(id.trim().toLowerCase());
                 if (h == null) {
-                    sender.sendMessage(MessageUtil.parse(plugin, "invalid-hack",
+                    sender.sendMessage(plugin.getMessageManager().get("invalid-hack",
                             Map.of("hack", id.trim())));
                     return true;
                 }
@@ -67,7 +65,7 @@ public class CheckHacksCommand implements CommandExecutor, TabCompleter {
         }
 
         if (hacks.isEmpty()) {
-            sender.sendMessage(MiniMessage.miniMessage().deserialize(
+            sender.sendMessage(plugin.getMessageManager().deserialize(
                     plugin.getConfigManager().getPrefix() + "<red>No valid hacks to check."));
             return true;
         }
@@ -83,14 +81,15 @@ public class CheckHacksCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!sender.hasPermission("checkhacks.check")) return List.of();
-        if (args.length == 1)
+        if (args.length == 1) {
             return Bukkit.getOnlinePlayers().stream()
                     .map(Player::getName)
                     .filter(n -> n.toLowerCase().startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());
+        }
         if (args.length == 2) {
             String typed = args[1];
-            String prefix  = typed.contains(",") ? typed.substring(0, typed.lastIndexOf(',') + 1) : "";
+            String prefix = typed.contains(",") ? typed.substring(0, typed.lastIndexOf(',') + 1) : "";
             String current = typed.contains(",") ? typed.substring(typed.lastIndexOf(',') + 1) : typed;
             return plugin.getConfigManager().getHacks().keySet().stream()
                     .filter(id -> id.startsWith(current.toLowerCase()))
