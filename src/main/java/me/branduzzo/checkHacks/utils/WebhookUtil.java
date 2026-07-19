@@ -27,7 +27,7 @@ public class WebhookUtil {
                 + "\"title\":\"CheckHacks Report\","
                 + "\"description\":\"" + escapeJson(description) + "\","
                 + "\"color\":" + color + ","
-                + "\"footer\":{\"text\":\"CheckHacks - Sign Translation Exploit\"},"
+                + "\"footer\":{\"text\":\"CheckHacks - Fork by Brei \"},"
                 + "\"timestamp\":\"" + Instant.now() + "\""
                 + "}]}";
         sendJson(webhookUrl, json);

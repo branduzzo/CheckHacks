@@ -23,7 +23,6 @@ bedrock:
   enabled: true
   prefixes:
     - "."
-    - "*"
 
 alerts:
   default-enabled: true

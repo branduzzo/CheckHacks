@@ -1,10 +1,10 @@
 name: CheckHacks
-version: 1.2.0
+version: 1.2.1
 main: me.branduzzo.checkHacks.CheckHacksPlugin
 api-version: '1.21'
 folia-supported: true
 description: Detects client-side hacks and mods via the Sign Translation Vulnerability.
-authors: [branduzzo]
+author: [branduzzo]
 
 softdepend:
   - PlaceholderAPI

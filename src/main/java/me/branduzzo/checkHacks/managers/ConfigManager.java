@@ -47,6 +47,10 @@ public class ConfigManager {
             String displayName = section.getString(id + ".display-name", id);
             String key = section.getString(id + ".key", "");
             if (key.isBlank()) continue;
+
+            String message = section.getString(id + ".message", "&cPlease disable " + displayName + " before joining again!");
+            String command = section.getString(id + ".command", "kick %player% &cPlease disable " + displayName + " before joining again!");
+
             DetectionMode mode;
             try {
                 mode = DetectionMode.valueOf(
@@ -54,7 +58,8 @@ public class ConfigManager {
             } catch (IllegalArgumentException e) {
                 mode = DetectionMode.TRANSLATE;
             }
-            hacks.put(id, new HackDefinition(id, displayName, key, mode));
+
+            hacks.put(id, new HackDefinition(id, displayName, key, message, mode));
         }
         plugin.getLogger().info("Loaded " + hacks.size() + " hacks.");
     }

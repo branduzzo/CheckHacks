@@ -63,17 +63,17 @@ CheckHacks is an innovative server-side anticheat plugin that detects client-sid
 | AutoClicker (Fabric) | TRANSLATE |
 | AntiAFK | TRANSLATE |
 | Auto Clicker (p1k0chu) | KEYBIND |
+| SeedCrackerX (1.2.1+) | TRANSLATE |
 
 ---
 
 ## ⚠️ Warning
 
 Mod developers can patch their mods at any time to block or spoof the Sign Translation Vulnerability, potentially making detection unreliable for specific clients. I will do my best to stay ahead of any patches, find bypasses, and continuously add support for new mods of all kinds. This is an ongoing effort, not a one-time solution.
-
-If you need a specific mod added, or have any doubts about how detection works, feel free to DM me on Discord at **@branduzzo.** (with the dot).
+If you have any doubts about how detection works, feel free to DM the Creator on Discord at **@branduzzo.** (with the dot).
 
 ---
 
 ## 📜 Credits
 
-* **Branduzzo** - Plugin creator and developer
+* **Branduzzo**  - Creator and developer of original plugin

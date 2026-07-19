@@ -2,87 +2,128 @@ hacks:
   meteor-client:
     display-name: "Meteor Client"
     key: "key.meteor-client.open-gui"
+    message: "&cPlease disable Meteor Client before joining again!"
+    duration: "5m"
     mode: METEOR
 
   liquidbounce:
     display-name: "LiquidBounce"
     key: "liquidbounce.module.killaura.name"
+    message: "&cPlease disable LiquidBounce before joining again!"
+    duration: "5m"
     mode: TRANSLATE
 
   freecam:
     display-name: "Freecam"
     key: "key.freecam.toggle"
+    message: "&cPlease disable Freecam before joining again!"
+    duration: "5m"
     mode: KEYBIND
 
   wurst:
     display-name: "Wurst Client (-1.21)"
     key: "key.wurst.zoom"
+    message: "&cPlease disable Wurst Client before joining again!"
+    duration: "5m"
     mode: KEYBIND
 
   xray-fabric:
     display-name: "XRay (Fabric)"
     key: "xray.config.toggle"
+    message: "&cPlease disable X-Ray before joining again!"
+    duration: "5m"
     mode: KEYBIND
 
   chestesp:
     display-name: "ChestESP"
     key: "key.chestesp.toggle"
+    message: "&cPlease disable ChestESP before joining again!"
+    duration: "5m"
     mode: KEYBIND
 
   killaura-fabric:
     display-name: "KillAura (Fabric)"
     key: "key.killaura"
+    message: "&cPlease disable KillAura before joining again!"
+    duration: "5m"
     mode: KEYBIND
 
   autofish:
     display-name: "AutoFish"
     key: "key.autofish.open_gui"
+    message: "&cPlease disable AutoFish before joining again!"
+    duration: "5m"
     mode: KEYBIND
 
   lumina:
     display-name: "Lumina"
     key: "key.lumina.open_click_gui"
+    message: "&cPlease disable Lumina before joining again!"
+    duration: "5m"
     mode: KEYBIND
 
   autoswitch:
     display-name: "AutoSwitch"
     key: "key.autoswitch.toggle"
+    message: "&cPlease disable AutoSwitch before joining again!"
+    duration: "5m"
     mode: KEYBIND
 
   bleachhack:
     display-name: "BleachHack"
     key: "bleachhack.module.killaura"
+    message: "&cPlease disable BleachHack before joining again!"
+    duration: "5m"
     mode: TRANSLATE
 
   aristois:
     display-name: "Aristois"
     key: "emc.module.killaura.name"
+    message: "&cPlease disable Aristois before joining again!"
+    duration: "5m"
     mode: TRANSLATE
 
   coffee:
     display-name: "Coffee Client"
     key: "coffee.module.killaura.name"
+    message: "&cPlease disable Coffee Client before joining again!"
+    duration: "5m"
     mode: TRANSLATE
 
   world-downloader:
     display-name: "World Downloader"
     key: "key.wdl.startStop"
+    message: "&cPlease disable World Downloader before joining again!"
+    duration: "5m"
     mode: TRANSLATE
 
   autoclicker-fabric:
     display-name: "AutoClicker (Fabric)"
     key: "autoclicker-fabric.hud.holding"
+    message: "&cPlease disable Auto Clicker before joining again!"
+    duration: "5m"
     mode: TRANSLATE
 
   antiafk:
     display-name: "AntiAFK"
     key: "key.antiafk.toggle"
+    message: "&cPlease disable AntiAFK before joining again!"
+    duration: "5m"
     mode: TRANSLATE
 
   auto-clicker-mc:
     display-name: "Auto Clicker (p1k0chu)"
     key: "key.auto-clicker_.toggle"
+    message: "&cPlease disable Auto Clicker before joining again!"
+    duration: "5m"
     mode: KEYBIND
+
+  seedcrackerx:
+    display-name: "SeedCrackerX"
+    key: "cracker.already"
+    message: "&cPlease disable SeedCrackerX before joining again!"
+    duration: "5m"
+    mode: TRANSLATE
 
 default-check-hacks:
   - meteor-client
@@ -102,6 +143,7 @@ default-check-hacks:
   - autoclicker-fabric
   - antiafk
   - auto-clicker-mc
+  - seedcrackerx
 
 auto-check-on-join:
   enabled: false
@@ -116,6 +158,7 @@ auto-check-on-join:
     - world-downloader
     - autoclicker-fabric
     - antiafk
+    - seedcrackerx
 
 detect-flag:
   enabled: false
@@ -135,18 +178,19 @@ detect-flag:
     - autoclicker-fabric
     - antiafk
     - baritone
+    - seedcrackerx
 
 command-if-positive:
-  enabled: false
-  command: "tempban %player% 14d Cheating"
+  enabled: true
+  command: "ban %player% %message% %duration%" # Duration won't work for servers without essentials or other ban plugins with time compatibility!
 
 command-if-protected:
-  enabled: false
-  command: "tempban %player% 14d Cheating"
+  enabled: true
+  command: "kick %player% Unexpected-Client-Response"
 
 command-if-clean:
   enabled: false
   command: "give %player% diamond 1"
 
 timeout-ticks: 200
-between-sign-ticks: 20
+between-sign-ticks: 3
