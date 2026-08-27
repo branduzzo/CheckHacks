@@ -19,6 +19,7 @@ public class CheckHacksPlugin extends JavaPlugin {
     private CheckManager      checkManager;
     private LangCheckManager  langCheckManager;
     private ClientDataManager clientDataManager;
+    private UpdateManager     updateManager;
     private final Set<UUID>   alertsDisabled = new HashSet<>();
 
     @Override
@@ -53,6 +54,11 @@ public class CheckHacksPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(acListener, this);
         acListener.registerHooks();
 
+        getCommand("checkhacksupdate").setExecutor(new UpdateCommand(this));
+
+        updateManager = new UpdateManager(this);
+        updateManager.checkForUpdates();
+
         getLogger().info("CheckHacks v" + getDescription().getVersion() + " enabled.");
     }
 
@@ -72,6 +78,7 @@ public class CheckHacksPlugin extends JavaPlugin {
     public CheckManager      getCheckManager()      { return checkManager; }
     public LangCheckManager  getLangCheckManager()  { return langCheckManager; }
     public ClientDataManager getClientDataManager() { return clientDataManager; }
+    public UpdateManager     getUpdateManager()     { return updateManager; }
 
     public boolean hasAlertsEnabled(UUID uuid) {
         boolean def = getConfig().getBoolean("alerts.default-enabled", true);

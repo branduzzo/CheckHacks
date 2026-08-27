@@ -165,7 +165,7 @@ public class LangCheckManager {
                     .replace("&name&",    target.getName())
                     .replace("&checker&", checkerName)
                     .replace("&lang&",    detected != null ? detected : "Unknown (" + response + ")");
-            WebhookUtil.sendRaw(cfg.getLangWebhookUrl(), cfg.getLangEmbedColor(), description);
+            WebhookUtil.sendRaw(cfg.getLangWebhookUrl(), cfg.getLangEmbedColor(), description, cfg.isLangDiscordUseComponentsV2());
         }
     }
 

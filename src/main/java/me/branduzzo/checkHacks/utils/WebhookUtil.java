@@ -9,8 +9,14 @@ import java.time.Instant;
 public class WebhookUtil {
 
     public static void sendResult(String webhookUrl, int color, String messageTemplate,
-                                  String playerName, String checkerName, String reason,
-                                  String hacksChecked, String resultText) {
+                                   String playerName, String checkerName, String reason,
+                                   String hacksChecked, String resultText) {
+        sendResult(webhookUrl, color, messageTemplate, playerName, checkerName, reason, hacksChecked, resultText, false);
+    }
+
+    public static void sendResult(String webhookUrl, int color, String messageTemplate,
+                                   String playerName, String checkerName, String reason,
+                                   String hacksChecked, String resultText, boolean useComponentsV2) {
         if (!isValid(webhookUrl)) return;
         String description = messageTemplate
                 .replace("&name&",    playerName)
@@ -18,19 +24,41 @@ public class WebhookUtil {
                 .replace("&reason&",  reason)
                 .replace("&hacks&",   hacksChecked)
                 .replace("&results&", resultText);
-        sendRaw(webhookUrl, color, description);
+        sendRaw(webhookUrl, color, description, useComponentsV2);
     }
 
     public static void sendRaw(String webhookUrl, int color, String description) {
+        sendRaw(webhookUrl, color, description, false);
+    }
+
+    public static void sendRaw(String webhookUrl, int color, String description, boolean useComponentsV2) {
         if (!isValid(webhookUrl)) return;
-        String json = "{\"embeds\":[{"
+        String json = useComponentsV2 ? buildComponentsV2Json(color, description) : buildEmbedJson(color, description);
+        sendJson(webhookUrl, json);
+    }
+
+    private static String buildEmbedJson(int color, String description) {
+        return "{\"embeds\":[{"
                 + "\"title\":\"CheckHacks Report\","
                 + "\"description\":\"" + escapeJson(description) + "\","
                 + "\"color\":" + color + ","
                 + "\"footer\":{\"text\":\"CheckHacks - Sign Translation Exploit\"},"
                 + "\"timestamp\":\"" + Instant.now() + "\""
                 + "}]}";
-        sendJson(webhookUrl, json);
+    }
+
+    private static String buildComponentsV2Json(int color, String description) {
+        long epochSeconds = Instant.now().getEpochSecond();
+        String content = "## CheckHacks Report\n" + description;
+        String footer = "-# CheckHacks — Sign Translation Exploit • <t:" + epochSeconds + ":F>";
+        return "{\"flags\":32768,\"components\":[{"
+                + "\"type\":17,"
+                + "\"accent_color\":" + color + ","
+                + "\"components\":["
+                + "{\"type\":10,\"content\":\"" + escapeJson(content) + "\"},"
+                + "{\"type\":14,\"divider\":true,\"spacing\":1},"
+                + "{\"type\":10,\"content\":\"" + escapeJson(footer) + "\"}"
+                + "]}]}";
     }
 
     private static boolean isValid(String url) {

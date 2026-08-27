@@ -6,6 +6,7 @@ discord:
   enabled: false
   webhook-url: "https://discord.com/api/webhooks/CHANGE_ME"
   embed-color: 5763719
+  use-components-v2: true
   message: "**Player:** &name&\n**Checked by:** &checker&\n**Language:** &lang&"
 
 timeout-ticks: 100

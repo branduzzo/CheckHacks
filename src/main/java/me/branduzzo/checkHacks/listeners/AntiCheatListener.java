@@ -24,6 +24,7 @@ public class AntiCheatListener implements Listener {
     };
     private static final String VULCAN_CLASS  = "me.frep.vulcan.spigot.events.PlayerFlagEvent";
     private static final String SPARTAN_CLASS = "me.vagdedes.spartan.api.PlayerViolationEvent";
+    private static final String MATRIX_CLASS  = "me.rerere.matrix.api.events.PlayerViolationEvent";
 
     public AntiCheatListener(CheckHacksPlugin plugin) {
         this.plugin = plugin;
@@ -44,6 +45,9 @@ public class AntiCheatListener implements Listener {
         if (plugin.getConfigManager().isSpartanEnabled())
             if (!tryRegister(SPARTAN_CLASS, "Spartan", false))
                 plugin.getLogger().info("[CheckHacks] Spartan not found, skipping.");
+        if (plugin.getConfigManager().isMatrixEnabled())
+            if (!tryRegister(MATRIX_CLASS, "Matrix", false))
+                plugin.getLogger().info("[CheckHacks] Matrix not found, skipping.");
     }
 
     @SuppressWarnings("unchecked")

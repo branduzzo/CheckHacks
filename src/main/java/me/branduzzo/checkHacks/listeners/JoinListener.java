@@ -49,6 +49,10 @@ public class JoinListener implements Listener {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
 
+        if (plugin.getUpdateManager() != null && plugin.getUpdateManager().isUpdateAvailable() && player.hasPermission("checkhacks.update")) {
+            plugin.getUpdateManager().notifyIfAvailable(player);
+        }
+
         if (plugin.getConfigManager().isJoinCheckEnabled()) {
             if (!plugin.getConfigManager().isOnlyFirstJoin() || alreadyHackChecked.add(uuid)) {
                 FoliaScheduler.runAtEntityLater(plugin, player, () -> {

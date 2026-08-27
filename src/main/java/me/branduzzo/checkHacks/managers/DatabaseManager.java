@@ -81,6 +81,50 @@ public class DatabaseManager {
     public synchronized long saveScan(String type, String targetName, String targetUUID,
                                       String checkerName, String reason, boolean hasDetected) {
         if (connection == null) return -1;
+        try {
+            return insertScanInternal(type, targetName, targetUUID, checkerName, reason, hasDetected);
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Failed to save scan: " + e.getMessage());
+        }
+        return -1;
+    }
+
+    public synchronized long saveScanWithResults(String type, String targetName, String targetUUID,
+                                                 String checkerName, String reason, boolean hasDetected,
+                                                 List<Object[]> hackResults) {
+        if (connection == null) return -1;
+        boolean prevAuto = true;
+        try {
+            prevAuto = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+            long scanId = insertScanInternal(type, targetName, targetUUID, checkerName, reason, hasDetected);
+            if (scanId == -1) {
+                connection.rollback();
+                return -1;
+            }
+            for (Object[] r : hackResults) {
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "INSERT INTO hack_results (scan_id,hack_id,hack_name,result) VALUES (?,?,?,?)")) {
+                    ps.setLong(1, scanId);
+                    ps.setString(2, (String) r[0]);
+                    ps.setString(3, (String) r[1]);
+                    ps.setString(4, (String) r[2]);
+                    ps.executeUpdate();
+                }
+            }
+            connection.commit();
+            return scanId;
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Failed to save scan batch: " + e.getMessage());
+            try { connection.rollback(); } catch (SQLException ignored) {}
+        } finally {
+            try { connection.setAutoCommit(prevAuto); } catch (SQLException ignored) {}
+        }
+        return -1;
+    }
+
+    private long insertScanInternal(String type, String targetName, String targetUUID,
+                                    String checkerName, String reason, boolean hasDetected) throws SQLException {
         String sql = "INSERT INTO scans (type,target_name,target_uuid,checker_name,reason,timestamp,has_detected) VALUES (?,?,?,?,?,?,?)";
         try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, type);
@@ -94,8 +138,6 @@ public class DatabaseManager {
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) return rs.getLong(1);
             }
-        } catch (SQLException e) {
-            plugin.getLogger().warning("Failed to save scan: " + e.getMessage());
         }
         return -1;
     }

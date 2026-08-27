@@ -17,6 +17,7 @@ public class CheckPlayerData {
     private int currentBatch;
     private final Map<String, HackResult> results;
     private final boolean autoCheck;
+    private final boolean confirmScan;
     private final String reason;
     private long scanId = -1;
 
@@ -29,12 +30,19 @@ public class CheckPlayerData {
     public CheckPlayerData(UUID targetUUID, UUID initiatorUUID,
                            List<List<HackDefinition>> batches,
                            boolean autoCheck, String reason) {
+        this(targetUUID, initiatorUUID, batches, autoCheck, reason, false);
+    }
+
+    public CheckPlayerData(UUID targetUUID, UUID initiatorUUID,
+                           List<List<HackDefinition>> batches,
+                           boolean autoCheck, String reason, boolean confirmScan) {
         this.targetUUID    = targetUUID;
         this.initiatorUUID = initiatorUUID;
         this.batches       = batches;
         this.currentBatch  = 0;
         this.results       = new LinkedHashMap<>();
         this.autoCheck     = autoCheck;
+        this.confirmScan   = confirmScan;
         this.reason        = reason;
     }
 
@@ -45,6 +53,7 @@ public class CheckPlayerData {
     public void incrementBatch()                       { currentBatch++; }
     public Map<String, HackResult> getResults()        { return results; }
     public boolean isAutoCheck()                       { return autoCheck; }
+    public boolean isConfirmScan()                     { return confirmScan; }
     public String getReason()                          { return reason; }
     public boolean hasMoreBatches()                    { return currentBatch < batches.size(); }
     public List<HackDefinition> getCurrentBatchHacks() { return batches.get(currentBatch); }

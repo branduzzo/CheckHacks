@@ -84,11 +84,59 @@ hacks:
     key: "key.auto-clicker_.toggle"
     mode: KEYBIND
 
+  trouser-streak:
+    display-name: "Trouser Streak"
+    key: "addon.trouser-streak.name"
+    mode: TRANSLATE
+
+  ui-utils:
+    display-name: "Ui Utils"
+    key: "key.ui-utils.restore_screen"
+    mode: TRANSLATE
+
+  seeedcrackerx:
+   display-name: "SeedCrackerX"
+   key: "cracker.already"
+   mode: TRANSLATE
+
+  simple-world-downloader:
+    display-name: "Simple World Downloader"
+    key: "swd.screen.config.title"
+    mode: TRANSLATE
+
+  trouser-streak-newchunks:
+    display-name: "Trouser Streak (NewerNewChunks)"
+    key: "module.trouser-streak.NewerNewChunks.description"
+    mode: TRANSLATE
+
+  trouser-streak-anhero:
+    display-name: "Trouser Streak (AnHero)"
+    key: "module.trouser-streak.AnHero.description"
+    mode: TRANSLATE
+
+  glazed:
+    display-name: "Glazed"
+    key: "addon.glazed.name"
+    mode: TRANSLATE
+
+  litematica:
+    display-name: "Litematica"
+    key: "litematica.hotkey.name.openmainmenuscreen"
+    mode: TRANSLATE
+
+  itemscroller:
+    display-name: "Item Scroller"
+    key: "itemscroller.hotkey.name.openconfigscreen"
+    mode: TRANSLATE
+
+  xaeros-minimap:
+    display-name: "Xaero's Minimap"
+    key: "gui.xaero_minimap"
+    mode: TRANSLATE
+
 default-check-hacks:
   - meteor-client
-  - liquidbounce
   - freecam
-  - wurst
   - xray-fabric
   - chestesp
   - killaura-fabric
@@ -96,7 +144,6 @@ default-check-hacks:
   - lumina
   - autoswitch
   - bleachhack
-  - aristois
   - coffee
   - world-downloader
   - autoclicker-fabric
@@ -108,11 +155,8 @@ auto-check-on-join:
   only-first-join: false
   hacks:
     - meteor-client
-    - liquidbounce
     - freecam
-    - wurst
     - bleachhack
-    - aristois
     - world-downloader
     - autoclicker-fabric
     - antiafk
@@ -123,14 +167,12 @@ detect-flag:
     grim: true
     vulcan: true
     spartan: true
+    matrix: true
   cooldown-hours: 24
   hacks:
     - meteor-client
-    - liquidbounce
     - freecam
-    - wurst
     - bleachhack
-    - aristois
     - world-downloader
     - autoclicker-fabric
     - antiafk
@@ -148,5 +190,12 @@ command-if-clean:
   enabled: false
   command: "give %player% diamond 1"
 
+command-rules:
+  meteorclient1:
+    mod: meteorclient
+    result: DETECTED
+    command: "tempban %player% 31d Meteor Client"
+
+doublecheck: true
 timeout-ticks: 200
-between-sign-ticks: 20
+between-sign-ticks: 5
