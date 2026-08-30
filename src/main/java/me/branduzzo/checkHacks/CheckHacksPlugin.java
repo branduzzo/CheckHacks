@@ -27,7 +27,10 @@ public class CheckHacksPlugin extends JavaPlugin {
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
-        new Metrics(this, 31804);
+        try {
+            new Metrics(this, 31804);
+        } catch (Throwable ignored) {
+        }
 
         configManager     = new ConfigManager(this);
         messageManager    = new MessageManager(this);
