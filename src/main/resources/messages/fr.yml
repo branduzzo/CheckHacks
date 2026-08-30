@@ -4,6 +4,7 @@ already-checking: "{prefix}<yellow>{player} <white>est déjà en cours de vérif
 check-started: "{prefix}<white>Démarrage de la vérification de <yellow>{player}<white>..."
 check-complete: "{prefix}<white>Vérification terminée pour <yellow>{player}<white> :"
 check-timeout: "{prefix}<yellow>{player} <white>n'a pas répondu - marqué comme <red>PROTÉGÉ<white>."
+doublecheck: "{prefix}<yellow>DoubleCheck<gray> : <white>{player} <gray>signalé - scan de confirmation en cours..."
 reload-done: "{prefix}<green>Configuration rechargée."
 anticheat-trigger: "{prefix}<gray>L'anticheat a signalé <yellow>{player}<gray>. Démarrage de la vérification automatique..."
 join-check: "{prefix}<gray>Vérification automatique de <yellow>{player} <gray>à la connexion..."

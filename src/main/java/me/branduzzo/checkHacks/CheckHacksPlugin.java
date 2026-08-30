@@ -3,6 +3,7 @@ package me.branduzzo.checkHacks;
 import me.branduzzo.checkHacks.commands.*;
 import me.branduzzo.checkHacks.listeners.*;
 import me.branduzzo.checkHacks.managers.*;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.HashSet;
@@ -26,6 +27,7 @@ public class CheckHacksPlugin extends JavaPlugin {
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
+        new Metrics(this, 31804);
 
         configManager     = new ConfigManager(this);
         messageManager    = new MessageManager(this);

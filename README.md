@@ -6,7 +6,7 @@
 
 It uses the **Sign Translation Vulnerability** (MC-265322), the same trick DonutSMP uses to catch cheaters. Signs pop up for just a split second, too fast to actually read.
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg?style=for-the-badge)](https://github.com/Branduzzo/CheckHacks/releases)
+[![Version](https://img.shields.io/badge/version-1.3.1-blue.svg?style=for-the-badge)](https://github.com/Branduzzo/CheckHacks/releases)
 [![Platform](https://img.shields.io/badge/platform-Paper%20%7C%20Spigot-orange.svg?style=for-the-badge)](https://papermc.io/)
 [![Minecraft](https://img.shields.io/badge/minecraft-1.21+-green.svg?style=for-the-badge)](https://www.minecraft.net/)
 [![Java](https://img.shields.io/badge/java-21+-red.svg?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
@@ -20,7 +20,7 @@ It uses the **Sign Translation Vulnerability** (MC-265322), the same trick Donut
 [![GitHub Stars](https://img.shields.io/github/stars/Branduzzo/CheckHacks.svg?style=for-the-badge&logo=github)](https://github.com/Branduzzo/CheckHacks/stargazers)
 [![PayPal](https://img.shields.io/badge/paypal-support%20me-00457C.svg?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/branduzzo)
 
-[Features](#-features) • [Detected Mods](#-detected-mods) • [Commands](#%EF%B8%8F-commands) • [Configuration](#%EF%B8%8F-configuration) • [Web Editor](#%EF%B8%8F-web-editor) • [Support Me](#-support-me)
+[Features](#-features) • [Detected Mods](#-detected-mods) • [Showcase](#-showcase) • [Commands](#%EF%B8%8F-commands) • [Configuration](#%EF%B8%8F-configuration) • [Web Editor](#%EF%B8%8F-web-editor) • [Support Me](#-support-me)
 
 </div>
 
@@ -156,6 +156,14 @@ Every mod registers its own translation keys, so a vanilla client and a modded c
 | Xaeros Minimap | `TRANSLATE` |
 
 > ➕ Want us to add a mod? Join our Discord and open a ticket, we will take care of it.
+
+---
+
+## 🎬 Showcase
+
+[![CheckHacks Showcase - Watch on YouTube](https://img.youtube.com/vi/dAwjMOlm0SQ/maxresdefault.jpg)](https://youtu.be/dAwjMOlm0SQ?t=193)
+
+> ▶️ Click the thumbnail to watch it on YouTube.
 
 ---
 

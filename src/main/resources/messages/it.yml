@@ -4,6 +4,7 @@ already-checking: "{prefix}<yellow>{player} <white>è già in fase di controllo.
 check-started: "{prefix}<white>Avvio controllo su <yellow>{player}<white>..."
 check-complete: "{prefix}<white>Controllo completato per <yellow>{player}<white>:"
 check-timeout: "{prefix}<yellow>{player} <white>non ha risposto - segnato come <red>PROTETTO<white>."
+doublecheck: "{prefix}<yellow>DoubleCheck<gray>: <white>{player} <gray>segnato come sospetto - avvio scansione di conferma..."
 reload-done: "{prefix}<green>Configurazione ricaricata."
 anticheat-trigger: "{prefix}<gray>L'anticheat ha segnalato <yellow>{player}<gray>. Avvio controllo automatico..."
 join-check: "{prefix}<gray>Controllo automatico di <yellow>{player} <gray>all'entrata..."

@@ -4,6 +4,7 @@ already-checking: "{prefix}<yellow>{player} <white>is awweady being checkied, he
 check-started: "{prefix}<white>Stawting a widdle checky on <yellow>{player}<white>..."
 check-complete: "{prefix}<white>Checky-check compwete fow <yellow>{player}<white>:"
 check-timeout: "{prefix}<yellow>{player} <white>didn't wespond - marked as <red>PWOTECTED<white>."
+doublecheck: "{prefix}<yellow>DoubweCheck<gray>: <white>{player} <gray>flagged - wunning confiwmation scan, nya~"
 reload-done: "{prefix}<green>Configy-wiggy wewoaded successfuwwy~"
 anticheat-trigger: "{prefix}<gray>Da anticheat noticed <yellow>{player}<gray> being a wittle sus... stawting auto-checky now~"
 join-check: "{prefix}<gray>Doing an automatic checky on <yellow>{player} <gray>when dey join~"

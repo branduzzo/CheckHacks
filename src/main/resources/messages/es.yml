@@ -4,6 +4,7 @@ already-checking: "{prefix}<yellow>{player} <white>ya está en proceso de revisi
 check-started: "{prefix}<white>Iniciando revisión de <yellow>{player}<white>..."
 check-complete: "{prefix}<white>Revisión completada para <yellow>{player}<white>:"
 check-timeout: "{prefix}<yellow>{player} <white>no respondió - marcado como <red>PROTEGIDO<white>."
+doublecheck: "{prefix}<yellow>DoubleCheck<gray>: <white>{player} <gray>marcado - ejecutando escaneo de confirmación..."
 reload-done: "{prefix}<green>Configuración recargada."
 anticheat-trigger: "{prefix}<gray>El anticheat ha detectado a <yellow>{player}<gray>. Iniciando revisión automática..."
 join-check: "{prefix}<gray>Revisión automática de <yellow>{player} <gray>al entrar..."
