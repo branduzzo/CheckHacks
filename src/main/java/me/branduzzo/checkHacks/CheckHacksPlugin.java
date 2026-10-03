@@ -13,15 +13,17 @@ import java.util.UUID;
 public class CheckHacksPlugin extends JavaPlugin {
 
     private static CheckHacksPlugin instance;
-    private ConfigManager     configManager;
-    private MessageManager    messageManager;
-    private DatabaseManager   databaseManager;
-    private WebServerManager  webServerManager;
-    private CheckManager      checkManager;
-    private LangCheckManager  langCheckManager;
-    private ClientDataManager clientDataManager;
-    private UpdateManager     updateManager;
-    private final Set<UUID>   alertsDisabled = new HashSet<>();
+    private ConfigManager       configManager;
+    private MessageManager      messageManager;
+    private DatabaseManager     databaseManager;
+    private WebServerManager    webServerManager;
+    private CheckManager        checkManager;
+    private LangCheckManager    langCheckManager;
+    private ClientDataManager   clientDataManager;
+    private ClientCheckManager  clientCheckManager;
+    private CheckRunner         checkRunner;
+    private UpdateManager       updateManager;
+    private final Set<UUID>     alertsDisabled = new HashSet<>();
 
     @Override
     public void onEnable() {
@@ -36,8 +38,10 @@ public class CheckHacksPlugin extends JavaPlugin {
         messageManager    = new MessageManager(this);
         databaseManager   = new DatabaseManager(this);
         clientDataManager = new ClientDataManager();
+        clientCheckManager = new ClientCheckManager(this);
         checkManager      = new CheckManager(this);
         langCheckManager  = new LangCheckManager(this);
+        checkRunner       = new CheckRunner(this);
 
         if (configManager.isWebEditorEnabled()) {
             webServerManager = new WebServerManager(this);
@@ -53,8 +57,19 @@ public class CheckHacksPlugin extends JavaPlugin {
         getCommand("checklang").setTabCompleter(langCmd);
         getCommand("cheditor").setExecutor(new EditorCommand(this));
 
+        CheckBrandCommand brandCmd = new CheckBrandCommand(this);
+        getCommand("checkbrand").setExecutor(brandCmd);
+        getCommand("checkbrand").setTabCompleter(brandCmd);
+        CheckModsCommand modsCmd = new CheckModsCommand(this);
+        getCommand("checkmods").setExecutor(modsCmd);
+        getCommand("checkmods").setTabCompleter(modsCmd);
+        CheckClientCommand clientCmd = new CheckClientCommand(this);
+        getCommand("checkclient").setExecutor(clientCmd);
+        getCommand("checkclient").setTabCompleter(clientCmd);
+
         getServer().getPluginManager().registerEvents(new SignListener(this), this);
         getServer().getPluginManager().registerEvents(new JoinListener(this), this);
+        getServer().getPluginManager().registerEvents(new ClientProfileListener(this), this);
         AntiCheatListener acListener = new AntiCheatListener(this);
         getServer().getPluginManager().registerEvents(acListener, this);
         acListener.registerHooks();
@@ -64,15 +79,17 @@ public class CheckHacksPlugin extends JavaPlugin {
         updateManager = new UpdateManager(this);
         updateManager.checkForUpdates();
 
-        getLogger().info("CheckHacks v" + getDescription().getVersion() + " enabled.");
+        getLogger().info("CheckHacks v" + getDescription().getVersion() + " enabled ("
+                + CheckType.idList() + " checks available).");
     }
 
     @Override
     public void onDisable() {
-        if (checkManager     != null) checkManager.cleanup();
-        if (langCheckManager != null) langCheckManager.cleanup();
-        if (webServerManager != null) webServerManager.stop();
-        if (databaseManager  != null) databaseManager.close();
+        if (checkManager       != null) checkManager.cleanup();
+        if (langCheckManager   != null) langCheckManager.cleanup();
+        if (checkRunner        != null) checkRunner.cleanup();
+        if (webServerManager   != null) webServerManager.stop();
+        if (databaseManager    != null) databaseManager.close();
         getLogger().info("CheckHacks disabled.");
     }
 
@@ -83,6 +100,8 @@ public class CheckHacksPlugin extends JavaPlugin {
     public CheckManager      getCheckManager()      { return checkManager; }
     public LangCheckManager  getLangCheckManager()  { return langCheckManager; }
     public ClientDataManager getClientDataManager() { return clientDataManager; }
+    public ClientCheckManager getClientCheckManager() { return clientCheckManager; }
+    public CheckRunner       getCheckRunner()       { return checkRunner; }
     public UpdateManager     getUpdateManager()     { return updateManager; }
 
     public boolean hasAlertsEnabled(UUID uuid) {

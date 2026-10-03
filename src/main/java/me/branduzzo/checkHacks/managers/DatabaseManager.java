@@ -66,6 +66,16 @@ public class DatabaseManager {
                     FOREIGN KEY (scan_id) REFERENCES scans(id) ON DELETE CASCADE
                 )""");
             s.execute("""
+                CREATE TABLE IF NOT EXISTS client_results (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    scan_id INTEGER NOT NULL,
+                    entry_key TEXT NOT NULL,
+                    entry_name TEXT NOT NULL,
+                    entry_value TEXT,
+                    outcome TEXT NOT NULL,
+                    FOREIGN KEY (scan_id) REFERENCES scans(id) ON DELETE CASCADE
+                )""");
+            s.execute("""
                 CREATE TABLE IF NOT EXISTS editor_tokens (
                     token TEXT PRIMARY KEY,
                     player_uuid TEXT NOT NULL,
@@ -116,6 +126,45 @@ public class DatabaseManager {
             return scanId;
         } catch (SQLException e) {
             plugin.getLogger().warning("Failed to save scan batch: " + e.getMessage());
+            try { connection.rollback(); } catch (SQLException ignored) {}
+        } finally {
+            try { connection.setAutoCommit(prevAuto); } catch (SQLException ignored) {}
+        }
+        return -1;
+    }
+
+    /**
+     * Saves a client check (brand, mod list, ...) together with every entry of
+     * its report. Rows are {@code {key, name, value, outcome}}.
+     */
+    public synchronized long saveClientScan(String type, String targetName, String targetUUID,
+                                            String checkerName, String reason, boolean hasDetected,
+                                            List<Object[]> entries) {
+        if (connection == null) return -1;
+        boolean prevAuto = true;
+        try {
+            prevAuto = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+            long scanId = insertScanInternal(type, targetName, targetUUID, checkerName, reason, hasDetected);
+            if (scanId == -1) {
+                connection.rollback();
+                return -1;
+            }
+            for (Object[] entry : entries) {
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "INSERT INTO client_results (scan_id,entry_key,entry_name,entry_value,outcome) VALUES (?,?,?,?,?)")) {
+                    ps.setLong(1, scanId);
+                    ps.setString(2, (String) entry[0]);
+                    ps.setString(3, (String) entry[1]);
+                    ps.setString(4, (String) entry[2]);
+                    ps.setString(5, (String) entry[3]);
+                    ps.executeUpdate();
+                }
+            }
+            connection.commit();
+            return scanId;
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Failed to save client scan: " + e.getMessage());
             try { connection.rollback(); } catch (SQLException ignored) {}
         } finally {
             try { connection.setAutoCommit(prevAuto); } catch (SQLException ignored) {}
@@ -198,7 +247,7 @@ public class DatabaseManager {
             Map<String, Object> row = rows.get(i);
             long id = ids.get(i);
             String t = (String) row.get("type");
-            row.put("results", "hack".equals(t) ? getHackResultsInternal(id) : getLangResultsInternal(id));
+            row.put("results", resultsFor(t, id));
             list.add(row);
         }
         return list;
@@ -218,7 +267,7 @@ public class DatabaseManager {
         }
         if (row == null) return null;
         String type = (String) row.get("type");
-        row.put("results", "hack".equals(type) ? getHackResultsInternal(id) : getLangResultsInternal(id));
+        row.put("results", resultsFor(type, id));
         return row;
     }
 
@@ -239,6 +288,34 @@ public class DatabaseManager {
             plugin.getLogger().warning("getHackResults: " + e.getMessage());
         }
         return list;
+    }
+
+    private List<Map<String, Object>> getClientResultsInternal(long scanId) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(
+                "SELECT entry_key, entry_name, entry_value, outcome FROM client_results WHERE scan_id=? ORDER BY id ASC")) {
+            ps.setLong(1, scanId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> r = new LinkedHashMap<>();
+                    r.put("entry_key",  rs.getString("entry_key"));
+                    r.put("entry_name", rs.getString("entry_name"));
+                    r.put("entry_value", rs.getString("entry_value"));
+                    r.put("outcome",    rs.getString("outcome"));
+                    list.add(r);
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("getClientResults: " + e.getMessage());
+        }
+        return list;
+    }
+
+    /** Picks the right result table for a scan type. */
+    private List<Map<String, Object>> resultsFor(String type, long scanId) {
+        if ("hack".equals(type)) return getHackResultsInternal(scanId);
+        if ("lang".equals(type)) return getLangResultsInternal(scanId);
+        return getClientResultsInternal(scanId);
     }
 
     private List<Map<String, Object>> getLangResultsInternal(long scanId) {
@@ -286,7 +363,7 @@ public class DatabaseManager {
             Map<String, Object> row = rows.get(i);
             long id = ids.get(i);
             String type = (String) row.get("type");
-            row.put("results", "hack".equals(type) ? getHackResultsInternal(id) : getLangResultsInternal(id));
+            row.put("results", resultsFor(type, id));
             list.add(row);
         }
         return list;

@@ -1,0 +1,322 @@
+#     ____ _               _    _   _            _
+#    / ___| |__   ___  ___| | _| | | | __ _  ___| | _____
+#    | |   | '_ \ / _ \/ __| |/ / |_| |/ _` |/ __| |/ / __|
+#    | |___| | | |  __/ (__|   <|  _  | (_| | (__|   <\__ \
+#    \____|_| |_|\___|\___|_|\_\_| |_|\__,_|\___|_|\_\___/
+#
+# CheckHacks 1.4.0 - checkclient.yml
+# The instant client checks: brand, mod list and the combined /checkclient.
+# Unlike the sign based checks, nothing is placed in the world here - we only
+# read what the client already told the server.
+
+# ──────────────────────────────────────────────
+# CLIENT BRAND CHECK  /checkbrand
+#   brand.enabled            turn the check on/off
+#   brand.alert-on-suspicious send an extra warning when the brand is flagged
+#   known-brands             pattern -> display name + client type
+#   suspicious-patterns      brand patterns that flag the player
+# Wildcards (*) are supported and matching is case insensitive.
+# Types: VANILLA FABRIC FORGE NEOFORGE QUILT LUNAR BADLION FEATHER LABYMOD BEDROCK UNKNOWN
+# ──────────────────────────────────────────────
+brand:
+  enabled: true
+  alert-on-suspicious: true
+
+  known-brands:
+    vanilla:
+      pattern: "vanilla"
+      display-name: "Vanilla"
+      type: VANILLA
+    fabric:
+      pattern: "fabric*"
+      display-name: "Fabric"
+      type: FABRIC
+    forge:
+      pattern: "forge*"
+      display-name: "Forge"
+      type: FORGE
+    neoforge:
+      pattern: "neoforge*"
+      display-name: "NeoForge"
+      type: NEOFORGE
+    quilt:
+      pattern: "quilt*"
+      display-name: "Quilt"
+      type: QUILT
+    lunar:
+      pattern: "*lunar*"
+      display-name: "Lunar Client"
+      type: LUNAR
+    badlion:
+      pattern: "*badlion*"
+      display-name: "Badlion Client"
+      type: BADLION
+    feather:
+      pattern: "*feather*"
+      display-name: "Feather Client"
+      type: FEATHER
+    labymod:
+      pattern: "*labymod*"
+      display-name: "LabyMod"
+      type: LABYMOD
+    geyser:
+      pattern: "*geyser*"
+      display-name: "Bedrock (Geyser)"
+      type: BEDROCK
+
+  # Brand strings that mark the player as DETECTED (cheat clients and alike).
+  suspicious-patterns:
+    - "*wurst*"
+    - "*meteor*"
+    - "*impact*"
+    - "*aristois*"
+    - "*liquidbounce*"
+    - "*kamiblue*"
+    - "*inertia*"
+    - "*salhack*"
+    - "*konas*"
+    - "*novoline*"
+    - "*sigma*"
+    - "*gamesense*"
+    - "*bleachhack*"
+    - "*future*"
+    - "*tlauncher*"
+    - "*cracked*"
+    - "*cheatbreaker*"
+
+# ──────────────────────────────────────────────
+# MOD LIST CHECK  /checkmods
+# Reads the plugin channels the client registered and maps them to mods.
+#   modlist.enabled             turn the check on/off
+#   modlist.alert-on-suspicious extra warning when a flagged mod is found
+#   modlist.show-channels       include the raw channel list in the report
+#   mods                        channel pattern -> mod name (+ suspicious)
+#   suspicious-channels         raw channel patterns that flag the player even
+#                               when they are not mapped to a mod name
+#   ignored-channels            channels that belong to the server/proxy
+# ──────────────────────────────────────────────
+modlist:
+  enabled: true
+  alert-on-suspicious: true
+  show-channels: true
+
+  mods:
+    fabric-api:
+      pattern: "fabric*"
+      display-name: "Fabric API"
+      suspicious: false
+    sodium:
+      pattern: "*sodium*"
+      display-name: "Sodium"
+      suspicious: false
+    iris:
+      pattern: "*iris*"
+      display-name: "Iris Shaders"
+      suspicious: false
+    modmenu:
+      pattern: "*modmenu*"
+      display-name: "Mod Menu"
+      suspicious: false
+    xaero-minimap:
+      pattern: "*xaerominimap*"
+      display-name: "Xaero's Minimap"
+      suspicious: false
+    xaero-worldmap:
+      pattern: "*xaeroworldmap*"
+      display-name: "Xaero's World Map"
+      suspicious: false
+    journeymap:
+      pattern: "*journeymap*"
+      display-name: "JourneyMap"
+      suspicious: false
+    litematica:
+      pattern: "*litematica*"
+      display-name: "Litematica"
+      suspicious: false
+    minihud:
+      pattern: "*minihud*"
+      display-name: "MiniHUD"
+      suspicious: false
+    itemscroller:
+      pattern: "*itemscroller*"
+      display-name: "Item Scroller"
+      suspicious: false
+    tweakeroo:
+      pattern: "*tweakeroo*"
+      display-name: "Tweakeroo"
+      suspicious: false
+    replaymod:
+      pattern: "*replaymod*"
+      display-name: "Replay Mod"
+      suspicious: false
+    worldedit-cui:
+      pattern: "*worldedit:cui*"
+      display-name: "WorldEdit CUI"
+      suspicious: false
+    freecam:
+      pattern: "*freecam*"
+      display-name: "Freecam"
+      suspicious: false
+    autofish:
+      pattern: "*autofish*"
+      display-name: "AutoFish"
+      suspicious: false
+    # ── flagged mods ──
+    baritone:
+      pattern: "*baritone*"
+      display-name: "Baritone"
+      suspicious: true
+    wurst:
+      pattern: "*wurst*"
+      display-name: "Wurst Client"
+      suspicious: true
+    meteor:
+      pattern: "*meteor*"
+      display-name: "Meteor Client"
+      suspicious: true
+    impact:
+      pattern: "*impact*"
+      display-name: "Impact"
+      suspicious: true
+    aristois:
+      pattern: "*aristois*"
+      display-name: "Aristois"
+      suspicious: true
+    liquidbounce:
+      pattern: "*liquidbounce*"
+      display-name: "LiquidBounce"
+      suspicious: true
+    bleachhack:
+      pattern: "*bleachhack*"
+      display-name: "BleachHack"
+      suspicious: true
+    kamiblue:
+      pattern: "*kamiblue*"
+      display-name: "KamiBlue"
+      suspicious: true
+    inertia:
+      pattern: "*inertia*"
+      display-name: "Inertia"
+      suspicious: true
+    salhack:
+      pattern: "*salhack*"
+      display-name: "SalHack"
+      suspicious: true
+    konas:
+      pattern: "*konas*"
+      display-name: "Konas"
+      suspicious: true
+    novoline:
+      pattern: "*novoline*"
+      display-name: "Novoline"
+      suspicious: true
+    sigma:
+      pattern: "*sigma*"
+      display-name: "Sigma"
+      suspicious: true
+    gamesense:
+      pattern: "*gamesense*"
+      display-name: "GameSense"
+      suspicious: true
+    world-downloader:
+      pattern: "*wdl*"
+      display-name: "World Downloader"
+      suspicious: true
+    seedcracker:
+      pattern: "*seedcracker*"
+      display-name: "SeedCracker"
+      suspicious: true
+    trouser-streak:
+      pattern: "*trouser*"
+      display-name: "Trouser Streak"
+      suspicious: true
+
+  suspicious-channels:
+    - "*wurst*"
+    - "*meteor*"
+    - "*impact*"
+    - "*aristois*"
+    - "*liquidbounce*"
+    - "*kamiblue*"
+    - "*inertia*"
+    - "*salhack*"
+    - "*konas*"
+    - "*novoline*"
+    - "*sigma*"
+    - "*gamesense*"
+    - "*bleachhack*"
+    - "*baritone*"
+    - "*seedcracker*"
+    - "*world_download*"
+    - "*wdl*"
+    - "*trouser*"
+    - "*anhero*"
+    - "*newernewchunks*"
+
+  ignored-channels:
+    - "minecraft:*"
+    - "bungeecord*"
+    - "velocity*"
+    - "paper*"
+    - "spigot*"
+    - "bukkit*"
+
+# ──────────────────────────────────────────────
+# /checkclient <player>
+# Which checks run when no type is given, and how the chain behaves.
+# Types: brand, modlist, hack, lang
+# ──────────────────────────────────────────────
+default-checks:
+  - brand
+  - modlist
+  - hack
+
+# Delay between two checks of the same chain (ticks, 20 = 1 second)
+between-checks-ticks: 10
+# How long a chains waits for a sign based check to finish before giving up (ticks)
+chain-timeout-ticks: 400
+
+# Instant checks when a player joins (brand + mod list, no signs involved)
+auto-check-on-join:
+  enabled: false
+  delay-ticks: 60
+  checks:
+    - brand
+    - modlist
+
+# Instant checks whenever Grim/Vulcan/Spartan/Matrix flags a player
+detect-flag:
+  enabled: true
+  checks:
+    - brand
+    - modlist
+
+# ──────────────────────────────────────────────
+# ACTIONS
+# Placeholders: %player%, %check%, %brand%, %mods%, %hack% / &hack& / {hack}
+# ──────────────────────────────────────────────
+command-if-suspicious:
+  enabled: false
+  command: "kick %player% Suspicious client: %brand%%mods%"
+
+command-if-clean:
+  enabled: false
+  command: ""
+
+# Per match rules: run a command when a brand or a mod matches "match"
+command-rules:
+  wurst-brand:
+    check: brand
+    match: "*wurst*"
+    command: "tempban %player% 30d Wurst client"
+
+# ──────────────────────────────────────────────
+# DISCORD
+# Placeholders: &name& &checker& &reason& &check& &brand& &mods& &results&
+# ──────────────────────────────────────────────
+discord:
+  enabled: false
+  webhook-url: "https://discord.com/api/webhooks/CHANGE_ME"
+  embed-color: 16776960
+  use-components-v2: true
+  message: "**Player:** &name&\n**Checked by:** &checker&\n**Reason:** &reason&\n**Check:** &check&\n**Brand:** &brand&\n**Mods:** &mods&\n**Results:**\n&results&"

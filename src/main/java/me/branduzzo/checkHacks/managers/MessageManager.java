@@ -32,6 +32,7 @@ public class MessageManager {
         ensureFile("messages/fr.yml");
         ensureFile("messages/lolcat.yml");
         ensureFile("messages/ru.yml");
+        ensureFile("messages/vi.yml");
         ensureFile("messages/uwu.yml");
         File file = new File(plugin.getDataFolder(), "messages/" + lang + ".yml");
         if (!file.exists()) {

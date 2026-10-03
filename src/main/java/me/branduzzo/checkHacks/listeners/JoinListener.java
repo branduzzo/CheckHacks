@@ -1,16 +1,11 @@
 package me.branduzzo.checkHacks.listeners;
 
 import me.branduzzo.checkHacks.CheckHacksPlugin;
-import me.branduzzo.checkHacks.ClientType;
 import me.branduzzo.checkHacks.HackDefinition;
 import me.branduzzo.checkHacks.utils.FoliaScheduler;
-import me.branduzzo.checkHacks.utils.MessageUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
@@ -24,24 +19,10 @@ public class JoinListener implements Listener {
     private final CheckHacksPlugin plugin;
     private final Set<UUID> alreadyHackChecked = ConcurrentHashMap.newKeySet();
     private final Set<UUID> alreadyLangChecked = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> alreadyClientChecked = ConcurrentHashMap.newKeySet();
 
     public JoinListener(CheckHacksPlugin plugin) {
         this.plugin = plugin;
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onLogin(PlayerLoginEvent event) {
-        Player player = event.getPlayer();
-        UUID uuid = player.getUniqueId();
-
-        FoliaScheduler.runAtEntityLater(plugin, player, () -> {
-            if (!player.isOnline()) return;
-            Set<String> channels = player.getListeningPluginChannels();
-            ClientType type = detectClientType(channels);
-            plugin.getClientDataManager().setClientType(uuid, type);
-            plugin.getLogger().info("[CheckHacks] " + player.getName() + " client type: " + type
-                    + " channels=" + channels);
-        }, 5L);
     }
 
     @EventHandler
@@ -79,29 +60,23 @@ public class JoinListener implements Listener {
                 }, 80L);
             }
         }
+
+        // Instant client checks (brand / mod list) - nothing is placed in the
+        // world here, so they can run while the sign checks are still queued.
+        if (plugin.getConfigManager().isClientJoinCheckEnabled()) {
+            if (alreadyClientChecked.add(uuid)) {
+                FoliaScheduler.runAtEntityLater(plugin, player, () -> {
+                    if (!player.isOnline()) return;
+                    plugin.getCheckRunner().runAuto(player,
+                            plugin.getConfigManager().getClientJoinCheckTypes(),
+                            "Auto-join client check");
+                }, Math.max(20L, plugin.getConfigManager().getClientJoinDelayTicks()));
+            }
+        }
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         plugin.getClientDataManager().remove(event.getPlayer().getUniqueId());
-    }
-
-    private ClientType detectClientType(Set<String> channels) {
-        for (String ch : channels) {
-            String lower = ch.toLowerCase();
-            if (lower.startsWith("fabric") || lower.contains("fabric-api")
-                    || lower.contains("fabric-networking") || lower.contains("fabric-screen")) {
-                return ClientType.FABRIC;
-            }
-        }
-        for (String ch : channels) {
-            String lower = ch.toLowerCase();
-            if (lower.startsWith("fml") || lower.startsWith("forge")
-                    || lower.contains("forge:") || lower.contains("fml:")) {
-                return ClientType.FORGE;
-            }
-        }
-        if (channels.isEmpty()) return ClientType.VANILLA;
-        return ClientType.UNKNOWN;
     }
 }
