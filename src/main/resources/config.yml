@@ -11,7 +11,7 @@
 # {prefix} is replaced in messages/*.yml
 prefix: "<gradient:#FFBA00:#03E700>[CheckHacks]</gradient> <gray>"
 
-# Language file to use from messages/*.yml (en, it, de, es, fr, br, ru, lolcat, uwu)
+# Language file to use from messages/*.yml (en, it, de, es, fr, br, ru, vi, lolcat, uwu)
 language: "en"
 
 # Web editor ( /cheditor ) - runs directly on the server

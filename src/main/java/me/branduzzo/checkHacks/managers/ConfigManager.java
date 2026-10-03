@@ -1,10 +1,6 @@
 package me.branduzzo.checkHacks.managers;
 
-import me.branduzzo.checkHacks.CheckHacksPlugin;
-import me.branduzzo.checkHacks.CommandRule;
-import me.branduzzo.checkHacks.DetectionMode;
-import me.branduzzo.checkHacks.HackDefinition;
-import me.branduzzo.checkHacks.HackResult;
+import me.branduzzo.checkHacks.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -18,10 +14,106 @@ public class ConfigManager {
     private FileConfiguration masterConfig;
     private FileConfiguration hacksConfig;
     private FileConfiguration langConfig;
+    private FileConfiguration clientConfig;
     private final Map<String, HackDefinition> hacks = new LinkedHashMap<>();
     private final Map<String, CommandRule> commandRules = new LinkedHashMap<>();
     private final Map<String, List<CommandRule>> rulesByHack = new HashMap<>();
 
+    /* ---------------- client checks (checkclient.yml) ---------------- */
+    private final List<BrandRule> brandRules = new ArrayList<>();
+    private final List<String> brandSuspiciousPatterns = new ArrayList<>();
+    private final List<ChannelModRule> channelModRules = new ArrayList<>();
+    private final List<String> suspiciousChannels = new ArrayList<>();
+    private final List<String> ignoredChannels = new ArrayList<>();
+    private final List<ClientCommandRule> clientCommandRules = new ArrayList<>();
+
+    private boolean brandCheckEnabled;
+    private boolean brandAlertOnSuspicious;
+    private boolean modListCheckEnabled;
+    private boolean modListAlertOnSuspicious;
+    private boolean clientShowChannels;
+    private List<CheckType> clientDefaultChecks = new ArrayList<>();
+    private long betweenChecksTicks;
+    private long chainTimeoutTicks;
+    private boolean clientJoinCheckEnabled;
+    private List<CheckType> clientJoinCheckTypes = new ArrayList<>();
+    private long clientJoinDelayTicks;
+    private boolean clientFlagCheckEnabled;
+    private List<CheckType> clientFlagCheckTypes = new ArrayList<>();
+    private boolean clientDiscordEnabled;
+    private String clientWebhookUrl;
+    private int clientEmbedColor;
+    private String clientDiscordMessage;
+    private boolean clientDiscordComponentsV2;
+    private boolean clientCommandIfSuspiciousEnabled;
+    private String clientCommandIfSuspicious;
+    private boolean clientCommandIfCleanEnabled;
+    private String clientCommandIfClean;
+
+    /* default rules, used when checkclient.yml has no rules at all */
+    private static final List<String> DEFAULT_IGNORED_CHANNELS = List.of(
+            "minecraft:*", "bungeecord*", "velocity*", "paper*", "spigot*", "bukkit*");
+
+    private static final List<String> DEFAULT_SUSPICIOUS_BRANDS = List.of(
+            "*wurst*", "*meteor*", "*impact*", "*aristois*", "*liquidbounce*", "*kamiblue*",
+            "*inertia*", "*salhack*", "*konas*", "*novoline*", "*sigma*", "*gamesense*",
+            "*bleachhack*", "*future*", "*tlauncher*", "*cracked*", "*cheatbreaker*");
+
+    private static final List<String> DEFAULT_SUSPICIOUS_CHANNELS = List.of(
+            "*wurst*", "*meteor*", "*impact*", "*aristois*", "*liquidbounce*", "*kamiblue*",
+            "*inertia*", "*salhack*", "*konas*", "*novoline*", "*sigma*", "*gamesense*",
+            "*bleachhack*", "*baritone*", "*seedcracker*", "*world_download*", "*wdl*",
+            "*trouser*", "*anhero*", "*newernewchunks*");
+
+    private static final Object[][] DEFAULT_BRAND_RULES = {
+            {"vanilla", "vanilla", "Vanilla", "VANILLA"},
+            {"fabric", "fabric*", "Fabric", "FABRIC"},
+            {"forge", "forge*", "Forge", "FORGE"},
+            {"neoforge", "neoforge*", "NeoForge", "NEOFORGE"},
+            {"quilt", "quilt*", "Quilt", "QUILT"},
+            {"lunar", "*lunar*", "Lunar Client", "LUNAR"},
+            {"badlion", "*badlion*", "Badlion Client", "BADLION"},
+            {"feather", "*feather*", "Feather Client", "FEATHER"},
+            {"labymod", "*labymod*", "LabyMod", "LABYMOD"},
+            {"geyser", "*geyser*", "Bedrock (Geyser)", "BEDROCK"}
+    };
+
+    private static final Object[][] DEFAULT_MOD_RULES = {
+            {"fabric-api", "fabric*", "Fabric API", "false"},
+            {"sodium", "*sodium*", "Sodium", "false"},
+            {"iris", "*iris*", "Iris Shaders", "false"},
+            {"modmenu", "*modmenu*", "Mod Menu", "false"},
+            {"xaero-minimap", "*xaerominimap*", "Xaero's Minimap", "false"},
+            {"xaero-worldmap", "*xaeroworldmap*", "Xaero's World Map", "false"},
+            {"journeymap", "*journeymap*", "JourneyMap", "false"},
+            {"litematica", "*litematica*", "Litematica", "false"},
+            {"minihud", "*minihud*", "MiniHUD", "false"},
+            {"itemscroller", "*itemscroller*", "Item Scroller", "false"},
+            {"tweakeroo", "*tweakeroo*", "Tweakeroo", "false"},
+            {"replaymod", "*replaymod*", "Replay Mod", "false"},
+            {"worldedit-cui", "*worldedit:cui*", "WorldEdit CUI", "false"},
+            {"freecam", "*freecam*", "Freecam", "false"},
+            {"autofish", "*autofish*", "AutoFish", "false"},
+            {"baritone", "*baritone*", "Baritone", "true"},
+            {"wurst", "*wurst*", "Wurst Client", "true"},
+            {"meteor", "*meteor*", "Meteor Client", "true"},
+            {"impact", "*impact*", "Impact", "true"},
+            {"aristois", "*aristois*", "Aristois", "true"},
+            {"liquidbounce", "*liquidbounce*", "LiquidBounce", "true"},
+            {"bleachhack", "*bleachhack*", "BleachHack", "true"},
+            {"kamiblue", "*kamiblue*", "KamiBlue", "true"},
+            {"inertia", "*inertia*", "Inertia", "true"},
+            {"salhack", "*salhack*", "SalHack", "true"},
+            {"konas", "*konas*", "Konas", "true"},
+            {"novoline", "*novoline*", "Novoline", "true"},
+            {"sigma", "*sigma*", "Sigma", "true"},
+            {"gamesense", "*gamesense*", "GameSense", "true"},
+            {"world-downloader", "*wdl*", "World Downloader", "true"},
+            {"seedcracker", "*seedcracker*", "SeedCracker", "true"},
+            {"trouser-streak", "*trouser*", "Trouser Streak", "true"}
+    };
+
+    /* ---------------- classic checkhacks.yml settings ---------------- */
     private String prefix;
     private long timeoutTicks;
     private long betweenSignTicks;
@@ -42,12 +134,15 @@ public class ConfigManager {
         plugin.reloadConfig();
         masterConfig = plugin.getConfig();
 
-        hacksConfig = loadFile("checkhacks.yml");
-        langConfig  = loadFile("checklang.yml");
+        hacksConfig  = loadFile("checkhacks.yml");
+        langConfig   = loadFile("checklang.yml");
+        clientConfig = loadFile("checkclient.yml");
 
         loadHacks();
         loadCommandRules();
+        loadClientRules();
         cacheSettings();
+        cacheClientSettings();
     }
 
     private FileConfiguration loadFile(String name) {
@@ -132,6 +227,81 @@ public class ConfigManager {
         }
     }
 
+    private void loadClientRules() {
+        brandRules.clear();
+        brandSuspiciousPatterns.clear();
+        channelModRules.clear();
+        suspiciousChannels.clear();
+        ignoredChannels.clear();
+        clientCommandRules.clear();
+
+        ConfigurationSection brands = clientConfig.getConfigurationSection("brand.known-brands");
+        if (brands != null) {
+            for (String id : brands.getKeys(false)) {
+                String pattern = brands.getString(id + ".pattern", "");
+                if (pattern.isBlank()) continue;
+                String name = brands.getString(id + ".display-name", id);
+                ClientType type = parseClientType(brands.getString(id + ".type", "UNKNOWN"));
+                brandRules.add(new BrandRule(id, pattern, name, type));
+            }
+        }
+        if (brandRules.isEmpty()) {
+            for (Object[] row : DEFAULT_BRAND_RULES)
+                brandRules.add(new BrandRule((String) row[0], (String) row[1], (String) row[2],
+                        parseClientType((String) row[3])));
+        }
+
+        brandSuspiciousPatterns.addAll(clientConfig.getStringList("brand.suspicious-patterns"));
+        if (brandSuspiciousPatterns.isEmpty()) brandSuspiciousPatterns.addAll(DEFAULT_SUSPICIOUS_BRANDS);
+
+        ConfigurationSection mods = clientConfig.getConfigurationSection("modlist.mods");
+        if (mods != null) {
+            for (String id : mods.getKeys(false)) {
+                String pattern = mods.getString(id + ".pattern", "");
+                if (pattern.isBlank()) continue;
+                String name = mods.getString(id + ".display-name", id);
+                boolean suspicious = mods.getBoolean(id + ".suspicious", false);
+                channelModRules.add(new ChannelModRule(id, pattern, name, suspicious));
+            }
+        }
+        if (channelModRules.isEmpty()) {
+            for (Object[] row : DEFAULT_MOD_RULES)
+                channelModRules.add(new ChannelModRule((String) row[0], (String) row[1],
+                        (String) row[2], Boolean.parseBoolean((String) row[3])));
+        }
+
+        suspiciousChannels.addAll(clientConfig.getStringList("modlist.suspicious-channels"));
+        if (suspiciousChannels.isEmpty()) suspiciousChannels.addAll(DEFAULT_SUSPICIOUS_CHANNELS);
+
+        ignoredChannels.addAll(clientConfig.getStringList("modlist.ignored-channels"));
+        if (ignoredChannels.isEmpty()) ignoredChannels.addAll(DEFAULT_IGNORED_CHANNELS);
+
+        ConfigurationSection rules = clientConfig.getConfigurationSection("command-rules");
+        if (rules != null) {
+            for (String name : rules.getKeys(false)) {
+                String match = rules.getString(name + ".match", "");
+                String cmd   = rules.getString(name + ".command", "");
+                if (match.isBlank() || cmd.isBlank()) continue;
+                CheckType check = CheckType.byId(rules.getString(name + ".check", "any"));
+                clientCommandRules.add(new ClientCommandRule(name, check, match, cmd));
+            }
+        }
+    }
+
+    private ClientType parseClientType(String raw) {
+        if (raw == null) return ClientType.UNKNOWN;
+        try {
+            return ClientType.valueOf(raw.trim().toUpperCase().replace(" ", "_").replace("-", "_"));
+        } catch (IllegalArgumentException e) {
+            return ClientType.UNKNOWN;
+        }
+    }
+
+    private List<CheckType> parseCheckTypes(List<String> ids, List<CheckType> fallback) {
+        List<CheckType> types = CheckType.byIds(ids);
+        return types.isEmpty() ? fallback : types;
+    }
+
     private static String normalize(String s) {
         return s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     }
@@ -147,6 +317,40 @@ public class ConfigManager {
         protectedCommand       = hacksConfig.getString("command-if-protected.command", "");
         commandIfCleanEnabled  = hacksConfig.getBoolean("command-if-clean.enabled", false);
         cleanCommand           = hacksConfig.getString("command-if-clean.command", "");
+    }
+
+    private void cacheClientSettings() {
+        brandCheckEnabled       = clientConfig.getBoolean("brand.enabled", true);
+        brandAlertOnSuspicious  = clientConfig.getBoolean("brand.alert-on-suspicious", true);
+        modListCheckEnabled     = clientConfig.getBoolean("modlist.enabled", true);
+        modListAlertOnSuspicious = clientConfig.getBoolean("modlist.alert-on-suspicious", true);
+        clientShowChannels      = clientConfig.getBoolean("modlist.show-channels", true);
+
+        clientDefaultChecks = parseCheckTypes(clientConfig.getStringList("default-checks"),
+                List.of(CheckType.BRAND, CheckType.MODLIST, CheckType.HACK));
+
+        betweenChecksTicks = clientConfig.getLong("between-checks-ticks", 10);
+        chainTimeoutTicks  = clientConfig.getLong("chain-timeout-ticks", 400);
+
+        clientJoinCheckEnabled = clientConfig.getBoolean("auto-check-on-join.enabled", false);
+        clientJoinCheckTypes   = parseCheckTypes(clientConfig.getStringList("auto-check-on-join.checks"),
+                List.of(CheckType.BRAND, CheckType.MODLIST));
+        clientJoinDelayTicks   = clientConfig.getLong("auto-check-on-join.delay-ticks", 60);
+
+        clientFlagCheckEnabled = clientConfig.getBoolean("detect-flag.enabled", true);
+        clientFlagCheckTypes   = parseCheckTypes(clientConfig.getStringList("detect-flag.checks"),
+                List.of(CheckType.BRAND, CheckType.MODLIST));
+
+        clientDiscordEnabled        = clientConfig.getBoolean("discord.enabled", false);
+        clientWebhookUrl            = clientConfig.getString("discord.webhook-url", "");
+        clientEmbedColor            = clientConfig.getInt("discord.embed-color", 16776960);
+        clientDiscordMessage        = clientConfig.getString("discord.message", "");
+        clientDiscordComponentsV2   = clientConfig.getBoolean("discord.use-components-v2", true);
+
+        clientCommandIfSuspiciousEnabled = clientConfig.getBoolean("command-if-suspicious.enabled", false);
+        clientCommandIfSuspicious        = clientConfig.getString("command-if-suspicious.command", "");
+        clientCommandIfCleanEnabled      = clientConfig.getBoolean("command-if-clean.enabled", false);
+        clientCommandIfClean             = clientConfig.getString("command-if-clean.command", "");
     }
 
     public Map<String, HackDefinition> getHacks()     { return hacks; }
@@ -227,4 +431,41 @@ public class ConfigManager {
     public String  getLangDiscordMessage()  { return langConfig.getString("discord.message", ""); }
     public boolean isLangDiscordUseComponentsV2() { return langConfig.getBoolean("discord.use-components-v2", true); }
     public int     getLangTimeoutTicks()    { return langConfig.getInt("timeout-ticks", 100); }
+
+    /* ---------------- client check accessors ---------------- */
+
+    public boolean isBrandCheckEnabled()        { return brandCheckEnabled; }
+    public boolean isModListCheckEnabled()      { return modListCheckEnabled; }
+    public boolean isBrandAlertOnSuspicious()   { return brandAlertOnSuspicious; }
+    public boolean isModListAlertOnSuspicious() { return modListAlertOnSuspicious; }
+    public boolean isClientShowChannels()       { return clientShowChannels; }
+
+    public List<BrandRule> getBrandRules()                 { return brandRules; }
+    public List<String> getBrandSuspiciousPatterns()       { return brandSuspiciousPatterns; }
+    public List<ChannelModRule> getChannelModRules()       { return channelModRules; }
+    public List<String> getSuspiciousChannels()            { return suspiciousChannels; }
+    public List<String> getIgnoredChannels()               { return ignoredChannels; }
+    public List<ClientCommandRule> getClientCommandRules() { return clientCommandRules; }
+
+    public List<CheckType> getClientDefaultChecks()   { return clientDefaultChecks; }
+    public List<CheckType> getClientJoinCheckTypes()  { return clientJoinCheckTypes; }
+    public List<CheckType> getClientFlagCheckTypes()  { return clientFlagCheckTypes; }
+
+    public long getBetweenChecksTicks() { return betweenChecksTicks; }
+    public long getChainTimeoutTicks()  { return chainTimeoutTicks; }
+
+    public boolean isClientJoinCheckEnabled() { return clientJoinCheckEnabled; }
+    public long    getClientJoinDelayTicks()  { return clientJoinDelayTicks; }
+    public boolean isClientFlagCheckEnabled() { return clientFlagCheckEnabled; }
+
+    public boolean isClientDiscordEnabled()       { return clientDiscordEnabled; }
+    public String  getClientWebhookUrl()          { return clientWebhookUrl; }
+    public int     getClientEmbedColor()          { return clientEmbedColor; }
+    public String  getClientDiscordMessage()      { return clientDiscordMessage; }
+    public boolean isClientDiscordComponentsV2()  { return clientDiscordComponentsV2; }
+
+    public boolean isClientCommandIfSuspiciousEnabled() { return clientCommandIfSuspiciousEnabled; }
+    public String  getClientCommandIfSuspicious()       { return clientCommandIfSuspicious; }
+    public boolean isClientCommandIfCleanEnabled()      { return clientCommandIfCleanEnabled; }
+    public String  getClientCommandIfClean()            { return clientCommandIfClean; }
 }

@@ -6,7 +6,7 @@
 
 It uses the **Sign Translation Vulnerability** (MC-265322), the same trick DonutSMP uses to catch cheaters. Signs pop up for just a split second, too fast to actually read.
 
-[![Version](https://img.shields.io/badge/version-1.3.1-blue.svg?style=for-the-badge)](https://github.com/Branduzzo/CheckHacks/releases)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg?style=for-the-badge)](https://github.com/Branduzzo/CheckHacks/releases)
 [![Platform](https://img.shields.io/badge/platform-Paper%20%7C%20Spigot-orange.svg?style=for-the-badge)](https://papermc.io/)
 [![Minecraft](https://img.shields.io/badge/minecraft-1.21+-green.svg?style=for-the-badge)](https://www.minecraft.net/)
 [![Java](https://img.shields.io/badge/java-21+-red.svg?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
@@ -26,7 +26,19 @@ It uses the **Sign Translation Vulnerability** (MC-265322), the same trick Donut
 
 ---
 
-## 🆕 What is new in 1.3.0
+## 🆕 What is new in 1.4.0
+
+Three new check types land next to the classic sign based hack check, all driven by one shared system:
+
+- **Brand check** (`/checkbrand`, type `brand`) - reads the client brand directly and tells you what the player runs: vanilla, Fabric, Forge, NeoForge, Quilt, Lunar, Badlion, Feather, LabyMod... Suspicious brands (Wurst, Meteor, Impact, Aristois, LiquidBounce, ...) are flagged instantly
+- **Mod list check** (`/checkmods`, type `modlist`) - every mod that registers a plugin channel is listed: Sodium, Iris, Xaero's Minimap, JourneyMap, Litematica, MiniHUD, Baritone, Wurst... All mapped through wildcards in `checkclient.yml`, flagged mods turn the report red
+- **Combined check** (`/checkclient <player>`) - runs brand, mod list, hack and language checks in one chain, in any combination you want
+- **Client profile** (`/checkclient info <player>`) - brand, client type, every plugin channel and every known mod, without touching the world
+- **New `checkclient.yml`** - brand rules, channel to mod map, suspicious patterns, per-match `command-rules`, its own Discord webhook and instant auto checks on join / anticheat flag
+- **Web editor upgrade** - brand and mod list scans appear in the history, every player page gets a live Client Profile card and all check types can be started from the browser
+- **Vietnamese messages** - `messages/vi.yml` is included and every other language got the new strings
+
+## 📜 What was new in 1.3.0
 
 This is a pretty big update, so here is a quick rundown of what has changed:
 
@@ -66,6 +78,9 @@ Every mod registers its own translation keys, so a vanilla client and a modded c
 
 ### 🔍 Detection
 
+- Four check types: `brand`, `modlist`, `hack` and `lang` - pick any of them with `/checkclient <player> brand,modlist,hack,lang`
+- **Brand check** reads the client brand straight from the server (no signs, instant) and classifies vanilla / Fabric / Forge / NeoForge / Quilt / Lunar / Badlion / Feather / LabyMod clients
+- **Mod list check** maps the plugin channels a client registers to mod names (Sodium, Iris, Xaero's Minimap, JourneyMap, Litematica, MiniHUD, Baritone, Wurst, Meteor, ...)
 - Fully server side, your players do not need to download anything
 - Signs are visible for just a couple of ticks, so they cannot be read
 - Three modes, `METEOR`, `TRANSLATE`, `KEYBIND`, and each mod automatically uses the right one
@@ -113,18 +128,29 @@ Every mod registers its own translation keys, so a vanilla client and a modded c
 - Configs are split up cleanly: `config.yml` for general settings, `checkhacks.yml` for mods, `checklang.yml` for languages
 - Every message is in its own file, you can switch language with one line in the config
 - Everything supports **MiniMessage**, your own prefix and **PlaceholderAPI**
-- 9 languages included plus all the updater strings: `update-available`, `update-downloading`, `update-complete`, `update-restart-required`, `update-failed`, `update-no-update`
+- 10 languages included (English, Italian, German, Spanish, French, Vietnamese, Brazilian Portuguese, Russian, lolcat, uwu) plus all the updater strings: `update-available`, `update-downloading`, `update-complete`, `update-restart-required`, `update-failed`, `update-no-update`
 
 <details>
 <summary>🌍 <b>Languages included</b> (click to expand)</summary>
 
 <br>
 
-`en.yml` · `it.yml` · `de.yml` · `es.yml` · `fr.yml` · `pt.yml` · `br.yml` · `ru.yml` · `lolcat.yml` · `uwu.yml`
+`en.yml` · `it.yml` · `de.yml` · `es.yml` · `fr.yml` · `vi.yml` · `br.yml` · `ru.yml` · `lolcat.yml` · `uwu.yml`
 
 </details>
 
 ---
+
+## 🧩 Check types
+
+| Type | Command | Signs | What it does |
+|------|---------|:-----:|--------------|
+| `brand` | `/checkbrand <player>` | no | Client brand + client type (`vanilla`, `fabric`, `forge`, `neoforge`, `quilt`, `lunar`, `badlion`, `feather`, `labymod`, ...) |
+| `modlist` | `/checkmods <player>` | no | Every mod that can be mapped from the plugin channels |
+| `hack` | `/checkhacks <player>` | yes | Sign scan that matches every configured hack/mod key |
+| `lang` | `/checklang <player>` | yes | Sign scan that detects the client language |
+
+`brand` and `modlist` are instant: nothing is placed in the world, they only read what the client already sent to the server. Run them together with `/checkclient <player>` or one by one.
 
 ## 🔍 Detected Mods
 
@@ -157,6 +183,8 @@ Every mod registers its own translation keys, so a vanilla client and a modded c
 
 > ➕ Want us to add a mod? Join our Discord and open a ticket, we will take care of it.
 
+The **mod list check** additionally recognizes every mod that registers a plugin channel, and you can map your own channels in `checkclient.yml` under `modlist.mods`.
+
 ---
 
 ## 🎬 Showcase
@@ -173,6 +201,11 @@ Every mod registers its own translation keys, so a vanilla client and a modded c
 |---------|--------------|
 | `/checkhacks <player>` | Checks every mod you have configured |
 | `/checkhacks <player> meteor-client,freecam` | Only checks the mods you list |
+| `/checkbrand <player>` | Instant client brand check (vanilla, Fabric, Lunar, Wurst, ...) |
+| `/checkmods <player>` | Instant mod list check through the plugin channels |
+| `/checkclient <player> [brand,modlist,hack,lang]` | Runs the check types you pick, one after another |
+| `/checkclient list` | Shows every check type and whether it is enabled |
+| `/checkclient info <player>` | Shows the cached client profile: brand, type, channels, mods |
 | `/checklang <player>` | Tries to figure out their client language using signs |
 | `/checklang <player> en_us,it_it` | Only checks those languages |
 | `/cheditor` | Gives you a one time link to the web editor |
@@ -187,6 +220,9 @@ Every mod registers its own translation keys, so a vanilla client and a modded c
 | Permission | What it is for |
 |------------|---------------|
 | `checkhacks.check` | Lets you run hack checks |
+| `checkhacks.checkbrand` | Lets you run brand checks |
+| `checkhacks.checkmods` | Lets you run mod list checks |
+| `checkhacks.checkclient` | Lets you use `/checkclient` (per type permissions are still checked) |
 | `checkhacks.checklang` | Lets you run language checks |
 | `checkhacks.reload` | Lets you reload configs |
 | `checkhacks.alerts` | Lets you get alerts and toggle them |
@@ -202,9 +238,11 @@ Every mod registers its own translation keys, so a vanilla client and a modded c
 plugins/CheckHacks/
 ├── config.yml          # General stuff + discord.use-components-v2 + prefix and language
 ├── checkhacks.yml      # Hack checks, your custom mods, detect-flag, command-if-*, command-rules, doublecheck, matrix
+├── checkclient.yml     # Brand rules, channel -> mod map, suspicious patterns, /checkclient defaults, its own Discord webhook
 ├── checklang.yml       # Language checks + discord.use-components-v2
 ├── messages/
 │   ├── en.yml          # English messages plus all the update-* keys
+│   ├── vi.yml          # Vietnamese
 │   ├── it.yml          # Italian
 │   └── ...             # de, es, fr, br, ru, lolcat, uwu
 └── database.db         # Scan history, it just shows up by itself
@@ -216,6 +254,17 @@ plugins/CheckHacks/
 # config.yml and checklang.yml
 discord:
   use-components-v2: true # false gives you classic embeds, true gives you the new Components V2 Container
+
+# checkclient.yml
+brand:
+  enabled: true
+  suspicious-patterns: ["*wurst*", "*meteor*", "*liquidbounce*"]
+modlist:
+  mods:
+    baritone: { pattern: "*baritone*", display-name: "Baritone", suspicious: true }
+default-checks: [brand, modlist, hack]   # what /checkclient <player> runs
+command-rules:
+  wurst-brand: { check: brand, match: "*wurst*", command: "tempban %player% 30d Wurst client" }
 
 # checkhacks.yml
 detect-flag:
@@ -239,6 +288,9 @@ The web editor runs right on your server, you do not need to host it somewhere e
 - 👤 Look up players you checked before
 - ▶️ Start new checks right from your browser
 - 🌍 Check language results too
+- 🧩 Brand and mod list scans with a full entry/value/result table
+- 👤 Live Client Profile card (brand, client type, channels, mapped mods) on every online player
+- ▶️ Start brand, mod list, hack or language checks straight from the browser
 - 🔐 It is locked behind one time tokens from `/cheditor`, so no shared password
 
 ---

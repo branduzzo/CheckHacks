@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import me.branduzzo.checkHacks.CheckHacksPlugin;
+import me.branduzzo.checkHacks.CheckType;
 import me.branduzzo.checkHacks.HackDefinition;
 import me.branduzzo.checkHacks.utils.FoliaScheduler;
 import org.bukkit.Bukkit;
@@ -118,7 +119,8 @@ public class WebServerManager {
         if (path.equals("/api/scans")) {
             String type  = params.get("type");
             int    limit = parseInt(params.get("limit"), 50);
-            String validType = ("hack".equals(type) || "lang".equals(type)) ? type : null;
+            CheckType checkType = CheckType.byId(type);
+            String validType = checkType != null ? checkType.getId() : null;
             sendJson(ex, 200, plugin.getDatabaseManager().getRecentScans(validType, limit));
             return;
         }
@@ -137,20 +139,27 @@ public class WebServerManager {
             final String checkerName = playerInfo.get("player_name");
             final String finalType   = type;
             final String finalTarget = targetName;
+            CheckType requested = CheckType.byId(finalType);
+            final CheckType checkType = requested != null ? requested : CheckType.HACK;
 
             FoliaScheduler.runGlobal(plugin, () -> {
                 Player target = Bukkit.getPlayerExact(finalTarget);
                 if (target == null) return;
                 FoliaScheduler.runAtEntity(plugin, target, () -> {
-                    if ("lang".equals(finalType)) {
-                        Map<String, String> langs = plugin.getConfigManager().getLanguages();
-                        if (!langs.isEmpty())
-                            plugin.getLangCheckManager().startCheck(target, null, langs);
-                    } else {
-                        List<HackDefinition> hacks = plugin.getConfigManager().getDefaultCheckHacks();
-                        if (!hacks.isEmpty())
-                            plugin.getCheckManager().startCheck(target, null, hacks, false,
-                                    "Web editor check by " + checkerName);
+                    String reason = "Web editor check by " + checkerName;
+                    switch (checkType) {
+                        case BRAND -> plugin.getClientCheckManager().runBrandCheck(target, null, reason);
+                        case MODLIST -> plugin.getClientCheckManager().runModListCheck(target, null, reason);
+                        case LANG -> {
+                            Map<String, String> langs = plugin.getConfigManager().getLanguages();
+                            if (!langs.isEmpty())
+                                plugin.getLangCheckManager().startCheck(target, null, langs);
+                        }
+                        default -> {
+                            List<HackDefinition> hacks = plugin.getConfigManager().getDefaultCheckHacks();
+                            if (!hacks.isEmpty())
+                                plugin.getCheckManager().startCheck(target, null, hacks, false, reason);
+                        }
                     }
                 });
             });
@@ -188,6 +197,11 @@ public class WebServerManager {
             result.put("name",   name);
             result.put("uuid",   uuid);
             result.put("online", online);
+            if (online && uuid != null && !uuid.isBlank()) {
+                Map<String, Object> profile =
+                        plugin.getClientCheckManager().cachedProfileToMap(java.util.UUID.fromString(uuid));
+                if (profile != null) result.put("profile", profile);
+            }
             result.put("scans",  plugin.getDatabaseManager().getPlayerScans(name));
             sendJson(ex, 200, result);
             return;

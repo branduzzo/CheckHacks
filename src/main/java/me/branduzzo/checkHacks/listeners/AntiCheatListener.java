@@ -78,6 +78,14 @@ public class AntiCheatListener implements Listener {
         MessageUtil.broadcastAlerts(plugin,
                 MessageUtil.parse(plugin, "anticheat-trigger", Map.of("player", player.getName())));
 
+        // Instant checks first (brand / mod list), they need no signs at all.
+        if (plugin.getConfigManager().isClientFlagCheckEnabled()) {
+            FoliaScheduler.runAtEntity(plugin, player, () ->
+                    plugin.getCheckRunner().runAuto(player,
+                            plugin.getConfigManager().getClientFlagCheckTypes(),
+                            "Anticheat flag: " + acName));
+        }
+
         List<HackDefinition> hacks = plugin.getConfigManager().getFlagCheckHacks();
         if (hacks.isEmpty()) return;
 
