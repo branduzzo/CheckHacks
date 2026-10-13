@@ -1,8 +1,10 @@
 me\branduzzo\checkHacks\commands\AlertsCommand.class
 me\branduzzo\checkHacks\listeners\JoinListener.class
+me\branduzzo\checkHacks\utils\WrappedTask.class
 me\branduzzo\checkHacks\utils\WebhookUtil.class
 me\branduzzo\checkHacks\HackResult.class
 me\branduzzo\checkHacks\managers\WebServerManager.class
+me\branduzzo\checkHacks\utils\FoliaScheduler$1.class
 me\branduzzo\checkHacks\managers\ConfigManager.class
 me\branduzzo\checkHacks\commands\EditorCommand.class
 me\branduzzo\checkHacks\CheckHacksPlugin.class
@@ -20,7 +22,9 @@ me\branduzzo\checkHacks\listeners\SignListener.class
 me\branduzzo\checkHacks\commands\CheckLangCommand.class
 me\branduzzo\checkHacks\CheckPlayerData.class
 me\branduzzo\checkHacks\managers\CheckManager.class
+me\branduzzo\checkHacks\utils\FoliaScheduler.class
 me\branduzzo\checkHacks\commands\CHReloadCommand.class
 me\branduzzo\checkHacks\HackDefinition.class
 me\branduzzo\checkHacks\managers\ClientDataManager.class
 me\branduzzo\checkHacks\managers\LangCheckManager.class
+me\branduzzo\checkHacks\utils\FoliaScheduler$2.class
