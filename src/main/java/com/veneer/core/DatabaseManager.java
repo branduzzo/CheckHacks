@@ -285,14 +285,8 @@ public class DatabaseManager {
             return list;
         }
 
-        for (int i = 0; i < rows.size(); i++) {
-            Map<String, Object> row = rows.get(i);
-            long id = ids.get(i);
-            String t = (String) row.get("type");
-            row.put("results", "hack".equals(t) ? getHackResultsInternal(id) : getLangResultsInternal(id));
-            list.add(row);
-        }
-        return list;
+        attachResultsBatch(rows, ids);
+        return rows;
     }
 
     public synchronized Map<String, Object> getScan(long id) {
@@ -376,14 +370,80 @@ public class DatabaseManager {
             return list;
         }
 
+        attachResultsBatch(rows, ids);
+        return rows;
+    }
+
+    private void attachResultsBatch(List<Map<String, Object>> rows, List<Long> ids) {
+        if (rows.isEmpty()) return;
+        List<Long> hackIds = new ArrayList<>();
+        List<Long> langIds = new ArrayList<>();
+        for (int i = 0; i < rows.size(); i++) {
+            Map<String, Object> row = rows.get(i);
+            long id = ids.get(i);
+            if ("hack".equals(row.get("type"))) hackIds.add(id);
+            else langIds.add(id);
+        }
+
+        Map<Long, List<Map<String, Object>>> hackMap = getBatchHackResults(hackIds);
+        Map<Long, List<Map<String, Object>>> langMap = getBatchLangResults(langIds);
+
         for (int i = 0; i < rows.size(); i++) {
             Map<String, Object> row = rows.get(i);
             long id = ids.get(i);
             String type = (String) row.get("type");
-            row.put("results", "hack".equals(type) ? getHackResultsInternal(id) : getLangResultsInternal(id));
-            list.add(row);
+            row.put("results", "hack".equals(type)
+                    ? hackMap.getOrDefault(id, List.of())
+                    : langMap.getOrDefault(id, List.of()));
         }
-        return list;
+    }
+
+    private Map<Long, List<Map<String, Object>>> getBatchHackResults(List<Long> scanIds) {
+        Map<Long, List<Map<String, Object>>> map = new LinkedHashMap<>();
+        if (scanIds.isEmpty()) return map;
+        String placeholders = String.join(",", java.util.Collections.nCopies(scanIds.size(), "?"));
+        String sql = "SELECT scan_id, hack_name, result FROM hack_results WHERE scan_id IN (" + placeholders + ") ORDER BY id ASC";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (int i = 0; i < scanIds.size(); i++) {
+                ps.setLong(i + 1, scanIds.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    long scanId = rs.getLong("scan_id");
+                    Map<String, Object> r = new LinkedHashMap<>();
+                    r.put("hack_name", rs.getString("hack_name"));
+                    r.put("result",    rs.getString("result"));
+                    map.computeIfAbsent(scanId, k -> new ArrayList<>()).add(r);
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("getBatchHackResults: " + e.getMessage());
+        }
+        return map;
+    }
+
+    private Map<Long, List<Map<String, Object>>> getBatchLangResults(List<Long> scanIds) {
+        Map<Long, List<Map<String, Object>>> map = new LinkedHashMap<>();
+        if (scanIds.isEmpty()) return map;
+        String placeholders = String.join(",", java.util.Collections.nCopies(scanIds.size(), "?"));
+        String sql = "SELECT scan_id, language, response FROM lang_results WHERE scan_id IN (" + placeholders + ") ORDER BY id ASC";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (int i = 0; i < scanIds.size(); i++) {
+                ps.setLong(i + 1, scanIds.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    long scanId = rs.getLong("scan_id");
+                    Map<String, Object> r = new LinkedHashMap<>();
+                    r.put("language", rs.getString("language"));
+                    r.put("response", rs.getString("response"));
+                    map.computeIfAbsent(scanId, k -> new ArrayList<>()).add(r);
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("getBatchLangResults: " + e.getMessage());
+        }
+        return map;
     }
 
     /** Counts for the panel's overview: scans by type, players whose latest mod scan found something, known accounts. */

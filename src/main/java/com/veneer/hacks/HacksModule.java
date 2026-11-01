@@ -57,7 +57,6 @@ public class HacksModule extends VeneerModule {
 
     @Override
     protected void enable() {
-        SignUtil.clearLeftovers(plugin);
         config = new ConfigManager(plugin);
         checks = new CheckManager(plugin);
         langChecks = new LangCheckManager(plugin);
@@ -85,7 +84,6 @@ public class HacksModule extends VeneerModule {
         signPackets = null;
         checks.cleanup();
         langChecks.cleanup();
-        SignUtil.saveLeftovers(plugin);
         if (web != null) web.stop();
         web = null;
     }

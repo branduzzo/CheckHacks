@@ -139,7 +139,7 @@ Produces two jars (Java 21 or newer):
 - The provider and country data (about 50 MB) is off by default; with `hacks.yml web-editor.links.ip-database: true` it is downloaded to `plugins/Veneer/geo/` through jsDelivr and refreshed weekly (the plugin works without it). The country is where the network is registered, not a precise location. Which providers count as weak is set by `weak-provider-asns` and `weak-provider-keywords`, the weight factor by `weak-provider-factor` (0.3). Client links need the spoof module and are recorded when a player leaves.
 - To translate the panel, add `src/main/resources/web/lang/<language>.json` (English text as keys, see `ru.json`).
 - Version `0.9.6` is independent of the originals (AntiSpoof 1.2.7, CheckHacks 1.3.1).
-- **Folia:** every task goes through `FoliaScheduler` (global, per-entity and async schedulers; Bukkit's scheduler is no longer used anywhere), and punishments run as console commands on the global region. Tested on Folia 1.21.11 (mod scan, language check, web panel scans, death, world change and quitting mid-scan). A probe sign Folia does not let the plugin remove on shutdown is removed on the next start.
+- **Folia:** every task goes through `FoliaScheduler` (global, per-entity and async schedulers; Bukkit's scheduler is no longer used anywhere), and punishments run as console commands on the global region. Tested on Folia 1.21.11 (mod scan, language check, web panel scans, death, world change and quitting mid-scan). Probe signs are purely virtual packets via PacketEvents and never touch the server world or chunks.
 - Compiled against Paper API 26.1.2, `api-version: '1.21'`. Legacy 1.8.x servers are untested.
 
 ## Data, network access and privacy

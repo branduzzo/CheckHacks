@@ -59,6 +59,14 @@ public class CheckManager {
         return data != null && SignUtil.sameBlock(data.getSignLocation(), loc);
     }
 
+    /** True when coordinates match this player's current virtual probe sign. */
+    public boolean matchesProbe(UUID uuid, int x, int y, int z) {
+        CheckPlayerData data = activeChecks.get(uuid);
+        if (data == null) return false;
+        Location loc = data.getSignLocation();
+        return loc != null && loc.getBlockX() == x && loc.getBlockY() == y && loc.getBlockZ() == z;
+    }
+
     /** True when {@code loc} is any running scan's probe sign. */
     public boolean isProbeSign(Location loc) {
         for (CheckPlayerData d : activeChecks.values())
@@ -167,38 +175,15 @@ public class CheckManager {
             return;
         }
 
-        Block block = signLoc.getBlock();
-        BlockState originalState = block.getState();
-
-        block.setType(Material.OAK_SIGN, false);
-        BlockState freshState = block.getState();
-        if (!(freshState instanceof Sign sign)) {
-            originalState.update(true, false);
-            finishCheck(uuid);
-            return;
-        }
-
-        var front = sign.getSide(Side.FRONT);
+        Component[] lines = new Component[4];
         for (int i = 0; i < LINES_PER_SIGN; i++)
-            front.line(i, i < batch.size() ? buildComponent(batch.get(i)) : Component.empty());
-        front.line(3, Component.keybind(CTRL_KEYBIND));
-        sign.update(true, false);
+            lines[i] = i < batch.size() ? buildComponent(batch.get(i)) : Component.empty();
+        lines[3] = Component.keybind(CTRL_KEYBIND);
 
         data.setSignLocation(signLoc);
         data.setLastSignLocation(signLoc);
-        data.setOriginalState(originalState);
 
-        SignUtil.setAllowedEditor(signLoc, uuid, plugin);
-
-        FoliaScheduler.runAtEntity(plugin, target, () -> {
-            if (!activeChecks.containsKey(uuid)) return;
-            SignUtil.sendBlockEntityPacket(target, signLoc, plugin);
-            FoliaScheduler.runAtEntityLater(plugin, target, () -> {
-                if (!activeChecks.containsKey(uuid)) return;
-                SignUtil.sendOpenSignPacket(target, signLoc, plugin);
-                target.sendBlockChange(signLoc, Material.AIR.createBlockData());
-            }, 1L);
-        });
+        SignUtil.sendVirtualSign(target, signLoc, lines, plugin);
 
         WrappedTask timeout = FoliaScheduler.runAtLocationLater(plugin, signLoc, () -> {
             CheckPlayerData d = activeChecks.get(uuid);
@@ -531,7 +516,10 @@ public class CheckManager {
     private void restoreCurrentSign(CheckPlayerData data, boolean now) {
         Location loc = data.getSignLocation();
         if (loc == null) return;
-        SignUtil.restore(plugin, loc, data.getOriginalState(), now);
+        Player p = Bukkit.getPlayer(data.getTargetUUID());
+        if (p != null && p.isOnline()) {
+            SignUtil.sendVirtualAir(p, loc);
+        }
         data.setSignLocation(null);
     }
 

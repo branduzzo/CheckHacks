@@ -42,6 +42,14 @@ public class LangCheckManager {
         return data != null && SignUtil.sameBlock(data.getSignLocation(), loc);
     }
 
+    /** True when coordinates match this player's current virtual probe sign. */
+    public boolean matchesProbe(UUID uuid, int x, int y, int z) {
+        LangCheckData data = activeChecks.get(uuid);
+        if (data == null) return false;
+        Location loc = data.getSignLocation();
+        return loc != null && loc.getBlockX() == x && loc.getBlockY() == y && loc.getBlockZ() == z;
+    }
+
     /** The raw lines of a sign update packet (network thread): kept when they answer this player's probe sign. */
     public void rawAnswer(UUID uuid, String worldName, int x, int y, int z, String[] lines) {
         LangCheckData data = activeChecks.get(uuid);
@@ -135,42 +143,20 @@ public class LangCheckManager {
         Location signLoc = SignUtil.findAirBlock(target, null);
         if (signLoc == null) { activeChecks.remove(uuid); return; }
 
-        Block block = signLoc.getBlock();
-        BlockState originalState = block.getState();
-
-        block.setType(Material.OAK_SIGN, false);
-        BlockState freshState = block.getState();
-        if (!(freshState instanceof Sign sign)) {
-            originalState.update(true, false);
-            activeChecks.remove(uuid);
-            return;
-        }
-
-        var front = sign.getSide(Side.FRONT);
-        front.line(0, Component.translatable(LANG_KEY, LANG_FALLBACK));
-        // The probe answers outgrow what Paper keeps of a sign line: only asked when the raw packet can be read
+        Component[] lines = new Component[4];
+        lines[0] = Component.translatable(LANG_KEY, LANG_FALLBACK);
         var protocol = ClientVersions.of(target);
         if (plugin.hacks().config().isVersionCheckEnabled() && plugin.hacks().readsRawSigns() && protocol != null) {
             Component[] probe = VersionProbe.lines(protocol);
-            for (int i = 0; i < probe.length; i++) front.line(i + 1, probe[i]);
+            for (int i = 0; i < probe.length; i++) lines[i + 1] = probe[i];
             data.setProbedFor(protocol);
+        } else {
+            for (int i = 1; i < 4; i++) lines[i] = Component.empty();
         }
-        sign.update(true, false);
 
         data.setSignLocation(signLoc);
-        data.setOriginalState(originalState);
 
-        SignUtil.setAllowedEditor(signLoc, uuid, plugin);
-
-        FoliaScheduler.runAtEntity(plugin, target, () -> {
-            if (!activeChecks.containsKey(uuid)) return;
-            SignUtil.sendBlockEntityPacket(target, signLoc, plugin);
-            FoliaScheduler.runAtEntityLater(plugin, target, () -> {
-                if (!activeChecks.containsKey(uuid)) return;
-                SignUtil.sendOpenSignPacket(target, signLoc, plugin);
-                target.sendBlockChange(signLoc, Material.AIR.createBlockData());
-            }, 1L);
-        });
+        SignUtil.sendVirtualSign(target, signLoc, lines, plugin);
 
         WrappedTask timeout = FoliaScheduler.runAtLocationLater(plugin, signLoc, () -> {
             if (!activeChecks.containsKey(uuid)) return;
@@ -292,7 +278,12 @@ public class LangCheckManager {
     }
 
     private void restoreSign(LangCheckData data, boolean now) {
-        SignUtil.restore(plugin, data.getSignLocation(), data.getOriginalState(), now);
+        Location loc = data.getSignLocation();
+        if (loc == null) return;
+        Player p = Bukkit.getPlayer(data.getTargetUUID());
+        if (p != null && p.isOnline()) {
+            SignUtil.sendVirtualAir(p, loc);
+        }
         data.setSignLocation(null);
     }
 

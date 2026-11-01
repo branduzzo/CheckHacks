@@ -1,130 +1,96 @@
 package com.veneer.hacks.utils;
 
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.protocol.nbt.NBTCompound;
+import com.github.retrooper.packetevents.protocol.nbt.NBTInt;
+import com.github.retrooper.packetevents.protocol.nbt.NBTList;
+import com.github.retrooper.packetevents.protocol.nbt.NBTString;
+import com.github.retrooper.packetevents.protocol.nbt.NBTType;
+import com.github.retrooper.packetevents.protocol.world.blockentity.BlockEntityTypes;
+import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
+import com.github.retrooper.packetevents.protocol.world.states.type.StateTypes;
+import com.github.retrooper.packetevents.util.Vector3i;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockChange;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockEntityData;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerOpenSignEditor;
 import com.veneer.core.FoliaScheduler;
-import org.bukkit.Bukkit;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.block.BlockState;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
-import java.io.File;
-import java.lang.reflect.Field;
-import java.nio.file.Files;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+public final class SignUtil {
 
-public class SignUtil {
+    private SignUtil() {}
 
-    public static void setAllowedEditor(Location loc, UUID playerUUID, Plugin plugin) {
-        try {
-            Object world = loc.getWorld().getClass().getMethod("getHandle").invoke(loc.getWorld());
-            Class<?> bpClass = Class.forName("net.minecraft.core.BlockPos");
-            Object bp = bpClass.getConstructor(int.class, int.class, int.class)
-                    .newInstance(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
-            Method gbe = Arrays.stream(world.getClass().getMethods())
-                    .filter(m -> m.getName().equals("getBlockEntity") && m.getParameterCount() == 1)
-                    .findFirst().orElse(null);
-            if (gbe == null) return;
-            Object be = gbe.invoke(world, bp);
-            if (be == null) return;
-            for (Method m : be.getClass().getMethods()) {
-                if (m.getName().equals("setAllowedPlayerEditor") && m.getParameterCount() == 1) {
-                    m.invoke(be, playerUUID);
-                    return;
-                }
-            }
-            for (Field f : getAllFields(be.getClass())) {
-                if (f.getType().equals(UUID.class)) {
-                    f.setAccessible(true);
-                    f.set(be, playerUUID);
-                    return;
-                }
-            }
-        } catch (Exception e) {
-            plugin.getLogger().warning("[Hacks] setAllowedEditor: " + e.getMessage());
+    /**
+     * Sends a virtual sign to the player via PacketEvents without touching the real Minecraft world.
+     * The sign block change and its block entity data (NBT) are sent first, followed 1 tick later by
+     * the open sign editor packet so the client's local level has initialized the block entity.
+     * Then virtual air is sent to reset the client's local block state without leaving phantom collisions.
+     */
+    public static void sendVirtualSign(Player player, Location loc, Component[] lines, Plugin plugin) {
+        if (player == null || !player.isOnline() || loc == null) return;
+        Vector3i pos = new Vector3i(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+
+        // 1. Send virtual oak sign block
+        WrapperPlayServerBlockChange blockChange = new WrapperPlayServerBlockChange(
+                pos, WrappedBlockState.getDefaultState(StateTypes.OAK_SIGN));
+        PacketEvents.getAPI().getPlayerManager().sendPacket(player, blockChange);
+
+        // 2. Build sign BlockEntityData NBT (supporting both modern 1.20+ front_text and legacy Text1..4)
+        NBTCompound nbt = new NBTCompound();
+        nbt.setTag("id", new NBTString("minecraft:sign"));
+        nbt.setTag("x", new NBTInt(pos.getX()));
+        nbt.setTag("y", new NBTInt(pos.getY()));
+        nbt.setTag("z", new NBTInt(pos.getZ()));
+
+        NBTCompound frontText = new NBTCompound();
+        NBTList<NBTString> messages = new NBTList<>(NBTType.STRING);
+        for (int i = 0; i < 4; i++) {
+            Component c = (lines != null && i < lines.length && lines[i] != null) ? lines[i] : Component.empty();
+            String json = GsonComponentSerializer.gson().serialize(c);
+            messages.addTag(new NBTString(json));
+            nbt.setTag("Text" + (i + 1), new NBTString(json));
         }
+        frontText.setTag("messages", messages);
+        nbt.setTag("front_text", frontText);
+
+        WrapperPlayServerBlockEntityData blockEntity = new WrapperPlayServerBlockEntityData(
+                pos, BlockEntityTypes.SIGN, nbt);
+        PacketEvents.getAPI().getPlayerManager().sendPacket(player, blockEntity);
+
+        // 3. Open editor 1 tick later, then restore virtual air to the client
+        FoliaScheduler.runAtEntityLater(plugin, player, () -> {
+            if (!player.isOnline()) return;
+            WrapperPlayServerOpenSignEditor openEditor = new WrapperPlayServerOpenSignEditor(pos, true);
+            PacketEvents.getAPI().getPlayerManager().sendPacket(player, openEditor);
+            sendVirtualAir(player, loc);
+        }, 1L);
     }
 
-    public static void sendBlockEntityPacket(Player player, Location loc, Plugin plugin) {
-        try {
-            Object world = loc.getWorld().getClass().getMethod("getHandle").invoke(loc.getWorld());
-            Class<?> bpClass = Class.forName("net.minecraft.core.BlockPos");
-            Object bp = bpClass.getConstructor(int.class, int.class, int.class)
-                    .newInstance(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
-            Method gbe = Arrays.stream(world.getClass().getMethods())
-                    .filter(m -> m.getName().equals("getBlockEntity") && m.getParameterCount() == 1)
-                    .findFirst().orElse(null);
-            if (gbe == null) return;
-            Object be = gbe.invoke(world, bp);
-            if (be == null) return;
-            Class<?> pktClass = Class.forName(
-                    "net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket");
-            Method create = Arrays.stream(pktClass.getMethods())
-                    .filter(m -> m.getName().equals("create") && m.getParameterCount() == 1)
-                    .findFirst().orElse(null);
-            if (create == null) return;
-            sendPacket(player, create.invoke(null, be), plugin);
-        } catch (Exception e) {
-            plugin.getLogger().warning("[Hacks] sendBlockEntityPacket: " + e.getMessage());
-        }
+    /** Sends a virtual block change of AIR to the player at the given location. */
+    public static void sendVirtualAir(Player player, Location loc) {
+        if (player == null || !player.isOnline() || loc == null) return;
+        sendVirtualAir(player, loc.getWorld(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
     }
 
-    public static void sendOpenSignPacket(Player player, Location loc, Plugin plugin) {
-        try {
-            Class<?> bpClass  = Class.forName("net.minecraft.core.BlockPos");
-            Class<?> pktClass = Class.forName(
-                    "net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket");
-            Object bp     = bpClass.getConstructor(int.class, int.class, int.class)
-                    .newInstance(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
-            Object packet = pktClass.getConstructor(bpClass, boolean.class).newInstance(bp, true);
-            sendPacket(player, packet, plugin);
-        } catch (Exception e) {
-            plugin.getLogger().warning("[Hacks] sendOpenSignPacket: " + e.getMessage());
-        }
-    }
-
-    public static void sendPacket(Player player, Object packet, Plugin plugin) {
-        try {
-            Object handle = player.getClass().getMethod("getHandle").invoke(player);
-            Object conn = null;
-            for (String name : new String[]{"connection", "networkManager", "playerConnection"}) {
-                try {
-                    Field f;
-                    try { f = handle.getClass().getField(name); }
-                    catch (NoSuchFieldException ex) {
-                        f = handle.getClass().getDeclaredField(name);
-                        f.setAccessible(true);
-                    }
-                    Object v = f.get(handle);
-                    if (v != null) { conn = v; break; }
-                } catch (Exception ignored) {}
-            }
-            if (conn == null) throw new IllegalStateException("connection not found");
-            Method send = null;
-            for (Method m : conn.getClass().getMethods())
-                if (m.getName().equals("send") && m.getParameterCount() == 1
-                        && m.getParameterTypes()[0].isAssignableFrom(packet.getClass())) {
-                    send = m; break;
-                }
-            if (send == null)
-                for (Method m : conn.getClass().getMethods())
-                    if (m.getName().equals("send") && m.getParameterCount() == 1) { send = m; break; }
-            if (send == null) throw new IllegalStateException("send() not found");
-            send.invoke(conn, packet);
-        } catch (Exception e) {
-            plugin.getLogger().warning("[Hacks] sendPacket: " + e.getMessage());
-        }
+    /** Sends a virtual block change of AIR to the player at the given coordinates. */
+    public static void sendVirtualAir(Player player, World world, int x, int y, int z) {
+        if (player == null || !player.isOnline() || world == null) return;
+        if (player.getWorld() != world) return;
+        Vector3i pos = new Vector3i(x, y, z);
+        WrapperPlayServerBlockChange reset = new WrapperPlayServerBlockChange(
+                pos, WrappedBlockState.getDefaultState(StateTypes.AIR));
+        PacketEvents.getAPI().getPlayerManager().sendPacket(player, reset);
     }
 
     /**
-     * A free spot for the probe sign, from two blocks above the feet (just over the head). The sign stands on
-     * nothing; {@code SignListener} keeps physics from breaking it. {@code avoid} (the previous probe sign, may
-     * be null) is skipped, so a late answer to an earlier sign never lands on the next one.
+     * A free spot for the virtual probe sign, from two blocks above the feet (just over the head).
+     * {@code avoid} (the previous probe sign, may be null) is skipped, so a late answer to an earlier
+     * sign never matches the next one.
      */
     public static Location findAirBlock(Player player, Location avoid) {
         Location base = player.getLocation().clone();
@@ -167,81 +133,5 @@ public class SignUtil {
     public static boolean sameBlock(Location a, Location b) {
         return a != null && b != null && a.getWorld() == b.getWorld()
                 && a.getBlockX() == b.getBlockX() && a.getBlockY() == b.getBlockY() && a.getBlockZ() == b.getBlockZ();
-    }
-
-    /**
-     * Puts back what a probe sign replaced. The values are passed in rather than read from the check data later,
-     * because the next batch overwrites that data before a scheduled restore would run.
-     * {@code now} restores on the calling thread: used on shutdown, when the scheduler no longer accepts tasks.
-     * Folia disables plugins on a thread that cannot write blocks; a sign left that way goes to {@link #LEFTOVERS}
-     * and is removed on the next start ({@link #saveLeftovers}, {@link #clearLeftovers}).
-     */
-    public static void restore(Plugin plugin, Location signLoc, BlockState original, boolean now) {
-        if (signLoc == null) return;
-        if (!now) {
-            FoliaScheduler.runAtLocation(plugin, signLoc, () -> {
-                try { if (original != null) original.update(true, false); }
-                catch (Exception e) {
-                    plugin.getLogger().warning("[Hacks] Restore: " + e.getMessage());
-                    LEFTOVERS.add(signLoc.clone());
-                }
-            });
-            return;
-        }
-        try { if (original != null) original.update(true, false); }
-        catch (Exception e) { LEFTOVERS.add(signLoc.clone()); }
-    }
-
-    // Appended from region threads (delayed restore) and the shutdown thread
-    private static final List<Location> LEFTOVERS = java.util.Collections.synchronizedList(new ArrayList<>());
-    private static final String LEFTOVER_FILE = "probe-signs.txt";
-
-    /** Writes the probe signs shutdown could not remove. */
-    public static void saveLeftovers(Plugin plugin) {
-        if (LEFTOVERS.isEmpty()) return;
-        List<String> lines = LEFTOVERS.stream().map(l -> l.getWorld().getName() + " " + l.getBlockX()
-                + " " + l.getBlockY() + " " + l.getBlockZ()).toList();
-        try { Files.write(new File(plugin.getDataFolder(), LEFTOVER_FILE).toPath(), lines); }
-        catch (Exception e) { plugin.getLogger().warning("[Hacks] Could not save probe sign positions: " + e.getMessage()); }
-        LEFTOVERS.clear();
-    }
-
-    /**
-     * Removes probe signs a previous shutdown left in the world. A probe sign only ever replaces air
-     * ({@link #findAirBlock}), so the block is set back to air when it is still an oak sign.
-     */
-    public static void clearLeftovers(Plugin plugin) {
-        File file = new File(plugin.getDataFolder(), LEFTOVER_FILE);
-        if (!file.isFile()) return;
-        List<String> lines;
-        try { lines = Files.readAllLines(file.toPath()); }
-        catch (Exception e) {
-            plugin.getLogger().warning("[Hacks] Could not read probe sign positions: " + e.getMessage());
-            return; // the file stays: a failed read lost every entry, unlike one bad line below
-        }
-        for (String line : lines) {
-            try {
-                String[] p = line.trim().split(" ");
-                World world = p.length == 4 ? Bukkit.getWorld(p[0]) : null;
-                if (world == null) continue;
-                Location loc = new Location(world, Integer.parseInt(p[1]), Integer.parseInt(p[2]), Integer.parseInt(p[3]));
-                FoliaScheduler.runAtLocation(plugin, loc, () -> {
-                    if (loc.getBlock().getType() == Material.OAK_SIGN) loc.getBlock().setType(Material.AIR, false);
-                });
-            } catch (Exception e) {
-                plugin.getLogger().warning("[Hacks] Bad probe sign line: " + line);
-            }
-        }
-        plugin.getLogger().info("[Hacks] Removed probe signs left by the last shutdown.");
-        file.delete();
-    }
-
-    public static List<Field> getAllFields(Class<?> clazz) {
-        List<Field> fields = new ArrayList<>();
-        while (clazz != null && clazz != Object.class) {
-            fields.addAll(Arrays.asList(clazz.getDeclaredFields()));
-            clazz = clazz.getSuperclass();
-        }
-        return fields;
     }
 }

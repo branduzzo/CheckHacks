@@ -2,7 +2,6 @@ package com.veneer.hacks;
 
 import com.veneer.core.WrappedTask;
 import org.bukkit.Location;
-import org.bukkit.block.BlockState;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,7 +29,6 @@ public class CheckPlayerData {
     public int waitWhileBusy() { return ++deadWaits; }
 
     private Location signLocation;
-    private BlockState originalState;
     private WrappedTask signTimeoutTask;
     private Location lastSignLocation;
     private List<HackDefinition> firstPassHacks;
@@ -73,8 +71,6 @@ public class CheckPlayerData {
 
     public Location getSignLocation()            { return signLocation; }
     public void setSignLocation(Location l)      { this.signLocation = l; }
-    public BlockState getOriginalState()         { return originalState; }
-    public void setOriginalState(BlockState s)   { this.originalState = s; }
     public WrappedTask getSignTimeoutTask()       { return signTimeoutTask; }
     public void setSignTimeoutTask(WrappedTask t) { this.signTimeoutTask = t; }
     public Location getLastSignLocation()         { return lastSignLocation; }
