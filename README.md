@@ -27,6 +27,7 @@ Client spoof detection, mod detection and cache-based account linking for Paper 
 | **Mod detection** (from CheckHacks) | Finds installed mods through the sign translation vulnerability (MC-265322). Hacks are defined in config, results are stored in SQLite. Clients older than `hacks.yml detection.min-client-version` (default 1.17) are not scanned: they do not answer the probe sign. |
 | **Language and version check** | `/hacklang` reads the client language, and from the same sign the client's real game version: key bindings and removed keys work in any language and tell apart every release from 1.21.5 to 26.3 (except 1.21.6-1.21.8 and 1.21.9/1.21.10), keys added in each version narrow en_us clients down to nearly the release. A version that does not match the protocol the player connects with points to ViaFabricPlus, ViaProxy and the like; an alert and an optional command follow. |
 | **Web panel** | Overview counts, scan history with filters, manual scans that show up as soon as they finish, scan deletion, player pages (first and last join, client brand, channels and real version, detected mods, fingerprint, addresses, possible alts), name suggestions in search, a list of every mod detected, and a 3D graph of linked accounts (shared addresses, RPTrack fingerprints and the same client brand and channels) with player heads (drawn from the skins the server stores, no outside image host), filters by link type, strength and last seen, and search by name or IP. Each address shows its provider, AS number and country; a shared address of a VPN, Cloudflare WARP or hosting provider counts as a weaker link. The panel follows `config.yml general.language` (English and Russian). |
+| **In-game GUI** | Interactive player profiles, check queues, client brand verdicts and channels overview via chest inventory or the Paper Dialog API (1.21.4+), with GrimAC violations and mouse sensitivity tracking. Run `/veneer` or `/veneer gui`. |
 | **Anticheat bridge** | Flags from Grim (event bus), Vulcan, Spartan, Matrix, Intave and AAC can trigger a mod scan. A spoof flag can also queue one. |
 | **RPTrack** | Links accounts and IPs of the same Minecraft installation through its resource-pack download cache, and detects LiquidBounce's local server. **Off by default.** See [RPTrack](#rptrack). |
 | **Integrations** | LuckPerms (primary group), PlaceholderAPI (`%veneer_*%`), Floodgate/Geyser, Discord webhooks, Folia-aware scheduling. |
@@ -45,7 +46,7 @@ A brand that matches no rule is reported to staff with **[Allow]** and **[Block]
 
 ![Mod scan: the server opens a hidden sign with keybind("key.freecam.toggle"); a vanilla client sends the key back unchanged, a client with Freecam sends the bound key "F"](docs/Mod Detection.svg)
 
-Veneer places a sign next to the player with a translation or keybind key from each mod on its lines, opens the sign editor and at once replaces the sign with air on the client. The editor closes and the client sends the sign text back, filled in from its own language files and key bindings. A key no mod defines comes back as is; a key a mod defines comes back as the mod's text or bound key. The player sees, at most, a flicker. Hacks are defined in `hacks.yml detection.hacks` (`TRANSLATE`, `KEYBIND` or `METEOR` mode); a client with ExploitPreventer, which blocks the trick, shows up as `PROTECTED`.
+Veneer sends a virtual sign packet to the client with a translation or keybind key from each mod on its lines, opens the sign editor and at once resets the virtual sign to air on the client without placing or touching any physical blocks in the server world. The editor closes and the client sends the sign text back, filled in from its own language files and key bindings. PacketEvents intercepts and cancels the update packet, so the server never processes a block change. A key no mod defines comes back as is; a key a mod defines comes back as the mod's text or bound key. The player sees, at most, a flicker. Hacks are defined in `hacks.yml detection.hacks` (`TRANSLATE`, `KEYBIND` or `METEOR` mode); a client with ExploitPreventer, which blocks the trick, shows up as `PROTECTED`.
 
 ## Install
 
@@ -57,6 +58,12 @@ Veneer places a sign next to the player with a translation or keybind key from e
 
 | Command | Permission | Description |
 |---|---|---|
+| `/veneer` | `veneer.admin` | Open the in-game GUI (player profiles, brand verdicts, check queue) |
+| `/veneer player <player>` | `veneer.admin` | Inspect a player's profile in the in-game GUI (or `/veneer p`) |
+| `/veneer find <player>` | `veneer.admin` | Search players and open their profile in the GUI |
+| `/veneer check <player>` | `veneer.admin` | Open the mod scan launcher in the GUI |
+| `/veneer brands` | `veneer.spoof.use` | Open client brand verdicts in the GUI |
+| `/veneer channels` | `veneer.admin` | Open registered plugin channels overview in the GUI |
 | `/veneer help` | - | The commands you may use, grouped by module; click one to put it in the chat box |
 | `/veneer lang [<code>\|auto\|reset]` | `veneer.lang` (everyone) | The language Veneer's messages and alerts reach you in: a file from `messages/`, `auto` (your game language), or `reset` (the server's `config.yml general.language`). Stored per player; the console keeps the server language |
 | `/veneer info <player>` | `veneer.admin` | One report per player: client brand and channels, spoof status, latest mod scan, RPTrack link |
@@ -125,7 +132,7 @@ debug: false                          # log every step; also turns on the experi
 ## Build
 
 ```
-mvn -q -DskipTests package
+mvn -q -DskipTests clean package
 ```
 
 Produces two jars (Java 21 or newer):
