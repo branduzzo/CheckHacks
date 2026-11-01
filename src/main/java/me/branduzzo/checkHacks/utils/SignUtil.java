@@ -70,11 +70,16 @@ public class SignUtil {
     public static void sendOpenSignPacket(Player player, Location loc, Plugin plugin) {
         try {
             Class<?> bpClass  = Class.forName("net.minecraft.core.BlockPos");
+            Class<?> slotClass = Class.forName(
+                    "net.minecraft.world.level.block.entity.SignTextSlot"
+            );
             Class<?> pktClass = Class.forName(
                     "net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket");
             Object bp     = bpClass.getConstructor(int.class, int.class, int.class)
                     .newInstance(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
-            Object packet = pktClass.getConstructor(bpClass, boolean.class).newInstance(bp, true);
+            @SuppressWarnings({"unchecked", "rawtypes"})
+            Object slot = Enum.valueOf((Class<? extends Enum>) slotClass, "FRONT");
+            Object packet = pktClass.getConstructor(bpClass, slotClass).newInstance(bp, slot);
             sendPacket(player, packet, plugin);
         } catch (Exception e) {
             plugin.getLogger().warning("[CheckHacks] sendOpenSignPacket: " + e.getMessage());
