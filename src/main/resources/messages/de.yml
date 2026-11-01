@@ -11,7 +11,7 @@ reload-done: "{prefix}<green>Konfiguration neu geladen."
 alerts-enabled: "{prefix}<green>Warnungen aktiviert."
 alerts-disabled: "{prefix}<red>Warnungen deaktiviert."
 bedrock-skip: "{prefix}<yellow>{player} <gray>ist ein Bedrock-Spieler - Überprüfung übersprungen."
-module-not-running: "{prefix}<red>Das Modul {module} läuft nicht (prüfe '{module}.enabled' in der config.yml).</red>"
+module-not-running: "{prefix}<red>Das Modul {module} läuft nicht (prüfe '{module}.enabled' in der {module}.yml).</red>"
 update-available: "{prefix}<green>Veneer {latest} ist verfügbar</green> <gray>(läuft: {current})</gray> <aqua><click:open_url:'{url}'>{url}</click></aqua>"
 
 # ======================================================================
@@ -62,7 +62,7 @@ lang-join-check: "{prefix}<gray>Automatische Sprachprüfung von <yellow>{player}
 # Placeholders: {url}.
 # ======================================================================
 editor-url: "{prefix}<white>Editor: <aqua><click:open_url:'{url}'>{url}</click>"
-editor-disabled: "{prefix}<red>Der Web-Editor ist in der config.yml deaktiviert."
+editor-disabled: "{prefix}<red>Der Web-Editor ist in der hacks.yml deaktiviert."
 editor-players-only: "{prefix}<red>Nur Spieler können den Editor öffnen.</red>"
 
 # ======================================================================

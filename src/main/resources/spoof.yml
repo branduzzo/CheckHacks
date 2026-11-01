@@ -1,0 +1,321 @@
+# Veneer spoof module: client brand / channel spoof detection (from AntiSpoof).
+# Split out of the old single config.yml; missing settings are filled in on load.
+# In-game alert messages take MiniMessage tags (legacy & codes still work) and {prefix}
+# (the prefix from config.yml). Console messages stay plain text.
+
+# Set to false to switch off client brand/channel detection (and PacketEvents) entirely.
+enabled: true
+
+# ──────────────────────────────────────────────────────────
+#                  Spoof detection
+# ──────────────────────────────────────────────────────────
+# Helps detect client-side modifications by analysing the brand and plugin channels
+# a client sends. It is not foolproof: skilled users can spoof both.
+#
+# By default only players claiming 'vanilla' while having registered plugin channels are flagged,
+# which is impossible on a true vanilla client.
+# ──────────────────────────────────────────────────────────
+
+# Delay (in seconds) before the first check after a player joins.
+# 0 checks immediately (unreliable, the brand may not have arrived). (Default: 1)
+delay-in-seconds: 1
+
+# ──────────────────────────────────────────────────────────
+#                  Core Detection Settings
+# ──────────────────────────────────────────────────────────
+
+# Vanilla Spoof Detection
+# Detects when a player claims to use vanilla but has registered plugin channels
+vanillaspoof-check:
+  # Whether to check if a player claiming "vanilla" client has plugin channels
+  enabled: true
+  # Whether to send alerts to Discord for this violation type
+  discord-alert: true
+  # Custom alert messages for this specific violation
+  alert-message: "<dark_gray>[<red>Veneer<dark_gray>] <yellow>%player% flagged! <red>Vanilla client with plugin channels"
+  console-alert-message: "%player% flagged! Vanilla client with plugin channels"
+  # Whether to punish the player if detection is positive
+  punish: false
+  # Punishment actions to execute
+  # Available placeholders: %player%, %reason%, %brand%, %channel%
+  punishments:
+    - "kick %player% &cVanilla spoof detected: %reason%"
+    # - "ban %player% &cVanilla client spoofing detected"
+
+# Super Strict Mode (Not Recommended)
+# Blocks players who either:
+#    - Do NOT have a "vanilla" client, OR
+#    - Have registered plugin channels (indicating mods/plugins)
+# ⚠️ This is an extremely strict mode and may block legitimate players
+non-vanilla-check:
+  # Whether to enable this strict check
+  enabled: false
+  # Whether to send alerts to Discord for this violation type
+  discord-alert: false
+  # Custom alert messages for this specific violation
+  alert-message: "<dark_gray>[<red>Veneer<dark_gray>] <yellow>%player% flagged! <red>Client modifications detected"
+  console-alert-message: "%player% flagged! Client modifications detected"
+  # Whether to punish the player if detection is positive
+  punish: false
+  # Punishment actions to execute
+  # Available placeholders: %player%, %reason%, %brand%, %channel%
+  punishments:
+    - "kick %player% &cNon-vanilla client with channels detected"
+    # - "tempban %player% 1h &cUsing a modified client"
+
+# ──────────────────────────────────────────────────────────
+#               No Brand Detection Settings
+# ──────────────────────────────────────────────────────────
+# Some hacked clients avoid detection by not sending a client brand at all
+# This check flags players who connect without providing any brand information
+no-brand-check:
+  # Whether to flag players who don't send a client brand
+  enabled: true
+  # Whether to send alerts to Discord for this violation type
+  discord-alert: true
+  # Custom alert messages for this specific violation
+  alert-message: "<dark_gray>[<red>Veneer<dark_gray>] <yellow>%player% flagged! <red>No client brand detected"
+  console-alert-message: "%player% flagged! No client brand detected"
+  # Whether to punish the player if detection is positive
+  punish: false
+  # Punishment actions to execute
+  # Available placeholders: %player%, %reason%
+  punishments:
+    - "kick %player% &cNo client brand detected"
+    # - "ban %player% &cSuspicious client detected (no brand)"
+
+# ──────────────────────────────────────────────────────────
+#                 Channel Detection Settings
+# ──────────────────────────────────────────────────────────
+blocked-channels:
+  # Enable channel-based detection
+  enabled: false
+  # Whether to send alerts to Discord for blocked channel violations
+  discord-alert: false
+
+  # ⚪ Whitelist Mode
+  # - FALSE: Block listed channels.
+  # - SIMPLE: Only allow players with at least one whitelisted channel.
+  # - STRICT: Only allow players who match the exact whitelist and have no extra channels.
+  whitelist-mode: FALSE
+
+  # List of channels to block/whitelist
+  values:
+    - "^fabric-screen-handler-api-v1:open_screen$"
+    # World Downloader (1.13+ and legacy channel names)
+    - "^wdl:(init|control|request)$"
+    - "(?i)^wdl\\|(init|control|request)$"
+    # Add more channels to block here
+    # - "another:blocked:channel"
+    # - "(?i).*litematica.*"
+    # - "(?i).*fabric.*"
+
+  # Custom alert messages for this specific violation
+  alert-message: "<dark_gray>[<red>Veneer<dark_gray>] <yellow>%player% flagged! <red>Using blocked channel: <white>%channel%"
+  console-alert-message: "%player% flagged! Using blocked channel: %channel%"
+  # Messages used instead when whitelist-mode is SIMPLE or STRICT
+  whitelist-alert-message: "<dark_gray>[<red>Veneer<dark_gray>] <yellow>%player% flagged! <red>Channels don't match whitelist requirements"
+  whitelist-console-alert-message: "%player% flagged! Channels don't match whitelist requirements"
+
+  # Whether to punish the player if detection is positive
+  punish: false
+  # Punishment actions to execute
+  # Available placeholders: %player%, %reason%, %brand%, %channel%
+  punishments:
+    - "kick %player% &cBlocked channel detected: %channel%"
+    # - "tempban %player% 1d &cUsing blocked mod channels"
+
+# ──────────────────────────────────────────────────────────
+#                 Client Brands Configuration
+# ──────────────────────────────────────────────────────────
+# Known client brands. Every key inside a brand is optional and falls back to:
+# enabled true, flag false, alert true, discord-alert false, punish false, no
+# punishments, no required channels, no strict-check, and a neutral
+# "is using %brand%" alert message. A normal client needs only its pattern;
+# set only what differs from those defaults.
+#
+# Available keys: values (regexes matched against the brand string), enabled,
+# flag, alert, discord-alert, alert-message, console-alert-message, punish,
+# punishments, required-channels (the client must have a channel matching each
+# regex), required-channels-punish, required-channels-punishments, strict-check
+# (flag the brand if the client registers any plugin channel).
+client-brands:
+  # Master switch for the client brands system
+  enabled: true
+
+  # Applied to a brand that matches no pattern in brands below
+  default:
+    flag: true
+    alert: true
+    discord-alert: false
+    punish: false
+    alert-message: "<dark_gray>[<red>Veneer<dark_gray>] <gray>%player% using unknown client: <yellow>%brand%"
+    console-alert-message: "%player% using unknown client: %brand%"
+
+  # Unknown brands come with [Allow] / [Block] buttons in the staff alert (also /spoof brands). The verdict
+  # is kept in data.db for that exact brand string: allowed brands count as a known clean client, blocked
+  # ones are flagged like a cheat client with the settings below.
+  staff-verdicts:
+    blocked:
+      alert-message: "<dark_gray>[<red>Veneer<dark_gray>] <gray>%player% is using blocked client <red>%brand%"
+      console-alert-message: "%player% is using blocked client: %brand%"
+      discord-alert: true
+      punish: false
+      punishments:
+        - "kick %player% &cThis client is not allowed on this server"
+
+  brands:
+    # Lunar Client
+    lunar:
+      values:
+        - "^lunarclient:v\\d+\\.\\d+\\.\\d+-\\d{4}$"
+      # The brand is only legit if the client also has a channel matching this
+      required-channels:
+        - "lunar.*"
+
+    # Badlion Client
+    badlion:
+      values:
+        - "^badlion.*"
+        - "^BLC.*"
+
+    # Forge
+    forge:
+      values:
+        - "^fml,forge.*"
+        - "^forge.*"
+      required-channels:
+        - "(?i).*forge.*"
+
+    # Fabric
+    fabric:
+      values:
+        - "^fabric$"
+      required-channels:
+        - "(?i).*fabric.*"
+
+    # LabyMod
+    labymod:
+      values:
+        - "^labymod.*"
+
+    # Known hacked clients
+    hacked:
+      values:
+        - "(?i).*wurst.*"
+        - "(?i).*impact.*"
+        - "(?i).*aristois.*"
+        - "(?i).*future.*"
+        - "(?i).*meteor.*"
+        - "(?i).*inertia.*"
+        - "(?i).*sigma.*"
+        - "(?i).*liquidbounce.*"
+      flag: true
+      discord-alert: true
+      alert-message: "<dark_gray>[<red>Veneer<dark_gray>] <yellow>%player% is using <red><bold>known hacked client: <white>%brand%"
+      console-alert-message: "ALERT! %player% is using known hacked client: %brand%"
+      punish: true
+      punishments:
+        - "kick %player% &cHacked client detected: %brand%"
+        # - "ban %player% &cUse of hacked client detected"
+
+    # Plain vanilla: no alert, but flag it if the client registers any channel (catches vanilla spoofing)
+    vanilla:
+      values:
+        - "^vanilla$"
+      alert: false
+      strict-check: true
+
+    # A client showing "Vanilla" or "vAnilla2" but not exactly "vanilla"
+    vanilla-variation:
+      values:
+        - "^(?!vanilla$).*?(?i)vanilla.*"
+      flag: true
+      discord-alert: true
+      alert-message: "<dark_gray>[<red>Veneer<dark_gray>] <yellow>%player% using fake Vanilla: <red>%brand%"
+      console-alert-message: "%player% is using fake Vanilla: %brand%"
+      strict-check: true
+
+    # A client sending a blank brand
+    blankbrand:
+      values:
+        - "^$"   # regex for empty/blank brand
+      flag: true
+      discord-alert: true
+      alert-message: "<dark_gray>[<yellow>Veneer<dark_gray>] <gray>%player% <yellow>is using a blank brand"
+      console-alert-message: "%player% is using a blank brand"
+
+# ──────────────────────────────────────────────────────────
+#                Bedrock Handling Settings
+# ──────────────────────────────────────────────────────────
+bedrock-handling:
+  # Choose how to handle Bedrock players.
+  # Options:
+  #   - "IGNORE": Completely ignore these players; process them like regular players.
+  #   - "EXEMPT": Process them but don't punish them for failing checks.
+  #
+  # Either way, Bedrock players won't get the anti-spoof treatment.
+  # "EXEMPT" mode is highly recommended as "IGNORE" can easily falsely punish Bedrock players.
+  mode: "EXEMPT"
+
+  # Geyser Spoofing Detection
+  # Detects players claiming a client brand including a variation of "geyser" without being verified
+  # as Bedrock players by the Floodgate API.
+  geyser-spoof:
+    # Whether to enable geyser spoofing detection
+    enabled: true
+    # Whether to send alerts to Discord for Geyser spoofing violations
+    discord-alert: true
+    # Custom alert messages for this specific violation
+    alert-message: "<dark_gray>[<red>Veneer<dark_gray>] <yellow>%player% flagged! <red>Geyser client spoofing"
+    console-alert-message: "%player% flagged! Geyser client spoofing with brand: %brand%"
+
+    # Whether to punish the player if detection is positive
+    punish: false
+    # Punishment actions to execute
+    # Available placeholders: %player%, %reason%, %brand%
+    punishments:
+      - "kick %player% &cGeyser client spoofing detected"
+      # - "ban %player% &cGeyser client spoofing"
+
+
+# ──────────────────────────────────────────────────────────
+#                 Discord Webhook Settings
+# ──────────────────────────────────────────────────────────
+discord:
+  enabled: false
+  # Leave empty to use the shared webhook in config.yml
+  webhook: ""
+  embed-title: "**Veneer spoof alert**"
+  embed-color: "#2AB7CA"
+
+# Whether to send Discord alerts when a player joins with a client brand,
+# even without a violation
+global-alerts:
+  join-brand-alerts: false
+
+# ──────────────────────────────────────────────────────────
+#                Fallback Punishment Settings
+# ──────────────────────────────────────────────────────────
+# Used when a check has 'punish: true' but no punishments of its own.
+# Available placeholders: %player%, %reason%, %brand%, %channel%
+punishments:
+  - "kick %player% &cSuspicious client detected!"
+  # - "ban %player% &cClient spoofing detected"
+
+# ──────────────────────────────────────────────────────────
+#                Fallback Alert Messages
+# ──────────────────────────────────────────────────────────
+# Used when a check has no alert message of its own.
+# Available placeholders: %player%, %reason%, %brand%, %channel%
+# Sent to players with the veneer.alerts permission when a spoofing attempt is detected.
+messages:
+  # Message shown to staff
+  alert: "<dark_gray>[<red>Veneer<dark_gray>] <yellow>%player% flagged! <red>%reason%"
+  # Message logged to console (no color codes needed)
+  console-alert: "%player% flagged! %reason%"
+  # Message for multiple violations
+  multiple-flags: "<dark_gray>[<red>Veneer<dark_gray>] <yellow>%player% has multiple violations: <red>%reasons%"
+  # Message for console when multiple violations
+  console-multiple-flags: "%player% has multiple violations: %reasons%"
+

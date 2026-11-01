@@ -1,0 +1,496 @@
+# Veneer hacks module: mod detection through sign translation, web panel (from CheckHacks).
+# Split out of the old single config.yml; missing settings are filled in on load.
+
+# Set to false to switch off mod scanning (/hackcheck, /hacklang, auto-checks and the web panel).
+enabled: true
+
+# Web panel (/hackeditor): scan history and manual scans, served by the plugin itself.
+web-editor:
+  enabled: true
+  # Host in the link that /hackeditor gives to the player
+  host: "localhost"
+  # Address the panel listens on. 127.0.0.1 only accepts connections from this machine
+  # (use a reverse proxy or tunnel); 0.0.0.0 listens on every interface.
+  bind: "127.0.0.1"
+  port: 8080
+  # The link /hackeditor gives works once, within this many minutes: opening it binds that browser to the account
+  # (the database keeps sha256 of a random cookie secret and of nick, address and client, never the secret itself).
+  # Running /hackeditor and opening a new link binds the new browser and unbinds the old one.
+  token-expire-minutes: 10
+  # Days a bound browser stays signed in, and whether it must keep the same IP address (a changed address or
+  # client signs it out; run /hackeditor again). Rights are those the player had when the link was issued.
+  session-days: 30
+  bind-ip: true
+  # Account graph: addresses accounts join from are stored to link accounts that share one
+  links:
+    # Days to keep an address after the account last used it (0 = forever)
+    retention-days: 90
+    # An address shared by more accounts than this is ignored (shared networks, mobile data)
+    max-accounts-per-ip: 8
+    # Provider and country of each address, shown in the panel, from ip-location-db (IPtoASN, PDDL; NRO country
+    # data, CC BY 4.0). About 50 MB is downloaded to plugins/Veneer/geo/ via cdn.jsdelivr.net, so it is off
+    # until you turn it on.
+    ip-database: false
+    ip-database-refresh-days: 7
+    # A shared address of a VPN, Cloudflare WARP or a hosting provider links strangers, so its link counts only
+    # this much (0 to 1). Such a provider is one of these ASNs or has one of the keywords in its name.
+    weak-provider-factor: 0.3
+    weak-provider-asns: [13335, 209242, 9009, 60068, 212238, 16276, 24940, 14061, 16509, 14618, 15169, 396982,
+                         8075, 63949, 20473, 51167, 60781, 28753, 39351, 136787, 44477, 49505, 9123, 210644]
+    weak-provider-keywords: [vpn, proxy, hosting, datacenter, "data center", cloud, vps, dedicated, colocation]
+    # Same client: accounts with the same brand and the same set of plugin channels (needs the spoof module).
+    # Only sets with at least client-min-channels channels count, shared by no more than max-accounts-per-client
+    # accounts: a common client (plain vanilla, a popular modpack) says nothing.
+    client-min-channels: 3
+    max-accounts-per-client: 5
+  # Scan history (mod scans and language checks with their results)
+  history:
+    # Days to keep a scan (0 = forever)
+    retention-days: 180
+
+# Discord webhook for mod scan results
+# Placeholders: &name& = player, &checker& = checker, &reason& = reason, &hacks& = hacks list, &results& = results
+discord:
+  enabled: false
+  # Leave empty to use the shared webhook in config.yml
+  webhook-url: ""
+  embed-color: 16776960
+  # true = Discord Components V2 (Container + accent_color), false = classic embeds
+  use-components-v2: true
+  message: "**Player:** &name&\n**Checked by:** &checker&\n**Reason:** &reason&\n**Hacks checked:** &hacks&\n**Results:**\n&results&"
+
+detection:
+
+  # ──────────────────────────────────────────────
+  # HACK DEFINITIONS
+  # Each entry needs:
+  #   display-name: shown in alerts / web editor / discord
+  #   key: translation or keybind key registered by the mod
+  #   mode: METEOR | TRANSLATE | KEYBIND
+  # ──────────────────────────────────────────────
+  hacks:
+    meteor-client:
+      display-name: "Meteor Client"
+      key: "key.meteor-client.open-gui"
+      mode: METEOR
+
+    liquidbounce:
+      display-name: "LiquidBounce"
+      key: "liquidbounce.module.killaura.name"
+      mode: TRANSLATE
+
+    freecam:
+      display-name: "Freecam"
+      key: "key.freecam.toggle"
+      mode: KEYBIND
+
+    wurst:
+      display-name: "Wurst"
+      key: "key.wurst.zoom"
+      mode: KEYBIND
+
+    xray-fabric:
+      display-name: "XRay"
+      key: "xray.config.toggle"
+      mode: KEYBIND
+
+    chestesp:
+      display-name: "ChestESP"
+      key: "key.chestesp.toggle"
+      mode: KEYBIND
+
+    killaura-fabric:
+      display-name: "KillAura"
+      key: "key.killaura"
+      mode: KEYBIND
+
+    autofish:
+      display-name: "AutoFish"
+      key: "key.autofish.open_gui"
+      mode: KEYBIND
+
+    lumina:
+      display-name: "Lumina"
+      key: "key.lumina.open_click_gui"
+      mode: KEYBIND
+
+    autoswitch:
+      display-name: "AutoSwitch"
+      key: "key.autoswitch.toggle"
+      mode: KEYBIND
+
+    bleachhack:
+      display-name: "BleachHack"
+      key: "bleachhack.module.killaura"
+      mode: TRANSLATE
+
+    aristois:
+      display-name: "Aristois"
+      key: "emc.module.killaura.name"
+      mode: TRANSLATE
+
+    coffee:
+      display-name: "Coffee Client"
+      key: "coffee.module.killaura.name"
+      mode: TRANSLATE
+
+    accurate-block-placement:
+      display-name: "Accurate Block Placement"
+      key: "net.clayborn.accurateblockplacement.modplacementmodemessage"
+      mode: TRANSLATE
+
+    world-downloader:
+      display-name: "World Downloader"
+      key: "key.wdl.startStop"
+      mode: TRANSLATE
+
+    autoclicker-fabric:
+      display-name: "AutoClicker"
+      key: "autoclicker-fabric.hud.holding"
+      mode: TRANSLATE
+
+    antiafk:
+      display-name: "AntiAFK"
+      key: "key.antiafk.toggle"
+      mode: TRANSLATE
+
+    auto-clicker-mc:
+      display-name: "Auto Clicker MC"
+      key: "key.auto-clicker_.toggle"
+      mode: KEYBIND
+
+    trouser-streak:
+      display-name: "Trouser Streak"
+      key: "addon.trouser-streak.name"
+      mode: TRANSLATE
+
+    ui-utils:
+      display-name: "UI Utils"
+      key: "key.ui-utils.restore_screen"
+      mode: TRANSLATE
+
+    seeedcrackerx:
+      display-name: "SeedCrackerX"
+      key: "cracker.already"
+      mode: TRANSLATE
+
+    simple-world-downloader:
+      display-name: "Simple World Downloader"
+      key: "swd.screen.config.title"
+      mode: TRANSLATE
+
+    trouser-streak-newchunks:
+      display-name: "Trouser Streak: NewChunks"
+      key: "module.trouser-streak.NewerNewChunks.description"
+      mode: TRANSLATE
+
+    trouser-streak-anhero:
+      display-name: "Trouser Streak: AnHero"
+      key: "module.trouser-streak.AnHero.description"
+      mode: TRANSLATE
+
+    glazed:
+      display-name: "Glazed"
+      key: "addon.glazed.name"
+      mode: TRANSLATE
+
+    litematica:
+      display-name: "Litematica"
+      key: "litematica.hotkey.name.openmainmenuscreen"
+      mode: TRANSLATE
+
+    itemscroller:
+      display-name: "Item Scroller"
+      key: "itemscroller.hotkey.name.openconfigscreen"
+      mode: TRANSLATE
+
+    xaeros-minimap:
+      display-name: "Xaero's Minimap"
+      key: "gui.xaero_minimap"
+      mode: TRANSLATE
+
+    baritone:
+      display-name: "Baritone"
+      key: "baritone.setting.allowBreak"
+      mode: TRANSLATE
+
+  # Hacks checked with /hackcheck <player> (no args)
+  default-check-hacks:
+    - meteor-client
+    - freecam
+    - xray-fabric
+    - chestesp
+    - killaura-fabric
+    - autofish
+    - lumina
+    - autoswitch
+    - bleachhack
+    - coffee
+    - world-downloader
+    - autoclicker-fabric
+    - antiafk
+    - auto-clicker-mc
+
+  # Auto-check on join
+  auto-check-on-join:
+    enabled: false
+    only-first-join: false
+    hacks:
+      - meteor-client
+      - freecam
+      - bleachhack
+      - world-downloader
+      - autoclicker-fabric
+      - antiafk
+
+  # Auto-check when an anticheat flags a player
+  detect-flag:
+    enabled: false
+    anticheats:
+      grim: true
+      vulcan: true
+      spartan: true
+      matrix: true
+      intave: true
+      aac: true
+    cooldown-hours: 24
+    hacks:
+      - meteor-client
+      - freecam
+      - bleachhack
+      - world-downloader
+      - autoclicker-fabric
+      - antiafk
+      - baritone
+
+  # Auto-check when spoof detection flags a player. Uses the hack list and cooldown of detect-flag.
+  # Needs the spoof module; Bedrock players are skipped.
+  detect-spoof-flag:
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # ACTIONS
+  # Placeholders: %player%, %hack% / &hack& / {hack} / {player}
+  # %hack% expands to comma-separated list for global commands, single name for per-hack rules
+  # ──────────────────────────────────────────────
+  command-if-positive:
+    enabled: false
+    command: "tempban %player% 14d Cheating"
+
+  command-if-protected:
+    enabled: false
+    command: "tempban %player% 14d Cheating"
+
+  command-if-clean:
+    enabled: false
+    command: "give %player% diamond 1"
+
+  # Per-mod rules: executed when a specific mod returns a specific result
+  command-rules:
+    meteorclient1:
+      mod: meteorclient
+      result: DETECTED
+      command: "tempban %player% 31d Meteor Client"
+
+  # ──────────────────────────────────────────────
+  # PERFORMANCE / RELIABILITY
+  # ──────────────────────────────────────────────
+  # Re-check DETECTED/PROTECTED/TIMEOUT results with a second confirmation scan to reduce false positives
+  doublecheck: true
+  # Leave the mods that were not found out of the check result (chat and Discord). The history keeps them.
+  hide-clean: true
+  # Add the plugin channels the client registered to the check result
+  show-channels: true
+  # How long to wait for client response per sign (ticks, 20 = 1s)
+  # With adaptive-timeout on this is the upper limit.
+  timeout-ticks: 200
+  # Wait for the answer as long as the player's ping needs plus a margin, instead of always timeout-ticks.
+  # A silent client is marked TIMEOUT sooner; a laggy one gets more time. Bedrock players are never scanned.
+  adaptive-timeout: true
+  # Added to the ping, in ticks (20 = 1s). Covers the 1 tick delay before the sign closes and ping jitter.
+  adaptive-margin-ticks: 4
+  # Lower limit of the adaptive wait (ticks)
+  adaptive-min-ticks: 20
+  # When a sign gets no answer, send it once more with twice the wait before marking it TIMEOUT
+  retry-on-timeout: true
+  # Delay between signs when checking multiple hacks (ticks)
+  between-sign-ticks: 5
+  # Oldest client version (the protocol the server sees, through Via too) that is scanned by mod and language
+  # checks. Tested: 1.17 and newer answer; with 1.16.5 and older the probe sign never shows up (ViaBackwards
+  # cannot send blocks below y=0 to them), the check times out, and on 1.12.2 the sign window stays open.
+  # Needs the spoof module (PacketEvents) to know the version; without it every client is scanned.
+  min-client-version: "1.17"
+
+language-check:
+  auto-check-on-join:
+    enabled: false
+    only-first-join: false
+
+  # Real client version: the other three lines of the language sign show which game version the client really
+  # is (key bindings, keys Mojang removed, and for en_us clients keys added in each version), and that is
+  # compared with the protocol version it connects with. A client posing as another version, as ViaFabricPlus
+  # or ViaProxy do, raises a "version-mismatch" alert. In any language it tells apart every release from 1.21.5
+  # on (not 1.21.6-1.21.8 or 1.21.9/1.21.10 from each other) and a few below; en_us clients show nearly every
+  # release. Needs PacketEvents (the answers are read from the packet, Paper cuts sign lines to 80 characters).
+  version-check:
+    enabled: true
+    # Console command on a mismatch. Placeholders: %player%, %real% (e.g. "<=1.21.1"), %claimed% (e.g. "1.21.11")
+    command-if-mismatch: ""
+
+  discord:
+    enabled: false
+    webhook-url: ""   # empty = the shared webhook in config.yml
+    embed-color: 5763719
+    use-components-v2: true
+    message: "**Player:** &name&\n**Checked by:** &checker&\n**Language:** &lang&"
+
+  timeout-ticks: 100
+
+  # What the client shows for the key.forward translation, per language (from the game's own language files,
+  # 1.21.1 and 1.21.11). Several texts for one language are separated by "|": English changed from
+  # "Walk Forwards" (up to 1.21.1) to "Walk Forward" (1.21.4). Languages that share a text are all reported.
+  languages:
+    en_us: "Walk Forward|Walk Forwards"
+    af_za: "Loop Vorentoe"
+    ar_sa: "السير الى الامام"
+    ast_es: "Caminar p'alantre"
+    az_az: "İrəli Getmək"
+    ba_ru: "Алға"
+    bar: "Vorwärts"
+    be_by: "Уперад"
+    be_latn: "Upierad"
+    bg_bg: "Вървене напред"
+    br_fr: "Mont war-raok"
+    brb: "Verèùt lowpe"
+    bs_ba: "Hodaj naprijed"
+    ca_es: "Caminar endavant"
+    cs_cz: "Chůze dopředu"
+    cv_cu: "Малалла"
+    cy_gb: "Cerdded Ymlaen"
+    da_dk: "Gå fremad"
+    de_at: "Vorwärts"
+    de_ch: "Vorwärts"
+    de_de: "Vorwärts"
+    el_gr: "Βάδισμα Μπροστά"
+    en_au: "Walk Forwards"
+    en_ca: "Walk Forwards"
+    en_gb: "Walk Forwards"
+    en_nz: "Walk Forwards"
+    en_pt: "Hop ahead"
+    en_ud: "spɹɐʍɹoℲ ʞꞁɐM"
+    enp: "Walk Forward"
+    enws: "Stride Onwards"
+    eo_uy: "Paŝi antaŭen"
+    es_ar: "Caminar hacia delante"
+    es_cl: "Caminar hacia delante"
+    es_ec: "Caminar hacia delante"
+    es_es: "Caminar hacia delante"
+    es_mx: "Caminar hacia delante"
+    es_uy: "Caminar hacia delante"
+    es_ve: "Caminar hacia delante"
+    esan: "Caminâh p'alante"
+    et_ee: "Kõnni edasi"
+    eu_es: "Aurrera ibili"
+    fa_ir: "راه رفتن به جلو"
+    fi_fi: "Kävele eteenpäin"
+    fil_ph: "Lumakad na Pasulong"
+    fo_fo: "Gang frameftir"
+    fr_ca: "Avancer"
+    fr_ch: "Avancer"
+    fr_fr: "Avancer"
+    fra_de: "Vorwärdds"
+    fur_it: "Cjaminâ indenant"
+    fy_nl: "Foarút rinne"
+    ga_ie: "Siúl ar aghaidh"
+    gd_gb: "Coisich an comhair do bheòil"
+    gl_es: "Camiñar cara adiante"
+    go_fr: "Avancer"
+    got_de: "𐍈𐌰𐍂𐌱𐍉 𐍆𐌰𐌿𐍂"
+    hal_ua: "Вперід"
+    haw_us: "Neʻemua"
+    he_il: "הליכה קדימה"
+    hi_in: "आगे चलना"
+    hn_no: "Gakk framleides"
+    hr_hr: "Naprijed"
+    hu_hu: "Gyaloglás előre"
+    hy_am: "Քայլել առաջ"
+    id_id: "Maju"
+    ig_ng: "Gaanụ n’iru"
+    io_en: "Marchar adelante"
+    is_is: "Labba áfram"
+    isv: "Idti vprěd"
+    it_it: "Cammina in avanti"
+    ja_jp: "前進"
+    jbo_en: "crane"
+    ka_ge: "წინ სიარული"
+    kk_kz: "Алға"
+    kn_in: "ಮುಂದೆ ನಡೆಯಿರಿ"
+    ko_kr: "앞으로 걷기"
+    ksh: "Vörwärts"
+    kw_gb: "Kerdhes Yn-Rag"
+    ky_kg: "Алга"
+    la_la: "Ambula prorsum"
+    lb_lu: "Vijenzeg"
+    li_li: "Veuroet loupen"
+    lmo: "Camina inanz"
+    lo_la: "ຍ່າງໄປໜ້າ"
+    lol_us: "Walk Forwardz"
+    lt_lt: "Eiti pirmyn"
+    lv_lv: "Iet uz priekšu"
+    lzh: "進"
+    mk_mk: "Движење нанапред"
+    mn_mn: "Урагшаа алхах"
+    ms_my: "Jalan Ke Hadapan"
+    mt_mt: "Imxi 'l Quddiem"
+    nah: "Xinehnemi xitlāwak"
+    nds_de: "Vüörwes gaon"
+    nl_be: "Voorwaarts Lopen"
+    nl_nl: "Vooruit"
+    nn_no: "Gå framover"
+    no_no: "Gå fremover"
+    oc_fr: "Caminar davant"
+    ovd: "Wavel framyvyr"
+    pl_pl: "Idź do przodu"
+    pls: "Ditaun"
+    pt_br: "Andar em frente"
+    pt_pt: "Andar em frente"
+    qcb_es: "Caminar pa lanti"
+    qid: "Madjoe"
+    qya_aa: "Menë ompa"
+    ro_ro: "Mers înainte"
+    rpr: "Вперёдъ"
+    ru_ru: "Вперёд"
+    ry_ua: "Ити вперед"
+    sah_sah: "Инники"
+    se_no: "Vázzit ovddas guvlui"
+    sk_sk: "Ísť dopredu"
+    sl_si: "Hodi naprej"
+    so_so: "Weeraryahanada socda"
+    sq_al: "Ecni përpara"
+    sr_cs: "Hodaj napred"
+    sr_sp: "Ходај напред"
+    sv_se: "Gå framåt"
+    sxu: "Forwärds"
+    szl: "Idź ku przodku"
+    ta_in: "முன்னோக்கி நடக்க"
+    th_th: "เดินไปข้างหน้า"
+    tl_ph: "Lumakad na Pasulong"
+    tlh_aa: "Forwards yIt"
+    tok: "o tawa sinpin"
+    tr_tr: "İleri Yürüme"
+    tt_ru: "Алга"
+    tzo_mx: "Xanavan ta ba be"
+    uk_ua: "Іти вперед"
+    uz_uz: "Oldinga yurish"
+    val_es: "Caminar avant"
+    vec_it: "Camina inansi"
+    vi_vn: "Tiến lên phía trước"
+    vp_vl: "Yalaka fura"
+    vro: "Kõnniq edesi"
+    yi_de: "פֿארווערטס גיין"
+    yo_ng: "Lọ siwaju"
+    zh_cn: "向前移动"
+    zh_hk: "向前移動"
+    zh_tw: "前進"
+    zlm_arab: "جالن کهادڤن"
+

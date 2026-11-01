@@ -11,7 +11,7 @@ reload-done: "{prefix}<green>Config reloaded."
 alerts-enabled: "{prefix}<green>Alertz enabled."
 alerts-disabled: "{prefix}<red>Alertz disabled."
 bedrock-skip: "{prefix}<yellow>{player} <gray>iz a Bedrock player - check skipped."
-module-not-running: "{prefix}<red>Teh {module} module iz not runnin (check '{module}.enabled' in config.yml).</red>"
+module-not-running: "{prefix}<red>Teh {module} module iz not runnin (check '{module}.enabled' in {module}.yml).</red>"
 update-available: "{prefix}<green>Veneer {latest} iz availabl</green> <gray>(runnin {current})</gray> <aqua><click:open_url:'{url}'>{url}</click></aqua>"
 
 # ======================================================================
@@ -62,7 +62,7 @@ lang-join-check: "{prefix}<gray>Auto language checkin for <yellow>{player}<gray>
 # Placeholders: {url}.
 # ======================================================================
 editor-url: "{prefix}<white>Editur: <aqua><click:open_url:'{url}'>{url}</click>"
-editor-disabled: "{prefix}<red>Web editur iz disabled in config.yml."
+editor-disabled: "{prefix}<red>Web editur iz disabled in hacks.yml."
 editor-players-only: "{prefix}<red>Only playrz can open teh editur.</red>"
 
 # ======================================================================

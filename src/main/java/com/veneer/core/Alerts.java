@@ -60,12 +60,13 @@ public final class Alerts {
         });
     }
 
-    /** Same as {@link #sendToPlayers(Function)} for a string already run through {@link Text#legacy}. */
-    public void sendToPlayers(String legacy) {
+    /** Same as {@link #sendToPlayers(Function)} for a component already built (e.g. via {@link Text#rich});
+     *  safe from async callers. */
+    public void sendToPlayers(Component message) {
         FoliaScheduler.runGlobal(plugin, () -> {
             dropOffline();
             for (Player p : Bukkit.getOnlinePlayers())
-                if (receives(p)) p.sendMessage(legacy);
+                if (receives(p)) p.sendMessage(message);
         });
     }
 

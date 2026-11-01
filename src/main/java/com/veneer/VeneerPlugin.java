@@ -159,7 +159,7 @@ public class VeneerPlugin extends JavaPlugin {
         return getDescription().getVersion();
     }
 
-    /** Re-reads config.yml and the language files, then lets every running module refresh itself. */
+    /** Re-reads the config files and the language files, then lets every running module refresh itself. */
     public void reloadAll() {
         config.reload();
         messages.load();
@@ -167,7 +167,7 @@ public class VeneerPlugin extends JavaPlugin {
             if (module.running()) {
                 module.refresh();
             } else if (module.wanted()) {
-                getLogger().info("Module '" + module.id() + "' is enabled in config.yml but not running: restart the server to start it.");
+                getLogger().info("Module '" + module.id() + "' is enabled in its config file but not running: restart the server to start it.");
             }
         }
         getLogger().info("Configuration reloaded.");

@@ -31,7 +31,9 @@ public class AlertManager {
      * @param message The message to send
      */
     public void sendAlertToRecipients(String message) {
-        plugin.alerts().sendToPlayers(Text.legacy(message));
+        // {prefix} works in every spoof.yml alert message like it does in messages/*.yml. Text.rich renders
+        // MiniMessage (gradients, hex) natively and still accepts legacy & codes in the message.
+        plugin.alerts().sendToPlayers(Text.rich(message.replace("{prefix}", plugin.config().prefix())));
     }
     
     /**
