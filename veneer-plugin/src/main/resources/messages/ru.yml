@@ -12,7 +12,7 @@ alerts-enabled: "{prefix}<green>Оповещения включены."
 alerts-disabled: "{prefix}<red>Оповещения выключены."
 bedrock-skip: "{prefix}<yellow>{player} <gray>— игрок Bedrock, проверка пропущена."
 client-too-old: "{prefix}<yellow>{player} <gray>играет на {version}: проверке табличками нужна {min} или новее, пропущено."
-module-not-running: "{prefix}<red>Модуль {module} не запущен (проверьте '{module}.enabled' в config.yml).</red>"
+module-not-running: "{prefix}<red>Модуль {module} не запущен (проверьте '{module}.enabled' в {module}.yml).</red>"
 update-available: "{prefix}<green>Доступен Veneer {latest}</green> <gray>(запущен {current})</gray> <aqua><click:open_url:'{url}'>{url}</click></aqua>"
 
 # ======================================================================
@@ -64,7 +64,7 @@ lang-join-check: "{prefix}<gray>Автоматическая проверка я
 # Placeholders: {url}.
 # ======================================================================
 editor-url: "{prefix}<white>Редактор: <aqua><click:open_url:'{url}'>{url}</click>"
-editor-disabled: "{prefix}<red>Веб-редактор отключён в config.yml."
+editor-disabled: "{prefix}<red>Веб-редактор отключён в hacks.yml."
 editor-players-only: "{prefix}<red>Открывать редактор могут только игроки.</red>"
 
 # ======================================================================
@@ -187,7 +187,7 @@ spoof-help-title: "<aqua>=== Команды spoof Veneer ==="
 spoof-help-channels: "<gray>/spoof channels \\<player> <white>- Показать каналы плагинов игрока"
 spoof-help-brand: "<gray>/spoof brand \\<player> <white>- Показать бренд клиента игрока"
 spoof-help-brands: "<gray>/spoof brands [allow|block|forget \\<id>] <white>- Неизвестные бренды клиентов и решения по ним"
-spoof-unknown-brand: "{prefix}<gray>{player} зашёл с неизвестным клиентом:</gray> <white>{brand}</white> <click:run_command:'/spoof brands allow {id}'><hover:show_text:'<gray>Разрешить именно этот бренд: больше никаких алертов и проверок из-за него'><green>[Разрешить]</green></hover></click> <click:run_command:'/spoof brands block {id}'><hover:show_text:'<gray>Запретить именно этот бренд: пометка и алерт, наказание по spoof.client-brands.staff-verdicts'><red>[Запретить]</red></hover></click>"
+spoof-unknown-brand: "{prefix}<gray>{player} зашёл с неизвестным клиентом:</gray> <white>{brand}</white> <click:run_command:'/spoof brands allow {id}'><hover:show_text:'<gray>Разрешить именно этот бренд: больше никаких алертов и проверок из-за него'><green>[Разрешить]</green></hover></click> <click:run_command:'/spoof brands block {id}'><hover:show_text:'<gray>Запретить именно этот бренд: пометка и алерт, наказание по spoof.yml client-brands.staff-verdicts'><red>[Запретить]</red></hover></click>"
 spoof-verdict-usage: "{prefix}<red>Использование: /spoof brands [allow|block|forget \\<id>]</red>"
 spoof-verdict-unknown-id: "{prefix}<red>Нет бренда с номером {id}, см. /spoof brands</red>"
 spoof-verdict-allowed: "{prefix}<green>Разрешён</green> <gray>бренд клиента</gray> <white>{brand}</white>"
@@ -224,7 +224,7 @@ veneer-cmd-help: "этот список"
 veneer-cmd-lang: "язык сообщений Veneer для вас"
 veneer-cmd-alerts: "история оповещений и детектов; toggle включает и выключает ваши оповещения"
 veneer-cmd-info: "клиент, проверки модов, RPTrack и обходы игрока"
-veneer-cmd-reload: "перезагрузить config.yml и сообщения"
+veneer-cmd-reload: "перезагрузить конфигурационные файлы и сообщения"
 veneer-cmd-version: "текущая и последняя версия"
 veneer-cmd-spoof-brand: "бренд клиента игрока"
 veneer-cmd-spoof-channels: "каналы плагинов игрока"

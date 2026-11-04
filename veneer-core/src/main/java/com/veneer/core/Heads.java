@@ -41,6 +41,26 @@ public final class Heads {
         }
     }
 
+    /** The face and hat layer of a stored 64x64 skin as a 32x32 PNG (nearest neighbour), or null when it cannot be read. */
+    public static byte[] face(String skinPngBase64) {
+        try {
+            BufferedImage skin = ImageIO.read(new ByteArrayInputStream(Base64.getDecoder().decode(skinPngBase64)));
+            if (skin == null || skin.getWidth() != 64 || skin.getHeight() != 64) return null;
+            BufferedImage out = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
+            for (int y = 0; y < 32; y++)
+                for (int x = 0; x < 32; x++) {
+                    int base = skin.getRGB(8 + x / 4, 8 + y / 4);
+                    int hat = skin.getRGB(40 + x / 4, 8 + y / 4);
+                    out.setRGB(x, y, (hat >>> 24) != 0 ? hat : base);
+                }
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            ImageIO.write(out, "png", bytes);
+            return bytes.toByteArray();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     /** Re-encodes the skin as a 64x64 PNG (legacy 64x32 skins and HD skins are brought to that size). */
     static String render(BufferedImage skin) throws java.io.IOException {
         if (skin == null || skin.getWidth() < 64 || skin.getWidth() % 64 != 0 || skin.getHeight() < skin.getWidth() / 2) return null;

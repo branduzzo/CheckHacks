@@ -133,5 +133,14 @@
   "⌂ Home": "⌂ Главная",
   "☢ Mods detected": "☢ Найденные моды",
   "☰ History": "☰ История",
-  "⚯ Links": "⚯ Связи"
+  "⚯ Links": "⚯ Связи",
+  "All": "Все",
+  "No players yet": "Игроков пока нет",
+  "Delete selected ({0})": "Удалить выбранных ({0})",
+  "Delete {0} account(s) and everything stored about them (addresses, scans, client, fingerprint)? This cannot be undone.": "Удалить аккаунты ({0}) и всё, что о них хранится (адреса, проверки, клиент, отпечаток)? Это нельзя отменить.",
+  "Deleted {0} account(s)": "Удалено аккаунтов: {0}",
+  "Mods found": "Найдены моды",
+  "Clean": "Чисто",
+  "Player": "Игрок",
+  "Profile": "Профиль"
 }

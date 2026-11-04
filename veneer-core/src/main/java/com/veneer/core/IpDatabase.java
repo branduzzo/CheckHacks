@@ -1,5 +1,6 @@
 package com.veneer.core;
 
+import com.google.common.net.InetAddresses;
 import com.veneer.VeneerPlugin;
 
 import java.io.BufferedReader;
@@ -209,7 +210,8 @@ public final class IpDatabase {
             return new long[]{0, v, 0};
         }
         try {
-            byte[] b = InetAddress.getByName(ip).getAddress();
+            // literals only: InetAddresses.forString never touches DNS (unlike InetAddress.getByName)
+            byte[] b = InetAddresses.forString(ip).getAddress();
             if (b.length == 4) return parse(InetAddress.getByAddress(b).getHostAddress());
             long hi = 0, lo = 0;
             for (int i = 0; i < 8; i++) hi = hi << 8 | (b[i] & 0xff);

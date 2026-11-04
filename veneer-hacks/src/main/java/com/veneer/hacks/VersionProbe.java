@@ -202,7 +202,7 @@ public final class VersionProbe {
         removed(left, REMOVED_3, Arrays.copyOfRange(three, 0, REMOVED_3.size()));
 
         if (code.equals("en_us")) {
-            String forward = lines.length > 0 ? lines[0].strip() : "";
+            String forward = lines.length > 0 && lines[0] != null ? lines[0].strip() : "";
             if (forward.equals("Walk Forwards"))     keep(left, v -> v.isOlderThan(ClientVersion.V_1_21_2));
             else if (forward.equals("Walk Forward")) keep(left, v -> !v.isOlderThan(ClientVersion.V_1_21_2));
             for (int i = 0; i < added.size(); i++) {

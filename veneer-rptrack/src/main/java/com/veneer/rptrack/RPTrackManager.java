@@ -194,10 +194,13 @@ public class RPTrackManager extends VeneerModule implements Listener {
 
     @Override
     protected void disable() {
+        // Mark live sessions done first: the queued probe/assign tasks check s.done and stop sending packs
+        for (Session s : sessions.values()) s.done = true;
         if (http != null) http.stop(0);
         http = null;
         sessions.clear();
         results.clear();
+        reserved.clear();
     }
 
     @Override
@@ -550,7 +553,12 @@ public class RPTrackManager extends VeneerModule implements Listener {
             }
             s.done = true;
             sessions.remove(player.getUniqueId());
-            results.put(player.getUniqueId(), new Result(Long.bitCount(l.own() != 0 ? l.own() : cache), l.direct().size(), lb));
+            // results.put on the entity thread: playerQuit may have cleaned up while this ran async,
+            // and an entry added after it would stay forever
+            Result result = new Result(Long.bitCount(l.own() != 0 ? l.own() : cache), l.direct().size(), lb);
+            FoliaScheduler.runAtEntity(plugin, player, () -> {
+                if (player.isOnline()) results.put(player.getUniqueId(), result);
+            });
             // A known account keeps its own set (anything else in the cache is another account's); a new one on
             // a known machine is stored with that machine's packs
             plugin.database().fingerprints().save(uuid, player.getName(), l.own() != 0 ? l.own() : cache, lb, false);
@@ -574,7 +582,8 @@ public class RPTrackManager extends VeneerModule implements Listener {
                 + (store ? ", stored" : ", not stored"));
         if (!store) { reserved.remove(held); return; }
         long mask = maskOf(s.ok);
-        results.put(player.getUniqueId(), new Result(s.ok.size(), 0, s.lbHit));
+        // On the entity thread here, like playerQuit: skip the put when the account already left, else its entry would linger
+        if (player.isOnline()) results.put(player.getUniqueId(), new Result(s.ok.size(), 0, s.lbHit));
         // Unique mode replaces: an account whose cache was wiped gets a new set, and two merged sets would break the rule.
         // The reservation is dropped once the set is in the database, so no pick in between misses it.
         FoliaScheduler.runAsync(plugin, () -> {

@@ -12,28 +12,29 @@ import java.util.*;
 public class ConfigManager {
 
     private final VeneerPlugin plugin;
-    private ConfigurationSection masterConfig;
-    private ConfigurationSection hacksConfig;
-    private ConfigurationSection langConfig;
-    private final Map<String, HackDefinition> hacks = new LinkedHashMap<>();
-    private final Map<String, CommandRule> commandRules = new LinkedHashMap<>();
-    private final Map<String, List<CommandRule>> rulesByHack = new HashMap<>();
+    private volatile ConfigurationSection masterConfig;
+    private volatile ConfigurationSection hacksConfig;
+    private volatile ConfigurationSection langConfig;
+    // Copy-on-write behind these volatile fields: reload() swaps whole maps while the web panel's
+    // HTTP threads read getHacks()/getDefaultCheckHacks()/getRulesForHack() meanwhile
+    private volatile Map<String, HackDefinition> hacks = new LinkedHashMap<>();
+    private volatile Map<String, List<CommandRule>> rulesByHack = new HashMap<>();
 
-    private long timeoutTicks;
-    private long betweenSignTicks;
-    private boolean hideClean;
-    private boolean showChannels;
-    private boolean adaptiveTimeout;
-    private long adaptiveMarginTicks;
-    private long adaptiveMinTicks;
-    private boolean retryOnTimeout;
-    private boolean doubleCheck;
-    private boolean commandIfPositiveEnabled;
-    private String positiveCommand;
-    private boolean commandIfProtectedEnabled;
-    private String protectedCommand;
-    private boolean commandIfCleanEnabled;
-    private String cleanCommand;
+    private volatile long timeoutTicks;
+    private volatile long betweenSignTicks;
+    private volatile boolean hideClean;
+    private volatile boolean showChannels;
+    private volatile boolean adaptiveTimeout;
+    private volatile long adaptiveMarginTicks;
+    private volatile long adaptiveMinTicks;
+    private volatile boolean retryOnTimeout;
+    private volatile boolean doubleCheck;
+    private volatile boolean commandIfPositiveEnabled;
+    private volatile String positiveCommand;
+    private volatile boolean commandIfProtectedEnabled;
+    private volatile String protectedCommand;
+    private volatile boolean commandIfCleanEnabled;
+    private volatile String cleanCommand;
 
     public ConfigManager(VeneerPlugin plugin) {
         this.plugin = plugin;
@@ -51,7 +52,7 @@ public class ConfigManager {
     }
 
     private void loadHacks() {
-        hacks.clear();
+        Map<String, HackDefinition> loaded = new LinkedHashMap<>();
         ConfigurationSection section = hacksConfig.getConfigurationSection("hacks");
         if (section == null) return;
         for (String id : section.getKeys(false)) {
@@ -65,13 +66,13 @@ public class ConfigManager {
             } catch (IllegalArgumentException e) {
                 mode = DetectionMode.TRANSLATE;
             }
-            hacks.put(id, new HackDefinition(id, displayName, key, mode));
         }
-        plugin.getLogger().info("Loaded " + hacks.size() + " hacks.");
+        hacks = loaded;
+        plugin.getLogger().info("Loaded " + loaded.size() + " hacks.");
     }
 
     private void loadCommandRules() {
-        commandRules.clear();
+        Map<String, CommandRule> commandRules = new LinkedHashMap<>();
         ConfigurationSection section = hacksConfig.getConfigurationSection("command-rules");
         if (section != null) {
             for (String name : section.getKeys(false)) {
@@ -89,7 +90,7 @@ public class ConfigManager {
                 commandRules.put(name, new CommandRule(name, mod.trim(), result, cmd));
             }
         }
-        rulesByHack.clear();
+        Map<String, List<CommandRule>> byHack = new HashMap<>();
         for (HackDefinition hack : hacks.values()) {
             String idNorm = normalize(hack.getId());
             String dnNorm = normalize(hack.getDisplayName());
@@ -98,8 +99,9 @@ public class ConfigManager {
                 String modNorm = normalize(rule.getMod());
                 if (modNorm.equals(idNorm) || modNorm.equals(dnNorm)) list.add(rule);
             }
-            rulesByHack.put(hack.getId(), list);
+            byHack.put(hack.getId(), list);
         }
+        rulesByHack = byHack;
     }
 
     private static String normalize(String s) {
@@ -152,6 +154,8 @@ public class ConfigManager {
     public String  getWebHost()         { return masterConfig.getString("web-editor.host", "localhost"); }
     public String  getWebBind()         { return masterConfig.getString("web-editor.bind", "127.0.0.1"); }
     public int     getTokenExpireMinutes() { return masterConfig.getInt("web-editor.token-expire-minutes", 10); }
+    public int     getWebSessionDays()  { return Math.max(1, masterConfig.getInt("web-editor.session-days", 30)); }
+    public boolean getWebBindIp()       { return masterConfig.getBoolean("web-editor.bind-ip", true); }
 
     public boolean isCommandIfPositiveEnabled() { return commandIfPositiveEnabled; }
     public String  getPositiveCommand()         { return positiveCommand; }

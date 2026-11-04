@@ -9,6 +9,7 @@ import com.veneer.core.FoliaScheduler;
 import org.bukkit.entity.Player;
 
 import java.util.function.Function;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -52,5 +53,11 @@ public class JoinListener {
                 }, 80L);
             }
         }
+    }
+
+    /** Players who left are forgotten, so their UUIDs do not pile up in memory forever. */
+    public void onQuit(UUID uuid) {
+        alreadyHackChecked.remove(uuid);
+        alreadyLangChecked.remove(uuid);
     }
 }

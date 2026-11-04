@@ -15,7 +15,6 @@
         body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
         header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;gap:16px;flex-shrink:0}
         .logo{font-weight:700;font-size:16px;color:var(--text)}
-        .logo span{color:var(--blue)}
         .header-spacer{flex:1}
         .home-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:6px 12px;border-radius:var(--radius);cursor:pointer;font-size:13px;font-family:var(--font);transition:all .15s}
         .home-btn:hover{border-color:var(--blue);color:var(--text)}
@@ -40,6 +39,17 @@
         .player-item:hover{background:var(--surface2);border-color:var(--border)}
         .player-item img{border-radius:3px;image-rendering:pixelated;flex-shrink:0;width:28px;height:28px;background:var(--surface2)}
         .player-item-name{font-size:13px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .tabs{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+        .tab{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text2);border-radius:var(--radius);padding:5px;cursor:pointer;font-size:12px;font-family:var(--font)}
+        .tab.active{background:var(--blue-dim);border-color:var(--blue);color:var(--blue)}
+        .del-bar{padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+        .del-bar[hidden]{display:none}
+        .del-bar button{width:100%;background:#3d1a1a;border:1px solid #7c2020;color:var(--red);border-radius:var(--radius);padding:6px;cursor:pointer;font-size:12px;font-family:var(--font)}
+        .del-bar button:hover{background:var(--red);color:#fff}
+        .no-delete .del-bar, .no-delete .player-check{display:none}
+        .player-check{flex-shrink:0;margin:0;cursor:pointer}
+        .panel-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0}
+        .panel-foot .player-badge{margin-left:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .online-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
         .scan-item{padding:9px 10px;border-radius:var(--radius);cursor:pointer;border:1px solid var(--border);margin-bottom:5px;background:var(--bg);transition:border-color .12s}
         .scan-item:hover{border-color:var(--blue)}
@@ -149,24 +159,31 @@
 </head>
 <body>
 <header>
-    <span class="logo">Vene<span>er</span> Panel</span>
+    <span class="logo">Veneer Panel</span>
     <div class="header-spacer"></div>
-    <span class="session" id="session"></span>
-    <div class="player-badge" id="player-badge"></div>
-    <button class="home-btn" onclick="nav('history')" data-t="☰ History">☰ History</button>
-    <button class="home-btn" onclick="nav('mods')" data-t="☢ Mods detected">☢ Mods detected</button>
-    <button class="home-btn links-btn" onclick="nav('links')" data-t="⚯ Links">⚯ Links</button>
-    <button class="home-btn" onclick="nav('home')" data-t="⌂ Home">⌂ Home</button>
+    <button class="home-btn" data-nav="history" data-t="☰ History">☰ History</button>
+    <button class="home-btn" data-nav="mods" data-t="☢ Mods detected">☢ Mods detected</button>
+    <button class="home-btn links-btn" data-nav="links" data-t="⚯ Links">⚯ Links</button>
+    <button class="home-btn" data-nav="home" data-t="⌂ Home">⌂ Home</button>
 </header>
 <div class="layout">
     <aside class="panel">
         <div class="panel-title" data-t="Players">Players</div>
         <div class="search-wrap">
-            <input type="text" id="search-input" list="search-list" autocomplete="off" placeholder="Search player..." data-tp="Search player..." onkeydown="if(event.key==='Enter')searchPlayer()">
+            <input type="text" id="search-input" list="search-list" autocomplete="off" placeholder="Search player..." data-tp="Search player..." >
             <datalist id="search-list"></datalist>
-            <button onclick="searchPlayer()" data-t="Search">Search</button>
+            <button data-search data-t="Search">Search</button>
         </div>
-        <div class="panel-scroll" id="offline-history"></div>
+        <div class="tabs">
+            <button class="tab active" data-tab="online" data-t="Online">Online</button>
+            <button class="tab" data-tab="all" data-t="All">All</button>
+        </div>
+        <div class="del-bar" id="del-bar" hidden><button id="del-btn"></button></div>
+        <div class="panel-scroll" id="player-list"></div>
+        <div class="panel-foot">
+            <div class="player-badge" id="player-badge"></div>
+            <span class="session" id="session"></span>
+        </div>
     </aside>
     <main id="main-content">
         <div class="loading" data-t="Loading...">Loading...</div>
@@ -174,15 +191,10 @@
     <aside class="panel panel-right">
         <div class="panel-title" data-t="Recent Scans">Recent Scans</div>
         <div class="panel-scroll" id="recent-scans"></div>
-        <div class="panel-title" style="border-top:1px solid var(--border)" data-t="Online Players">Online Players</div>
-        <div style="height:220px;overflow-y:auto;padding:6px;flex-shrink:0" id="online-players"></div>
     </aside>
 </div>
 <div class="toast" id="toast"></div>
-<script src="/web/three.min.js"></script>
-<script src="/web/3d-force-graph.min.js"></script>
 <script>
-    const token = new URLSearchParams(location.search).get('token');
     // Translations for general.language, put in by the server (web/lang/<language>.json): English text -> text.
     // Missing entries and English stay as written; {0}, {1}... are filled from the arguments.
     const L = /*I18N*/{};
@@ -190,15 +202,44 @@
       return String(L[text] || text).replace(/\{(\d+)\}/g, (m, i) => args[i] !== undefined ? args[i] : m);
     }
 
+    // The session is a cookie the server set when the link from /hackeditor was opened; no token travels in the address
     function apiUrl(path) {
-      const sep = path.includes('?') ? '&' : '?';
-      return '/api/' + path + sep + 'token=' + encodeURIComponent(token);
+      return '/api/' + path;
     }
+
+    // The graph libraries (about 1.9 MB) are only loaded when the links page is opened
+    let graphLibs = null;
+    function loadGraphLibs() {
+      if (!graphLibs) graphLibs = ['/web/three.min.js', '/web/3d-force-graph.min.js'].reduce((p, src) => p.then(() => new Promise((ok, no) => {
+        const el = document.createElement('script');
+        el.src = src; el.onload = ok; el.onerror = () => { graphLibs = null; no(new Error(src)); };
+        document.head.appendChild(el);
+      })), Promise.resolve());
+      return graphLibs;
+    }
+
+    // Clicks and image errors are handled here, not in onclick/onerror attributes: the page's policy runs only scripts
+    document.addEventListener('click', ev => {
+      const el = ev.target.closest('[data-nav],[data-back],[data-search],[data-hist]');
+      if (!el || (el.dataset.hist !== undefined && ev.target.closest('.player-check'))) return;
+      if (el.dataset.hist !== undefined) nav('history/' + encodeURIComponent(el.dataset.hist));
+      else if (el.dataset.nav) nav(el.dataset.nav);
+      else if (el.dataset.back !== undefined) { history.length > 1 ? history.back() : nav('home'); }
+      else searchPlayer();
+    });
+    document.addEventListener('error', ev => {
+      const img = ev.target;
+      if (!img || img.tagName !== 'IMG') return;
+      if (img.dataset.fb && !img.dataset.tried) { img.dataset.tried = '1'; img.src = img.dataset.fb; }
+      else img.style.visibility = 'hidden';
+    }, true);
 
     let expired = false;
     async function apiFetch(path, opts) {
       if (expired) throw new Error(t('Session expired. Run /hackeditor in Minecraft.'));
-      const r = await fetch(apiUrl(path), opts || {});
+      const o = opts || {};
+      o.headers = Object.assign({ 'X-Veneer': '1' }, o.headers);
+      const r = await fetch(apiUrl(path), o);
       const text = await r.text();
       let json;
       try { json = JSON.parse(text); } catch(e) { throw new Error('Invalid JSON: ' + text.slice(0,100)); }
@@ -226,7 +267,7 @@
       if (page === 'player' && arg) showPlayer(arg);
       else if (page === 'scan' && arg) showScan(+arg);
       else if (page === 'mods') showMods();
-      else if (page === 'history') showHistory();
+      else if (page === 'history') showHistory(arg);
       else if (page === 'links' && perms.includes('links')) showLinks(arg);
       else showHome();
     }
@@ -241,9 +282,6 @@
         body: JSON.stringify(body)
       });
     }
-
-    let offlineHistory = [];
-    try { offlineHistory = JSON.parse(localStorage.getItem('ch_history') || '[]'); } catch(e) {}
 
     function showToast(msg) {
       const el = document.getElementById('toast');
@@ -266,7 +304,7 @@
     }
 
     function headUrl(id) {
-      return 'https://mc-heads.net/avatar/' + encodeURIComponent(id) + '/32';
+      return '/api/head/' + encodeURIComponent(id);
     }
 
     function badge(result) {
@@ -286,19 +324,19 @@
         document.body.classList.toggle('no-scan', !perms.includes('scan'));
         document.body.classList.toggle('no-delete', !perms.includes('delete'));
         document.getElementById('player-badge').innerHTML =
-          '<img src="' + headUrl(info.player_uuid) + '" onerror="this.style.visibility=\'hidden\'" alt=""> ' + esc(info.player_name);
+          '<img src="' + headUrl(info.player_uuid) + '" alt=""> ' + esc(info.player_name);
         startSessionClock(Number(info.expires_at) || 0);
       } catch(e) {
         sessionExpired();
         return;
       }
       render();
-      loadOnlinePlayers();
+      initPlayerList();
       loadRecentScans();
-      renderOfflineHistory();
-      setInterval(loadOnlinePlayers, 10000);
+      setInterval(() => { if (playerTab === 'online') loadPlayers(); }, 10000);
       setInterval(loadRecentScans, 15000);
       const input = document.getElementById('search-input');
+      input.addEventListener('keydown', ev => { if (ev.key === 'Enter') searchPlayer(); });
       let suggestTimer = 0;
       input.addEventListener('input', () => {
         clearTimeout(suggestTimer);
@@ -306,7 +344,7 @@
       });
     }
 
-    // Minutes left on the token; the page goes to the expired screen when it runs out
+    // Minutes left for this browser's binding; the page goes to the expired screen when it runs out
     function startSessionClock(expiresAt) {
       const el = document.getElementById('session');
       if (!expiresAt) { el.style.display = 'none'; return; }
@@ -314,6 +352,8 @@
         const left = expiresAt - Date.now();
         if (left <= 0) { clearInterval(timer); sessionExpired(); return; }
         const min = Math.ceil(left / 60000);
+        // A browser stays bound for days: the clock only appears when the day is nearly over
+        el.style.display = min > 1440 ? 'none' : '';
         el.textContent = t('session: {0} min', min);
         el.classList.toggle('low', min <= 2);
       };
@@ -445,7 +485,7 @@
           '<span class="scan-card-time">' + t(m.count === 1 ? '{0} player' : '{0} players', m.count) + '</span></div>' +
           '<div style="padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px">' +
           m.players.map(p => '<span class="player-item" style="padding:4px 8px" data-player="' + esc(p.name) + '" title="' + esc(timeAgo(p.last_seen)) + '">' +
-            '<img src="' + headUrl(p.uuid) + '" onerror="this.style.visibility=\'hidden\'" alt="" style="width:20px;height:20px"><span class="player-item-name">' + esc(p.name) + '</span></span>').join('') +
+            '<img src="' + headUrl(p.uuid) + '" alt="" style="width:20px;height:20px"><span class="player-item-name">' + esc(p.name) + '</span></span>').join('') +
           '</div></div>').join('') + '</div>';
     }
 
@@ -466,7 +506,7 @@
       const main = document.getElementById('main-content');
       main.innerHTML = '<div class="loading">' + t('Loading...') + '</div>';
       let data;
-      try { data = await apiFetch('links'); } catch(e) { main.innerHTML = '<div class="error-msg">' + esc(e.message) + '</div>'; return; }
+      try { await loadGraphLibs(); data = await apiFetch('links'); } catch(e) { main.innerHTML = '<div class="error-msg">' + esc(e.message) + '</div>'; return; }
       if (!data.nodes.length) {
         main.innerHTML = '<div class="section-title">' + t('Linked accounts') + '</div><div class="empty-state">' + t('No linked accounts yet. Links appear when accounts join from the same address, share an RPTrack fingerprint or play with the same uncommon client.') + '</div>';
         return;
@@ -702,7 +742,7 @@
       try {
         const [st, recent] = await Promise.all([apiFetch('stats'), apiFetch('scans?limit=15')]);
         const card = (num, label, route, colour) =>
-          '<div class="stat-card' + (route ? ' link" onclick="nav(\'' + route + '\')' : '') + '"><div class="stat-card-num"' +
+          '<div class="stat-card' + (route ? ' link" data-nav="' + route : '') + '"><div class="stat-card-num"' +
           (colour ? ' style="color:' + colour + '"' : '') + '>' + Number(num || 0).toLocaleString() + '</div><div class="stat-card-label">' + t(label) + '</div></div>';
         main.innerHTML =
           '<div class="section-title">' + t('Overview') + '</div>' +
@@ -716,23 +756,27 @@
           '</div>' +
           '<div class="section-title">' + t('Recent Activity') + '</div>' +
           '<div class="scan-cards">' + (recent.map(buildScanCard).join('') || '<div class="empty-state"><p>' + t('No scans yet.') + '</p></div>') + '</div>' +
-          (recent.length >= 15 ? '<button class="more-btn" onclick="nav(\'history\')">' + t('Full history') + '</button>' : '');
+          (recent.length >= 15 ? '<button class="more-btn" data-nav="history">' + t('Full history') + '</button>' : '');
       } catch(e) {
         main.innerHTML = '<div class="empty-state"><p>' + t('Error: {0}', esc(e.message)) + '</p></div>';
       }
     }
 
     // Scan history with filters; the filters survive leaving the page and coming back
-    const historyFilter = {type: '', detected: false};
+    const historyFilter = {kind: ''};
+    // What each choice asks the server for
+    const HISTORY_KINDS = [['', 'all', ''], ['found', 'Mods found', '&type=hack&detected=1'], ['clean', 'Clean', '&type=hack&detected=0'], ['lang', 'Language', '&type=lang']];
     const HISTORY_PAGE = 30;
-    async function showHistory() {
+    async function showHistory(player) {
       const main = document.getElementById('main-content');
       main.innerHTML =
         '<div class="section-title">' + t('Scan history') + '</div>' +
+        (player ? '<div class="graph-bar"><span>' + t('Player') + ': <b>' + esc(player) + '</b></span>' +
+          '<button class="more-btn" style="margin:0" data-nav="' + esc(playerRoute(player)) + '">' + t('Profile') + '</button>' +
+          '<button class="more-btn" style="margin:0" data-nav="history">✕</button></div>' : '') +
         '<div class="graph-bar">' +
-          '<label>' + t('Type') + ' <select id="h-type">' + [['', 'all'], ['hack', 'Hack Check'], ['lang', 'Lang Check']]
-            .map(([v, n]) => '<option value="' + v + '"' + (historyFilter.type === v ? ' selected' : '') + '>' + t(n) + '</option>').join('') + '</select></label>' +
-          '<label><input type="checkbox" id="h-det"' + (historyFilter.detected ? ' checked' : '') + '> ' + t('only with mods found') + '</label>' +
+          '<label>' + t('Type') + ' <select id="h-type">' + HISTORY_KINDS
+            .map(([v, n]) => '<option value="' + v + '"' + (historyFilter.kind === v ? ' selected' : '') + '>' + t(n) + '</option>').join('') + '</select></label>' +
         '</div>' +
         '<div class="scan-cards" id="h-list"><div class="loading">' + t('Loading...') + '</div></div>' +
         '<button class="more-btn" id="h-more" style="display:none">' + t('Load more') + '</button>';
@@ -744,7 +788,7 @@
         let page;
         try {
           page = await apiFetch('scans?limit=' + HISTORY_PAGE + '&offset=' + offset +
-            (historyFilter.type ? '&type=' + historyFilter.type : '') + (historyFilter.detected ? '&detected=1' : ''));
+            HISTORY_KINDS.find(k => k[0] === historyFilter.kind)[2] + (player ? '&player=' + encodeURIComponent(player) : ''));
         } catch(e) { list.innerHTML = '<div class="error-msg">' + esc(e.message) + '</div>'; return; }
         if (!list.isConnected) return;
         if (reset) list.innerHTML = '';
@@ -754,8 +798,7 @@
         more.style.display = page.length === HISTORY_PAGE ? '' : 'none';
         more.disabled = false;
       };
-      document.getElementById('h-type').onchange = e => { historyFilter.type = e.target.value; load(true); };
-      document.getElementById('h-det').onchange = e => { historyFilter.detected = e.target.checked; load(true); };
+      document.getElementById('h-type').onchange = e => { historyFilter.kind = e.target.value; load(true); };
       more.onclick = () => load(false);
       load(true);
     }
@@ -764,16 +807,20 @@
       const results = s.results || [];
       let preview = '';
       if (s.type === 'hack') {
-        // Found mods first: they are what the card is for
-        const shown = results.filter(r => r.result === 'DETECTED').concat(results.filter(r => r.result !== 'DETECTED'));
-        preview = shown.slice(0, 6).map(r => r.result === 'DETECTED'
-          ? '<span class="badge badge-DETECTED">' + esc(r.hack_name) + '</span>' : badge(r.result)).join(' ') +
-          (results.length > 6 ? ' <span class="muted" style="font-size:11px">+' + (results.length - 6) + '</span>' : '');
+        // The card is for the mods that were found; a scan without any shows one "Clean" plate, plus the statuses that need a look
+        const found = results.filter(r => r.result === 'DETECTED');
+        preview = found.slice(0, 6).map(r => '<span class="badge badge-DETECTED">' + esc(r.hack_name) + '</span>').join(' ') +
+          (found.length > 6 ? ' <span class="muted" style="font-size:11px">+' + (found.length - 6) + '</span>' : '');
+        if (!found.length) {
+          const other = ['PROTECTED', 'TIMEOUT'].filter(k => results.some(r => r.result === k));
+          preview = results.length || !other.length ? '<span class="badge badge-NOT_DETECTED">' + t('Clean') + '</span>' : '';
+          preview += other.map(k => ' ' + badge(k)).join('');
+        }
       } else {
         const r = results[0];
         preview = r ? '<span class="badge badge-lang">' + esc(r.language || t('Unknown')) + '</span>' : '';
       }
-      return '<div class="scan-card' + (s.has_detected == 1 ? ' hit' : '') + '" onclick="nav(\'scan/' + Number(s.id) + '\')">' +
+      return '<div class="scan-card' + (s.has_detected == 1 ? ' hit' : '') + '" data-nav="scan/' + Number(s.id) + '">' +
         '<div class="scan-card-header">' +
           '<span class="scan-card-type">' + t(s.type === 'hack' ? 'Hack Check' : 'Lang Check') + ' — ' + esc(s.target_name) + '</span>' +
           '<span class="scan-card-time">' + timeAgo(s.timestamp) + '</span>' +
@@ -876,7 +923,6 @@
     }
 
     async function showPlayer(name, quiet) {
-      addHistory(name);
       const main = document.getElementById('main-content');
       if (!quiet) main.innerHTML = '<div class="loading">' + t('Loading {0}...', esc(name)) + '</div>';
       try {
@@ -896,7 +942,7 @@
             '<button class="run-btn" id="btn-lang" data-player="' + esc(name) + '" data-scan="lang">' + t('Run Lang Check') + '</button>';
         }
         if (data.alts && data.alts.length)
-          runButtons += '<button class="run-btn links-btn" onclick="nav(\'links/' + encodeURIComponent(data.uuid) + '\')">⚯ ' + t('Show in graph') + '</button>';
+          runButtons += '<button class="run-btn links-btn" data-nav="links/' + esc(encodeURIComponent(data.uuid)) + '">⚯ ' + t('Show in graph') + '</button>';
 
         const fp = data.fingerprint;
         const mods = (data.mods || []).slice();
@@ -933,9 +979,9 @@
         for (const s of scans) scanCards += buildScanCard(s);
 
         main.innerHTML =
-          '<button class="back-btn" onclick="history.length > 1 ? history.back() : nav(\'home\')">← ' + t('Back') + '</button>' +
+          '<button class="back-btn" data-back>← ' + t('Back') + '</button>' +
           '<div class="player-header">' +
-            '<img src="' + headUrl(uuid) + '" data-fb="' + esc(headUrl(name)) + '" onerror="this.onerror=null;this.src=this.dataset.fb" width="64" height="64" alt="">' +
+            '<img src="' + headUrl(uuid) + '" data-fb="' + esc(headUrl(name)) + '" width="64" height="64" alt="">' +
             '<div class="player-header-info"><h2>' + esc(name) + '</h2><p>' + esc(data.uuid || '') + '</p>' + onlineBadge + '</div>' +
           '</div>' +
           (runButtons ? '<div class="toolbar">' + runButtons + '</div>' : '') +
@@ -1002,52 +1048,77 @@
       } catch(e) {}
     }
 
-    async function loadOnlinePlayers() {
+    // Left column: players online or every known account; with veneer.web.delete they can be ticked and removed from the database
+    let playerTab = 'online', allPlayers = [], allMore = false;
+    const selected = new Set();
+    const PLAYERS_PAGE = 50;
+
+    async function loadPlayers(more) {
       try {
-        const players = await apiFetch('players/online');
-        const container = document.getElementById('online-players');
-        if (!container) return;
-        if (!players || players.length === 0) {
-          container.innerHTML = '<div style="padding:10px;color:var(--text2);font-size:12px;text-align:center">' + t('No players online') + '</div>';
-          return;
+        let rows;
+        if (playerTab === 'online') {
+          rows = await apiFetch('players/online');
+        } else {
+          if (!more) allPlayers = [];
+          const page = await apiFetch('players/all?limit=' + PLAYERS_PAGE + '&offset=' + allPlayers.length);
+          allMore = page.length === PLAYERS_PAGE;
+          allPlayers = allPlayers.concat(page);
+          rows = allPlayers;
         }
-        container.innerHTML = '';
-        for (const p of players) {
-          const el = document.createElement('div');
-          el.className = 'player-item';
-          el.onclick = () => nav(playerRoute(p.name));
-          el.innerHTML =
-            '<img src="' + headUrl(p.uuid) + '" data-fb="' + esc(headUrl(p.name)) + '" onerror="this.onerror=null;this.src=this.dataset.fb" alt="" width="28" height="28">' +
-            '<span class="player-item-name">' + esc(p.name) + '</span>' +
-            '<div class="online-dot"></div>';
-          container.appendChild(el);
-        }
+        renderPlayers(rows);
       } catch(e) {}
     }
 
-    function addHistory(name) {
-      offlineHistory = [name, ...offlineHistory.filter(n => n !== name)].slice(0, 20);
-      try { localStorage.setItem('ch_history', JSON.stringify(offlineHistory)); } catch(e) {}
-      renderOfflineHistory();
-    }
-
-    function renderOfflineHistory() {
-      const container = document.getElementById('offline-history');
+    function renderPlayers(rows) {
+      const container = document.getElementById('player-list');
       if (!container) return;
-      if (offlineHistory.length === 0) {
-        container.innerHTML = '<div style="padding:10px;color:var(--text2);font-size:12px;text-align:center">' + t('Search a player above') + '</div>';
+      if (!rows.length) {
+        container.innerHTML = '<div style="padding:10px;color:var(--text2);font-size:12px;text-align:center">' +
+          t(playerTab === 'online' ? 'No players online' : 'No players yet') + '</div>';
         return;
       }
-      container.innerHTML = '';
-      for (const name of offlineHistory) {
-        const el = document.createElement('div');
-        el.className = 'player-item';
-        el.onclick = () => nav(playerRoute(name));
-        el.innerHTML =
-          '<img src="' + headUrl(name) + '" onerror="this.style.visibility=\'hidden\'" alt="" width="28" height="28">' +
-          '<span class="player-item-name">' + esc(name) + '</span>';
-        container.appendChild(el);
-      }
+      container.innerHTML = rows.map(p =>
+        '<div class="player-item" data-hist="' + esc(p.name) + '">' +
+          '<input type="checkbox" class="player-check" data-uuid="' + esc(p.uuid) + '"' + (selected.has(p.uuid) ? ' checked' : '') + '>' +
+          '<img src="' + headUrl(p.uuid) + '" data-fb="' + esc(headUrl(p.name)) + '" alt="" width="28" height="28">' +
+          '<span class="player-item-name">' + esc(p.name) + '</span>' +
+          (p.online ? '<div class="online-dot"></div>' : '') +
+        '</div>').join('') +
+        (playerTab === 'all' && allMore ? '<button class="more-btn" id="players-more">' + t('Load more') + '</button>' : '');
+      const more = document.getElementById('players-more');
+      if (more) more.onclick = () => loadPlayers(true);
+      updateDeleteBar();
+    }
+
+    function updateDeleteBar() {
+      const bar = document.getElementById('del-bar');
+      bar.hidden = selected.size === 0;
+      document.getElementById('del-btn').textContent = t('Delete selected ({0})', selected.size);
+    }
+
+    function initPlayerList() {
+      document.querySelectorAll('.tab').forEach(btn => btn.onclick = () => {
+        playerTab = btn.dataset.tab;
+        document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
+        loadPlayers();
+      });
+      document.getElementById('player-list').addEventListener('change', ev => {
+        const box = ev.target.closest('.player-check');
+        if (!box) return;
+        if (box.checked) selected.add(box.dataset.uuid); else selected.delete(box.dataset.uuid);
+        updateDeleteBar();
+      });
+      document.getElementById('del-btn').onclick = async () => {
+        const n = selected.size;
+        if (!n || !confirm(t('Delete {0} account(s) and everything stored about them (addresses, scans, client, fingerprint)? This cannot be undone.', n))) return;
+        try {
+          await apiPost('players/delete', { uuids: [...selected] });
+          selected.clear();
+          showToast(t('Deleted {0} account(s)', n));
+          loadPlayers(); loadRecentScans(); render();
+        } catch(e) { showToast(e.message); }
+      };
+      loadPlayers();
     }
 
     function searchPlayer() {

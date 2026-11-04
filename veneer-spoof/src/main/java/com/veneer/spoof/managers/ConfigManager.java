@@ -7,6 +7,7 @@ import com.veneer.VeneerPlugin;
 import java.util.Locale;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -25,9 +26,10 @@ public class ConfigManager {
 
     // Client brand configurations
     private boolean clientBrandsEnabled;
-    // Insertion order: when two patterns match, the brand listed first in the config wins
-    private final Map<String, ClientBrandConfig> clientBrands = new java.util.LinkedHashMap<>();
-    private ClientBrandConfig defaultBrandConfig;
+    // Insertion order: when two patterns match, the brand listed first in the config wins. Replaced
+    // wholesale on reload; readers on packet/netty threads must never see a half-cleared map.
+    private volatile Map<String, ClientBrandConfig> clientBrands = new LinkedHashMap<>();
+    private volatile ClientBrandConfig defaultBrandConfig = new ClientBrandConfig();
 
     // Class to hold client brand configuration
     public static class ClientBrandConfig {
@@ -81,7 +83,7 @@ public class ConfigManager {
         List<String> channelRegexes = getBlockedChannels();
         for (String regex : channelRegexes) {
             try {
-                channelPatterns.put(regex, Pattern.compile(regex));
+                newPatterns.put(regex, Pattern.compile(regex));
             } catch (PatternSyntaxException e) {
                 plugin.getLogger().warning("Invalid channel regex pattern: " + regex + " - " + e.getMessage());
             }
@@ -114,39 +116,39 @@ public class ConfigManager {
                 "&8[&cVeneer&8] &7%player% using unknown client: &e%brand%");
             defaultBrandConfig.consoleAlertMessage = defaultSection.getString("console-alert-message",
                 "%player% using unknown client: %brand%");
-            defaultBrandConfig.punish = defaultSection.getBoolean("punish", false);
-            defaultBrandConfig.punishments = defaultSection.getStringList("punishments");
+            defaultConfig.punish = defaultSection.getBoolean("punish", false);
+            defaultConfig.punishments = defaultSection.getStringList("punishments");
         } else {
             // Set up default values if section is missing
-            defaultBrandConfig.enabled = true;
-            defaultBrandConfig.flag = true;
-            defaultBrandConfig.alert = true;
-            defaultBrandConfig.discordAlert = false;
-            defaultBrandConfig.alertMessage = "&8[&cVeneer&8] &7%player% using unknown client: &e%brand%";
-            defaultBrandConfig.consoleAlertMessage = "%player% using unknown client: %brand%";
-            defaultBrandConfig.punish = false;
-            defaultBrandConfig.punishments = new ArrayList<>();
+            defaultConfig.enabled = true;
+            defaultConfig.flag = true;
+            defaultConfig.alert = true;
+            defaultConfig.discordAlert = false;
+            defaultConfig.alertMessage = "<dark_gray>[<red>Veneer</dark_gray>] <gray>%player% using unknown client: <yellow>%brand%";
+            defaultConfig.consoleAlertMessage = "%player% using unknown client: %brand%";
+            defaultConfig.punish = false;
+            defaultConfig.punishments = new ArrayList<>();
         }
 
         // Brands staff decided on: allowed ones are a known clean client, blocked ones flag like a cheat client
         ClientBrandConfig allowed = new ClientBrandConfig();
         allowed.enabled = true;
-        allowed.alertMessage = defaultBrandConfig.alertMessage;
-        allowed.consoleAlertMessage = defaultBrandConfig.consoleAlertMessage;
-        clientBrands.put(STAFF_ALLOWED, allowed);
+        allowed.alertMessage = defaultConfig.alertMessage;
+        allowed.consoleAlertMessage = defaultConfig.consoleAlertMessage;
+        newBrands.put(STAFF_ALLOWED, allowed);
         ConfigurationSection blockedSection = config.getConfigurationSection("client-brands.staff-verdicts.blocked");
         ClientBrandConfig blocked = new ClientBrandConfig();
         blocked.enabled = true;
         blocked.flag = true;
         blocked.alert = true;
         blocked.alertMessage = blockedSection != null ? blockedSection.getString("alert-message",
-                "&8[&cVeneer&8] &7%player% is using blocked client &c%brand%") : "&8[&cVeneer&8] &7%player% is using blocked client &c%brand%";
+                "<dark_gray>[<red>Veneer</dark_gray>] <gray>%player% is using blocked client <red>%brand%") : "<dark_gray>[<red>Veneer</dark_gray>] <gray>%player% is using blocked client <red>%brand%";
         blocked.consoleAlertMessage = blockedSection != null ? blockedSection.getString("console-alert-message",
                 "%player% is using blocked client: %brand%") : "%player% is using blocked client: %brand%";
         blocked.discordAlert = blockedSection != null && blockedSection.getBoolean("discord-alert", true);
         blocked.punish = blockedSection != null && blockedSection.getBoolean("punish", false);
         blocked.punishments = blockedSection != null ? blockedSection.getStringList("punishments") : new ArrayList<>();
-        clientBrands.put(STAFF_BLOCKED, blocked);
+        newBrands.put(STAFF_BLOCKED, blocked);
 
         // Load individual brand configurations
         ConfigurationSection brandsSection = config.getConfigurationSection("client-brands.brands");
@@ -164,6 +166,7 @@ public class ConfigManager {
                 }
             }
         }
+        clientBrands = newBrands;
     }
 
     /**
@@ -175,8 +178,10 @@ public class ConfigManager {
         brandConfig.flag = section.getBoolean("flag", false);
         brandConfig.alert = section.getBoolean("alert", true);
         brandConfig.discordAlert = section.getBoolean("discord-alert", false);
-        brandConfig.alertMessage = section.getString("alert-message", defaultBrandConfig.alertMessage);
-        brandConfig.consoleAlertMessage = section.getString("console-alert-message", defaultBrandConfig.consoleAlertMessage);
+        // A configured brand is a known client, so the fallback is neutral; the "unknown client"
+        // wording belongs to the default section, which only applies when no pattern matched.
+        brandConfig.alertMessage = section.getString("alert-message", "<dark_gray>[<yellow>Veneer</dark_gray>] <gray>%player% is using <aqua>%brand%");
+        brandConfig.consoleAlertMessage = section.getString("console-alert-message", "%player% is using %brand%");
         brandConfig.punish = section.getBoolean("punish", false);
         brandConfig.punishments = section.getStringList("punishments");
         brandConfig.strictCheck = section.getBoolean("strict-check", false);

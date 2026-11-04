@@ -21,7 +21,9 @@ import java.util.function.Consumer;
  */
 public final class FoliaScheduler {
 
-    public static final boolean FOLIA;
+    /** Resolved lazily on first scheduling call: true only when Folia is present AND reflection init worked.
+     *  Lazy because {@code Bukkit.getServer()} cannot be touched from a static initialiser. */
+    private static volatile Boolean folia;
 
     private static Method globalRun;
     private static Method globalRunDelayed;
@@ -38,53 +40,61 @@ public final class FoliaScheduler {
     private static Method entitySchedRunDelayed;
 
     private static Method scheduledTaskCancel;
-
-    static {
-        boolean folia;
-        try {
-            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
-            folia = true;
-        } catch (ClassNotFoundException e) {
-            folia = false;
-        }
-        FOLIA = folia;
-        if (FOLIA) initFoliaReflection();
-    }
+    private static Method scheduledTaskIsCancelled;
 
     private FoliaScheduler() {}
 
-    public static boolean isFolia() { return FOLIA; }
+    /** True when running on Folia with all reflective handles resolved; otherwise the Bukkit path is used. */
+    public static boolean isFolia() {
+        Boolean f = folia;
+        if (f == null) { initFolia(); f = folia; }
+        return f;
+    }
 
-    private static void initFoliaReflection() {
+    private static synchronized void initFolia() {
+        if (folia != null) return;
         try {
-            Class<?> server = Bukkit.getServer().getClass();
-
-            Object global = server.getMethod("getGlobalRegionScheduler").invoke(Bukkit.getServer());
-            Class<?> globalCls = global.getClass();
-            globalRun            = findMethod(globalCls, "run",            Plugin.class, Consumer.class);
-            globalRunDelayed     = findMethod(globalCls, "runDelayed",     Plugin.class, Consumer.class, long.class);
-            globalRunAtFixedRate = findMethod(globalCls, "runAtFixedRate", Plugin.class, Consumer.class, long.class, long.class);
-
-            Object region = server.getMethod("getRegionScheduler").invoke(Bukkit.getServer());
-            Class<?> regionCls = region.getClass();
-            regionRun        = findMethod(regionCls, "run",        Plugin.class, org.bukkit.World.class, int.class, int.class, Consumer.class);
-            regionRunDelayed = findMethod(regionCls, "runDelayed", Plugin.class, org.bukkit.World.class, int.class, int.class, Consumer.class, long.class);
-
-            Object async = server.getMethod("getAsyncScheduler").invoke(Bukkit.getServer());
-            Class<?> asyncCls = async.getClass();
-            asyncRunNow     = findMethod(asyncCls, "runNow",     Plugin.class, Consumer.class);
-            asyncRunDelayed = findMethod(asyncCls, "runDelayed", Plugin.class, Consumer.class, long.class, java.util.concurrent.TimeUnit.class);
-
-            entityGetScheduler = Entity.class.getMethod("getScheduler");
-            Class<?> entitySchedCls = entityGetScheduler.getReturnType();
-            entitySchedRun        = findMethod(entitySchedCls, "run",        Plugin.class, Consumer.class, Runnable.class);
-            entitySchedRunDelayed = findMethod(entitySchedCls, "runDelayed", Plugin.class, Consumer.class, Runnable.class, long.class);
-
-            Class<?> scheduledTask = Class.forName("io.papermc.paper.threadedregions.scheduler.ScheduledTask");
-            scheduledTaskCancel = scheduledTask.getMethod("cancel");
-        } catch (Throwable t) {
-            Bukkit.getLogger().severe("[Veneer] Failed to init Folia reflection: " + t);
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+        } catch (ClassNotFoundException e) {
+            folia = false;  // not Folia at all: plain Bukkit scheduler
+            return;
         }
+        try {
+            initFoliaReflection();
+            folia = true;
+        } catch (Throwable t) {
+            Bukkit.getLogger().severe("[Veneer] Folia reflection init failed, falling back to the Bukkit scheduler: " + t);
+            folia = false;
+        }
+    }
+
+    private static void initFoliaReflection() throws Exception {
+        Class<?> server = Bukkit.getServer().getClass();
+
+        Object global = server.getMethod("getGlobalRegionScheduler").invoke(Bukkit.getServer());
+        Class<?> globalCls = global.getClass();
+        globalRun            = findMethod(globalCls, "run",            Plugin.class, Consumer.class);
+        globalRunDelayed     = findMethod(globalCls, "runDelayed",     Plugin.class, Consumer.class, long.class);
+        globalRunAtFixedRate = findMethod(globalCls, "runAtFixedRate", Plugin.class, Consumer.class, long.class, long.class);
+
+        Object region = server.getMethod("getRegionScheduler").invoke(Bukkit.getServer());
+        Class<?> regionCls = region.getClass();
+        regionRun        = findMethod(regionCls, "run",        Plugin.class, org.bukkit.World.class, int.class, int.class, Consumer.class);
+        regionRunDelayed = findMethod(regionCls, "runDelayed", Plugin.class, org.bukkit.World.class, int.class, int.class, Consumer.class, long.class);
+
+        Object async = server.getMethod("getAsyncScheduler").invoke(Bukkit.getServer());
+        Class<?> asyncCls = async.getClass();
+        asyncRunNow     = findMethod(asyncCls, "runNow",     Plugin.class, Consumer.class);
+        asyncRunDelayed = findMethod(asyncCls, "runDelayed", Plugin.class, Consumer.class, long.class, java.util.concurrent.TimeUnit.class);
+
+        entityGetScheduler = Entity.class.getMethod("getScheduler");
+        Class<?> entitySchedCls = entityGetScheduler.getReturnType();
+        entitySchedRun        = findMethod(entitySchedCls, "run",        Plugin.class, Consumer.class, Runnable.class);
+        entitySchedRunDelayed = findMethod(entitySchedCls, "runDelayed", Plugin.class, Consumer.class, Runnable.class, long.class);
+
+        Class<?> scheduledTask = Class.forName("io.papermc.paper.threadedregions.scheduler.ScheduledTask");
+        scheduledTaskCancel      = scheduledTask.getMethod("cancel");
+        scheduledTaskIsCancelled = scheduledTask.getMethod("isCancelled");
     }
 
     private static Method findMethod(Class<?> c, String name, Class<?>... params) throws NoSuchMethodException {
@@ -96,7 +106,7 @@ public final class FoliaScheduler {
      * =========================================================== */
 
     public static WrappedTask runGlobal(Plugin plugin, Runnable task) {
-        if (!FOLIA) return wrap(Bukkit.getScheduler().runTask(plugin, task));
+        if (!isFolia()) return wrap(Bukkit.getScheduler().runTask(plugin, task));
         try {
             Object handle = globalRun.invoke(getGlobalScheduler(), plugin, asConsumer(task));
             return wrap(handle);
@@ -107,7 +117,7 @@ public final class FoliaScheduler {
 
     public static WrappedTask runGlobalLater(Plugin plugin, Runnable task, long delayTicks) {
         long delay = Math.max(1L, delayTicks);
-        if (!FOLIA) return wrap(Bukkit.getScheduler().runTaskLater(plugin, task, delay));
+        if (!isFolia()) return wrap(Bukkit.getScheduler().runTaskLater(plugin, task, delay));
         try {
             Object handle = globalRunDelayed.invoke(getGlobalScheduler(), plugin, asConsumer(task), delay);
             return wrap(handle);
@@ -119,7 +129,7 @@ public final class FoliaScheduler {
     public static WrappedTask runGlobalTimer(Plugin plugin, Runnable task, long delayTicks, long periodTicks) {
         long delay  = Math.max(1L, delayTicks);
         long period = Math.max(1L, periodTicks);
-        if (!FOLIA) return wrap(Bukkit.getScheduler().runTaskTimer(plugin, task, delay, period));
+        if (!isFolia()) return wrap(Bukkit.getScheduler().runTaskTimer(plugin, task, delay, period));
         try {
             Object handle = globalRunAtFixedRate.invoke(getGlobalScheduler(), plugin, asConsumer(task), delay, period);
             return wrap(handle);
@@ -133,7 +143,7 @@ public final class FoliaScheduler {
      * =========================================================== */
 
     public static WrappedTask runAtEntity(Plugin plugin, Entity entity, Runnable task) {
-        if (!FOLIA) return wrap(Bukkit.getScheduler().runTask(plugin, task));
+        if (!isFolia()) return wrap(Bukkit.getScheduler().runTask(plugin, task));
         try {
             Object sched = entityGetScheduler.invoke(entity);
             Object handle = entitySchedRun.invoke(sched, plugin, asConsumer(task), (Runnable) null);
@@ -145,7 +155,7 @@ public final class FoliaScheduler {
 
     public static WrappedTask runAtEntityLater(Plugin plugin, Entity entity, Runnable task, long delayTicks) {
         long delay = Math.max(1L, delayTicks);
-        if (!FOLIA) return wrap(Bukkit.getScheduler().runTaskLater(plugin, task, delay));
+        if (!isFolia()) return wrap(Bukkit.getScheduler().runTaskLater(plugin, task, delay));
         try {
             Object sched = entityGetScheduler.invoke(entity);
             Object handle = entitySchedRunDelayed.invoke(sched, plugin, asConsumer(task), (Runnable) null, delay);
@@ -160,7 +170,7 @@ public final class FoliaScheduler {
      * =========================================================== */
 
     public static WrappedTask runAtLocation(Plugin plugin, Location loc, Runnable task) {
-        if (!FOLIA) return wrap(Bukkit.getScheduler().runTask(plugin, task));
+        if (!isFolia()) return wrap(Bukkit.getScheduler().runTask(plugin, task));
         try {
             Object handle = regionRun.invoke(getRegionScheduler(),
                     plugin, loc.getWorld(), loc.getBlockX() >> 4, loc.getBlockZ() >> 4, asConsumer(task));
@@ -172,7 +182,7 @@ public final class FoliaScheduler {
 
     public static WrappedTask runAtLocationLater(Plugin plugin, Location loc, Runnable task, long delayTicks) {
         long delay = Math.max(1L, delayTicks);
-        if (!FOLIA) return wrap(Bukkit.getScheduler().runTaskLater(plugin, task, delay));
+        if (!isFolia()) return wrap(Bukkit.getScheduler().runTaskLater(plugin, task, delay));
         try {
             Object handle = regionRunDelayed.invoke(getRegionScheduler(),
                     plugin, loc.getWorld(), loc.getBlockX() >> 4, loc.getBlockZ() >> 4, asConsumer(task), delay);
@@ -187,7 +197,7 @@ public final class FoliaScheduler {
      * =========================================================== */
 
     public static WrappedTask runAsync(Plugin plugin, Runnable task) {
-        if (!FOLIA) return wrap(Bukkit.getScheduler().runTaskAsynchronously(plugin, task));
+        if (!isFolia()) return wrap(Bukkit.getScheduler().runTaskAsynchronously(plugin, task));
         try {
             Object handle = asyncRunNow.invoke(getAsyncScheduler(), plugin, asConsumer(task));
             return wrap(handle);
@@ -197,7 +207,7 @@ public final class FoliaScheduler {
     }
 
     public static WrappedTask runAsyncLater(Plugin plugin, Runnable task, long delayTicks) {
-        if (!FOLIA) return wrap(Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, task, delayTicks));
+        if (!isFolia()) return wrap(Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, task, delayTicks));
         try {
             Object handle = asyncRunDelayed.invoke(getAsyncScheduler(), plugin, asConsumer(task),
                     Math.max(1, delayTicks) * 50L, java.util.concurrent.TimeUnit.MILLISECONDS);
@@ -237,11 +247,19 @@ public final class FoliaScheduler {
 
     private static WrappedTask wrap(Object foliaTask) {
         return new WrappedTask() {
+            private volatile boolean cancelled;
             @Override public void cancel() {
                 if (foliaTask == null || scheduledTaskCancel == null) return;
-                try { scheduledTaskCancel.invoke(foliaTask); } catch (Throwable ignored) {}
+                cancelled = true;
+                try { scheduledTaskCancel.invoke(foliaTask); }
+                catch (Throwable t) { Bukkit.getLogger().warning("[Veneer] Failed to cancel Folia task: " + t); }
             }
-            @Override public boolean isCancelled() { return false; }
+            @Override public boolean isCancelled() {
+                if (cancelled) return true;
+                if (foliaTask == null || scheduledTaskIsCancelled == null) return false;
+                try { return (boolean) scheduledTaskIsCancelled.invoke(foliaTask); }
+                catch (Throwable t) { return false; }
+            }
         };
     }
 }

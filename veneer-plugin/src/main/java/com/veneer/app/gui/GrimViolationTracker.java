@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** Isolated so GrimAPI classes are only loaded when Grim is installed. */
 final class GrimViolationTracker {
@@ -29,6 +30,8 @@ final class GrimViolationTracker {
 
     private static final int MAX = 500;
     private final ConcurrentLinkedDeque<Violation> recent = new ConcurrentLinkedDeque<>();
+    // ConcurrentLinkedDeque.size() is O(n): keep the count instead of walking the deque on every flag
+    private final AtomicInteger recentCount = new AtomicInteger();
     private final ConcurrentHashMap<UUID, SensitivitySnapshot> sensitivities = new ConcurrentHashMap<>();
 
     GrimViolationTracker(VeneerPlugin plugin) {
@@ -54,7 +57,12 @@ final class GrimViolationTracker {
 
     private void add(Violation v) {
         recent.addFirst(v);
-        while (recent.size() > MAX) recent.removeLast();
+        if (recentCount.incrementAndGet() > MAX && recent.removeLast() != null) recentCount.decrementAndGet();
+    }
+
+    /** Drops a quitting player's stored sensitivity; the flag history is kept for offline lookups. */
+    void onQuit(UUID uuid) {
+        sensitivities.remove(uuid);
     }
 
     SensitivitySnapshot getSensitivity(UUID uuid) {
@@ -62,7 +70,7 @@ final class GrimViolationTracker {
     }
 
     List<Violation> getRecent(int limit) {
-        List<Violation> out = new ArrayList<>(Math.min(limit, recent.size()));
+        List<Violation> out = new ArrayList<>(Math.min(limit, recentCount.get()));
         for (Violation v : recent) {
             out.add(v);
             if (out.size() >= limit) break;

@@ -2,6 +2,7 @@ package com.veneer.spoof.listeners;
 
 import com.veneer.spoof.SpoofModule;
 import com.veneer.VeneerPlugin;
+import com.veneer.spoof.SpoofModule;
 import com.veneer.spoof.managers.ConfigManager;
 import com.github.retrooper.packetevents.event.PacketListenerAbstract;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;

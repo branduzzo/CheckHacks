@@ -50,7 +50,7 @@ permissions:
   veneer.spoof.admin:
     description: Admin /spoof subcommands (check, brands allow/block/forget, blockedchannels, blockedbrands) and brand verdicts in the panel
     default: op
-  # Bypasses have no children: the plugin resolves them itself, the most specific one set wins (a false on
+  # Bypasses have no children: the plugin resolves them itself, and a denial wins over any grant (a false on
   # veneer.bypass.hacks beats a true on veneer.bypass). veneer.* and * never grant them.
   veneer.bypass:
     description: Skip every automatic check (spoof, mod scan, RPTrack), join and later

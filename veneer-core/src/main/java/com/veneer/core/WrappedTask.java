@@ -7,5 +7,6 @@ package com.veneer.core;
  */
 public interface WrappedTask {
     void cancel();
+    /** True once cancelled; for repeatable tasks this is the only way callers learn it stopped. */
     boolean isCancelled();
 }

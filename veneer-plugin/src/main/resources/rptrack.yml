@@ -1,0 +1,26 @@
+# Veneer rptrack module: resource-pack cache fingerprint, off by default.
+
+# RPTrack: resource-pack cache fingerprint (https://alaggydev.github.io/posts/cytooxien/).
+# Links accounts/IPs of the same Minecraft installation via its pack download cache.
+# This is covert tracking of players: disclose it in your rules/privacy policy.
+enabled: false
+# Where clients download the packs, e.g. "http://play.example.com:8123". Must be reachable by players.
+# Point it at localhost (e.g. "http://localhost:8123") and Veneer serves the packs itself on that port;
+# clients are then sent to the host they joined with. Otherwise no server is started: host the files
+# exported to plugins/Veneer/rptrack/fp/ at <public-url>/fp/.
+public-url: ""
+# How many probe packs exist and are checked on every join.
+track: 28
+# How many of them a fresh client is sent (it downloads and caches these). Must be <= track.
+send: 6
+# How many cached packs must overlap with a stored fingerprint to link two accounts. Must be <= send.
+match: 5
+# Log every step (statuses, cached packs, stability against the stored fingerprint) to the console.
+# Also switches on the experimental unique-set mode: every client gets a set that shares at most send-2
+# packs with any stored one; a client with a whole stored set is linked directly, one with all but one pack
+# of it indirectly. match is ignored there. Try it with e.g. track: 52, send: 6.
+debug: false
+delay-ticks: 40           # wait after join before probing
+timeout-ticks: 100        # max wait for client answers
+liquidbounce-probe: true  # detect LiquidBounce via its 127.0.0.1:15000 server
+alert: true               # notify staff (veneer.alerts) on a match

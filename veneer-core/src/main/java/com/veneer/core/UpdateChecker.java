@@ -86,10 +86,14 @@ public final class UpdateChecker {
         }
         if (announce && status.updateAvailable()) {
             plugin.getLogger().info("Veneer " + status.latest() + " is available (running " + current + "): " + status.url());
-            if (plugin.config().updateNotifyOnJoin())
-                for (Player p : plugin.getServer().getOnlinePlayers())
-                    if (p.hasPermission(PERMISSION))
-                        FoliaScheduler.runAtEntity(plugin, p, () -> notify(p, status));
+            if (plugin.config().updateNotifyOnJoin()) {
+                Status s = status;  // the player list and permissions must be read on the global thread, not here
+                FoliaScheduler.runGlobal(plugin, () -> {
+                    for (Player p : plugin.getServer().getOnlinePlayers())
+                        if (p.hasPermission(PERMISSION))
+                            FoliaScheduler.runAtEntity(plugin, p, () -> notify(p, s));
+                });
+            }
         }
     }
 

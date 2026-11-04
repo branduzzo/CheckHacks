@@ -3,7 +3,6 @@ package com.veneer.hacks;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import com.veneer.core.WrappedTask;
 import org.bukkit.Location;
-import org.bukkit.block.BlockState;
 
 import java.util.Map;
 import java.util.UUID;
@@ -15,7 +14,6 @@ public class LangCheckData {
     private final Map<String, String> languages;
 
     private Location signLocation;
-    private BlockState originalState;
     private WrappedTask timeoutTask;
     private int deadWaits;
     private volatile String[] rawLines;
@@ -38,8 +36,6 @@ public class LangCheckData {
     public Map<String, String> getLanguages()  { return languages; }
     public Location getSignLocation()          { return signLocation; }
     public void setSignLocation(Location l)    { this.signLocation = l; }
-    public BlockState getOriginalState()       { return originalState; }
-    public void setOriginalState(BlockState s) { this.originalState = s; }
     public WrappedTask getTimeoutTask()         { return timeoutTask; }
     public void setTimeoutTask(WrappedTask t)   { this.timeoutTask = t; }
 
