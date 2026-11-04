@@ -4,7 +4,6 @@ import com.veneer.spoof.SpoofModule;
 import net.kyori.adventure.text.Component;
 import com.veneer.core.Messages;
 import com.veneer.VeneerPlugin;
-import com.veneer.spoof.SpoofModule;
 import org.bukkit.entity.Player;
 import com.veneer.core.Text;
 
@@ -32,31 +31,7 @@ public class AlertManager {
      * @param message The message to send
      */
     public void sendAlertToRecipients(String message) {
-        // {prefix} works in every spoof.yml alert message like it does in messages/*.yml. Text.rich renders
-        // MiniMessage (gradients, hex) natively and still accepts legacy & codes in the message.
-        plugin.alerts().sendToPlayers(Text.rich(message.replace("{prefix}", plugin.config().prefix())));
-    }
-
-    /**
-     * Client-supplied brand or channel text for console commands and the log: a conservative allowlist of
-     * characters a real namespaced id can contain, length-capped; anything else (quotes, semicolons, newlines,
-     * MiniMessage tags) is dropped so it cannot forge a log line or command argument.
-     */
-    public static String safeToken(String value) {
-        if (value == null) return "unknown";
-        if (SpoofModule.BRAND_NONE.equals(value)) return value; // our own constant, not client text
-        String cleaned = value.replaceAll("[^A-Za-z0-9_.:\\-/]", "");
-        if (cleaned.length() > 64) cleaned = cleaned.substring(0, 64);
-        return cleaned.isEmpty() ? "unknown" : cleaned;
-    }
-
-    /** Free text (violation reasons) going into a console command or the log: no command metacharacters or
-     *  newlines, whitespace collapsed, length-capped. */
-    public static String safeText(String value) {
-        if (value == null) return "unknown";
-        String cleaned = value.replaceAll("[;&|<>`$'\"\\\\\\r\\n\\t\\u0000]", " ").replaceAll("\\s+", " ").trim();
-        if (cleaned.length() > 128) cleaned = cleaned.substring(0, 128);
-        return cleaned.isEmpty() ? "unknown" : cleaned;
+        plugin.alerts().sendToPlayers(Text.legacy(message));
     }
 
     /**
@@ -180,7 +155,7 @@ public class AlertManager {
 
         if (violatedChannel != null) {
             alertMessage = alertMessage.replace("%channel%", Text.inert(violatedChannel));
-            consoleMessage = consoleMessage.replace("%channel%", safeToken(violatedChannel));
+            consoleMessage = consoleMessage.replace("%channel%", Text.inert(violatedChannel));
         }
 
         // Log to console
@@ -280,7 +255,7 @@ public class AlertManager {
 
         if (violatedChannel != null && violationType.equals("BLOCKED_CHANNEL")) {
             playerAlert = playerAlert.replace("%channel%", Text.inert(violatedChannel));
-            consoleAlert = consoleAlert.replace("%channel%", safeToken(violatedChannel));
+            consoleAlert = consoleAlert.replace("%channel%", Text.inert(violatedChannel));
         }
 
         // Log to console
@@ -319,13 +294,12 @@ public class AlertManager {
 
         // Execute the punishments
         for (String command : punishments) {
-            // Values come from the client: sanitize them before they reach the console command
             String formatted = command.replace("%player%", player.getName())
                                      .replace("%reason%", Text.inert(reason))
                                      .replace("%brand%", Text.inert(brand != null ? brand : "unknown"));
 
             if (violatedChannel != null) {
-                formatted = formatted.replace("%channel%", safeToken(violatedChannel));
+                formatted = formatted.replace("%channel%", Text.inert(violatedChannel));
             }
 
             // Execute command on the main thread
@@ -424,13 +398,12 @@ public class AlertManager {
 
         // Execute the punishments
         for (String command : punishments) {
-            // Values come from the client: sanitize them before they reach the console command
             String formatted = command.replace("%player%", player.getName())
                                      .replace("%reason%", Text.inert(reason))
                                      .replace("%brand%", Text.inert(brand != null ? brand : "unknown"));
 
             if (violatedChannel != null && violationType.equals("BLOCKED_CHANNEL")) {
-                formatted = formatted.replace("%channel%", safeToken(violatedChannel));
+                formatted = formatted.replace("%channel%", Text.inert(violatedChannel));
             }
 
             // Execute command on the main thread

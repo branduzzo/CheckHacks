@@ -32,9 +32,6 @@ public class BrandVerdicts {
         private volatile String decidedBy;
         private volatile long decidedAt;
         private volatile String lastPlayer;
-        // shortcut: persisted on first sighting and on verdict changes only; lastPlayer drift in the DB
-        // matters less than one write per sighting, upgrade if the DB must mirror the in-memory map exactly
-        private volatile boolean persisted;
 
         Entry(int id, String brand, long firstSeen) {
             this.id = id;
@@ -70,7 +67,6 @@ public class BrandVerdicts {
             e.decidedBy = (String) row.get("decided_by");
             e.decidedAt = row.get("decided_at") instanceof Number n ? n.longValue() : 0;
             e.lastPlayer = (String) row.get("last_player");
-            e.persisted = true;
             byBrand.put(e.brand, e);
             byId.put(e.id, e);
             lastId.accumulateAndGet(e.id, Math::max);
@@ -95,11 +91,7 @@ public class BrandVerdicts {
             });
         }
         e.lastPlayer = player;
-        // One DB write per new brand; later sightings only update memory (decide() still saves)
-        if (!e.persisted) {
-            e.persisted = true;
-            save(e);
-        }
+        save(e);
         return e;
     }
 

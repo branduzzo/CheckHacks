@@ -32,9 +32,6 @@ public class SpoofModule extends VeneerModule {
 
     private static final String BRAND_CHANNEL = "minecraft:brand";
 
-    /** The brand stored when the client sent an empty/blank one; a real client always announces a brand. */
-    public static final String BRAND_NONE = "[нету]";
-
     private ConfigManager config;
     private AlertManager alertManager;
     private DetectionManager detection;
@@ -68,7 +65,7 @@ public class SpoofModule extends VeneerModule {
         }
 
         plugin.getServer().getMessenger().registerIncomingPluginChannel(plugin, BRAND_CHANNEL,
-                (channel, player, message) -> onBrand(player, decodeBrand(message)));
+                (channel, player, message) -> onBrand(player, new String(message).substring(1)));
 
         events = new PlayerEventListener(plugin);
         PacketEvents.getAPI().getEventManager().registerListener(events);
@@ -101,19 +98,8 @@ public class SpoofModule extends VeneerModule {
         PlayerProfile profile = plugin.profile(player);
         if (brand.equals(profile.getBrand())) return;
         profile.setBrand(brand);
-        plugin.debug("Received brand for " + player.getName() + ": " + AlertManager.safeToken(brand));
+        plugin.debug("Received brand for " + player.getName() + ": " + brand);
         detection.checkPlayerAsync(player, false);
-    }
-
-    /**
-     * Decodes the brand payload: a UTF-8 string with a one-byte VarInt length prefix. A malicious client can
-     * send an empty array or a length-0 string, so the prefix is stripped only when there is content and a
-     * blank result becomes {@link #BRAND_NONE}, which flows into the normal detection as a suspicious brand.
-     */
-    static String decodeBrand(byte[] message) {
-        String payload = new String(message, StandardCharsets.UTF_8);
-        String brand = payload.isEmpty() ? "" : payload.substring(1);
-        return brand.isBlank() ? BRAND_NONE : brand;
     }
 
     // ------------------------------------------------------------ accessors
@@ -167,7 +153,7 @@ public class SpoofModule extends VeneerModule {
                 .replace("%brand%", Text.inert(brand));
         String consoleMessage = brandConfig.getConsoleAlertMessage()
                 .replace("%player%", player.getName())
-                .replace("%brand%", AlertManager.safeToken(brand));
+                .replace("%brand%", Text.inert(brand));
 
         plugin.getLogger().info(consoleMessage);
         alertManager.sendAlertToRecipients(alertMessage);

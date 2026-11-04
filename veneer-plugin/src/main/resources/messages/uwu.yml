@@ -64,7 +64,7 @@ lang-join-check: "{prefix}<gray>Automatic wanguage checky fow <yellow>{player}<g
 # Placeholders: {url}.
 # ======================================================================
 editor-url: "{prefix}<white>Editow: <aqua><click:open_url:'{url}'>{url}</click>"
-editor-disabled: "{prefix}<red>Da web editow is disabled in hacks.yml, sowwy."
+editor-disabled: "{prefix}<red>Da web editow is disabled in config.yml, sowwy."
 editor-players-only: "{prefix}<red>Onwy pwayews can open da editow.</red>"
 
 # ======================================================================

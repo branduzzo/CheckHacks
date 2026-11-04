@@ -3,7 +3,6 @@ package com.veneer.hooks;
 import com.veneer.VeneerPlugin;
 import com.veneer.core.PermissionSource;
 import com.veneer.core.VeneerModule;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -49,9 +48,7 @@ public class HooksModule extends VeneerModule implements PermissionSource {
 
     /**
      * Nodes under {@code prefix} set on the player: from LuckPerms (own nodes first, then groups; no wildcards above
-     * the prefix) when it is installed, else the ones Bukkit reports as explicitly set on the player. Without
-     * LuckPerms a group is not known there, and an operator's {@code *} is not an explicit setting: it must not
-     * show up as a granted node, or operators would bypass every check by being operators.
+     * the prefix) when it is installed, else what Bukkit reports as set (a group is not known there).
      */
     @Override
     public List<SetNode> setNodes(Player player, String prefix) {

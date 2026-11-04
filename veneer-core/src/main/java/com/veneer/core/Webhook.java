@@ -56,7 +56,7 @@ public final class Webhook {
                 } else {
                     plugin.getLogger().warning("Discord webhook failed with HTTP " + code + ": " + errorBody(conn));
                 }
-            } catch (IOException | RuntimeException e) {   // URI.create and friends can throw unchecked
+            } catch (IOException e) {
                 plugin.getLogger().warning("Discord webhook error: " + e.getMessage());
             } finally {
                 if (conn != null) conn.disconnect();

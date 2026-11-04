@@ -36,15 +36,15 @@ public class RPTrackCommand implements CommandExecutor {
             String uuid = online != null ? online.getUniqueId().toString()
                     : (String) plugin.database().players().getPlayerRecord(args[0]).getOrDefault("uuid", "");
             long mask = fp.getMask(uuid);
-            List<String> linked = mask == 0 ? List.of() : fp.findLinked(uuid, mask);
-            String linkedText = linked.isEmpty() ? plugin.messages().in(sender).plain("veneer-rp-linked-none") : String.join(", ", linked);
-            // Messages are Bukkit API: send them back on the main/global thread
-            FoliaScheduler.runGlobal(plugin, () -> {
-                if (mask == 0) { plugin.messages().send(sender, "rptrack-none", "player", args[0]); return; }
-                plugin.messages().send(sender, "rptrack-cache", "player", args[0],
-                        "mask", Long.toBinaryString(mask), "packs", Long.bitCount(mask));
-                plugin.messages().send(sender, "rptrack-linked", "linked", linkedText);
-            });
+            if (mask == 0) {
+                plugin.messages().send(sender, "rptrack-none", "player", args[0]);
+                return;
+            }
+            List<String> linked = fp.findLinked(uuid, mask);
+            plugin.messages().send(sender, "rptrack-cache", "player", args[0],
+                    "mask", Long.toBinaryString(mask), "packs", Long.bitCount(mask));
+            plugin.messages().send(sender, "rptrack-linked",
+                    "linked", linked.isEmpty() ? plugin.messages().in(sender).plain("veneer-rp-linked-none") : String.join(", ", linked));
         });
         return true;
     }

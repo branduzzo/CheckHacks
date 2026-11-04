@@ -4,7 +4,6 @@ import com.veneer.spoof.SpoofModule;
 import com.veneer.hacks.HacksModule;
 import com.veneer.VeneerPlugin;
 import com.veneer.core.PlayerProfile;
-import com.veneer.spoof.SpoofModule;
 import org.bukkit.entity.Player;
 
 import java.util.*;
@@ -78,14 +77,6 @@ public class DetectionManager {
 
         boolean channelAdded = false;
         if (!data.getChannels().contains(channel)) {
-            // Memory DoS guard: a client can register unlimited made-up channels, real ones stay far below 64
-            if (data.getChannels().size() >= MAX_CHANNELS_PER_PLAYER) {
-                if (plugin.spoof().config().isDebugMode()) {
-                    plugin.getLogger().info("[Debug] Ignoring channel for " + player.getName()
-                            + " over the per-player cap: " + AlertManager.safeToken(channel));
-                }
-                return false;
-            }
             data.addChannel(channel);
             channelAdded = true;
 
@@ -198,9 +189,8 @@ public class DetectionManager {
      * @param player The player to check
      * @param isJoinCheck Whether this is an initial join check
      * @param checkRequiredChannels Whether to check for required channels
-     * @param isBedrockPlayer Whether the player is a Bedrock player, captured on the global thread
      */
-    private void checkPlayer(Player player, boolean isJoinCheck, boolean checkRequiredChannels, boolean isBedrockPlayer) {
+    private void checkPlayer(Player player, boolean isJoinCheck, boolean checkRequiredChannels) {
         UUID uuid = player.getUniqueId();
 
         // Skip if player is offline or has been punished
@@ -759,18 +749,18 @@ public class DetectionManager {
 
     /**
      * Checks if a player is spoofing Geyser client
+     * @param player The player to check
      * @param brand The player's client brand
-     * @param isBedrock Whether the player is a Bedrock player, captured on the global thread
      * @return True if the player is spoofing Geyser, false otherwise
      */
-    private boolean isSpoofingGeyser(String brand, boolean isBedrock) {
+    private boolean isSpoofingGeyser(Player player, String brand) {
         if (brand == null) return false;
 
         // Check if brand contains "geyser" (case insensitive)
         boolean claimsGeyser = brand.toLowerCase(Locale.ROOT).contains("geyser");
 
         // If player claims to be using Geyser but isn't detected as a Bedrock player
-        return claimsGeyser && !isBedrock;
+        return claimsGeyser && !plugin.bedrock().isBedrock(player);
     }
 
     /**

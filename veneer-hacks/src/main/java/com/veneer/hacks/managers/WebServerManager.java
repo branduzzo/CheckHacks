@@ -9,7 +9,6 @@ import com.veneer.hacks.HackDefinition;
 import com.veneer.core.FoliaScheduler;
 import com.veneer.core.IpDatabase;
 import com.veneer.core.PlayerProfile;
-import com.veneer.core.WrappedTask;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -30,12 +29,11 @@ public class WebServerManager {
     private final Gson gson = new Gson();
     private volatile List<Map<String, Object>> cachedPlayers = new ArrayList<>();
     private final IpDatabase ipdb;
-    private WrappedTask cacheTask;
 
     public WebServerManager(VeneerPlugin plugin) {
         this.plugin = plugin;
         var links = links();
-        if (links.getBoolean("ip-database", false)) {
+        if (links.getBoolean("ip-database", true)) {
             ipdb = new IpDatabase(plugin, links.getInt("ip-database-refresh-days", 7),
                     links.getIntegerList("weak-provider-asns"), links.getStringList("weak-provider-keywords"));
             ipdb.start();
@@ -43,7 +41,7 @@ public class WebServerManager {
             ipdb = null;
         }
         start();
-        cacheTask = FoliaScheduler.runGlobalTimer(plugin, this::updatePlayerCache, 1L, 100L);
+        FoliaScheduler.runGlobalTimer(plugin, this::updatePlayerCache, 1L, 100L);
     }
 
     private void start() {
@@ -56,9 +54,6 @@ public class WebServerManager {
             server.setExecutor(executor);
             server.start();
             plugin.getLogger().info("Web panel listening on " + bind + ":" + port);
-            if (!server.getAddress().getAddress().isLoopbackAddress())
-                plugin.getLogger().warning("The web panel is plain HTTP and is reachable from other machines: put it behind HTTPS "
-                        + "(reverse proxy) or an SSH tunnel, otherwise sessions and player addresses travel unencrypted.");
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to start the web panel: " + e.getMessage());
         }
@@ -127,54 +122,6 @@ public class WebServerManager {
         }
     }
 
-    private static final String SESSION_COOKIE = "veneer_session";
-    private static final int MAX_FAILS_PER_MINUTE = 10;
-    private final Map<String, long[]> failures = new java.util.concurrent.ConcurrentHashMap<>();
-    private volatile long lastFailPrune;
-
-    private static String remote(HttpExchange ex) {
-        return ex.getRemoteAddress().getAddress().getHostAddress();
-    }
-
-    /** True when this address has used up its failed sign-ins for the current minute. */
-    private boolean blocked(HttpExchange ex) {
-        pruneStaleFails();
-        long[] f = failures.get(remote(ex));
-        return f != null && System.currentTimeMillis() - f[0] < 60_000 && f[1] >= MAX_FAILS_PER_MINUTE;
-    }
-
-    private void fail(HttpExchange ex) {
-        long now = System.currentTimeMillis();
-        pruneStaleFails();
-        failures.compute(remote(ex), (k, f) -> f == null || now - f[0] >= 60_000 ? new long[]{now, 1} : new long[]{f[0], f[1] + 1});
-    }
-
-    // The window is a minute: prune on it (at most once a minute), so entries of quiet addresses do not sit in the map forever
-    private void pruneStaleFails() {
-        long now = System.currentTimeMillis();
-        if (now - lastFailPrune > 60_000) {
-            lastFailPrune = now;
-            failures.values().removeIf(f -> now - f[0] >= 60_000);
-        }
-    }
-
-    private static String cookie(HttpExchange ex, String name) {
-        for (String header : ex.getRequestHeaders().getOrDefault("Cookie", List.of()))
-            for (String part : header.split(";")) {
-                String[] kv = part.trim().split("=", 2);
-                if (kv.length == 2 && kv[0].equals(name)) return kv[1];
-            }
-        return null;
-    }
-
-    /** The account this browser is bound to, or null: the cookie secret must be known and the nick, address and client must still match. */
-    private Map<String, String> authenticate(HttpExchange ex) {
-        String secret = cookie(ex, SESSION_COOKIE);
-        if (secret == null) return null;
-        return plugin.database().validateDevice(secret, remote(ex), ex.getRequestHeaders().getFirst("User-Agent"),
-                plugin.hacks().config().getWebBindIp());
-    }
-
     private void serveEditor(HttpExchange ex, Map<String, String> params) throws IOException {
         String token = params.get("token");
         if (token == null || plugin.database().tokens().validateToken(token) == null) {
@@ -183,23 +130,8 @@ public class WebServerManager {
         }
         try (InputStream is = plugin.getResource("web/editor.html")) {
             if (is == null) { sendHtml(ex, 500, "<h1>editor.html missing</h1>"); return; }
-            // Scripts run only with this nonce, so markup that gets into the page cannot start one
-            byte[] nonceBytes = new byte[16];
-            new java.security.SecureRandom().nextBytes(nonceBytes);
-            String nonce = Base64.getEncoder().encodeToString(nonceBytes);
-            ex.getResponseHeaders().set("Content-Security-Policy", "default-src 'none'; script-src 'self' 'nonce-" + nonce
-                    + "'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; "
-                    + "form-action 'none'; frame-ancestors 'none'");
-            String html = new String(is.readAllBytes(), StandardCharsets.UTF_8)
-                    .replace("<script>", "<script nonce=\"" + nonce + "\">")
-                    .replace("/*I18N*/{}", translations());
-            sendHtml(ex, 200, html);
+            sendHtml(ex, 200, new String(is.readAllBytes(), StandardCharsets.UTF_8).replace("/*I18N*/{}", translations()));
         }
-    }
-
-    private static String denied(String message) {
-        return "<html><body style='font-family:monospace;background:#0d1117;color:#e6edf3;display:flex;align-items:center;justify-content:center;height:100vh;margin:0'><div>"
-                + message + "</div></body></html>";
     }
 
     /** The panel texts for general.language from web/lang/<language>.json, or {} (English, as written in the page). */
@@ -228,17 +160,11 @@ public class WebServerManager {
         Map<String, String> playerInfo = token != null ? plugin.database().tokens().validateToken(token) : null;
 
         if (playerInfo == null) {
-            if (cookie(ex, SESSION_COOKIE) != null) fail(ex); // a cookie that matches nothing is a guess, an expired session or another client
             sendJson(ex, 401, Map.of("error", "unauthorized"));
             return;
         }
 
         String method = ex.getRequestMethod();
-        // Changes need a header a page of another site cannot add without a preflight this server never answers
-        if (!method.equals("GET") && !"1".equals(ex.getRequestHeaders().getFirst("X-Veneer"))) {
-            sendJson(ex, 403, Map.of("error", "missing X-Veneer header"));
-            return;
-        }
 
         if (path.equals("/api/validate")) {
             sendJson(ex, 200, playerInfo);
@@ -260,54 +186,6 @@ public class WebServerManager {
         if (path.equals("/api/players/search")) {
             String q = params.getOrDefault("q", "").trim();
             sendJson(ex, 200, q.isEmpty() || q.length() > 16 ? List.of() : plugin.database().players().searchPlayers(q, 12));
-            return;
-        }
-
-        if (path.equals("/api/players/all")) {
-            Set<Object> online = new HashSet<>();
-            for (Map<String, Object> p : cachedPlayers) online.add(p.get("uuid"));
-            List<Map<String, Object>> rows = plugin.database().listPlayers(
-                    Math.max(1, Math.min(100, parseInt(params.get("limit"), 50))), Math.max(0, parseInt(params.get("offset"), 0)));
-            for (Map<String, Object> row : rows) row.put("online", online.contains(row.get("uuid")));
-            sendJson(ex, 200, rows);
-            return;
-        }
-
-        if (path.equals("/api/players/delete") && "POST".equals(method)) {
-            if (!can(playerInfo, "delete")) {
-                sendJson(ex, 403, Map.of("error", "no permission: veneer.web.delete"));
-                return;
-            }
-            byte[] raw = ex.getRequestBody().readNBytes(MAX_BODY * 8 + 1);
-            if (raw.length > MAX_BODY * 8) { sendJson(ex, 413, Map.of("error", "request too large")); return; }
-            Map<?, ?> req = gson.fromJson(new String(raw, StandardCharsets.UTF_8), Map.class);
-            List<String> uuids = new ArrayList<>();
-            if (req != null && req.get("uuids") instanceof List<?> given)
-                for (Object o : given) if (o instanceof String u && u.length() == 36 && uuids.size() < 200) uuids.add(u);
-            if (uuids.isEmpty()) { sendJson(ex, 400, Map.of("error", "uuids are required")); return; }
-            int removed = plugin.database().deletePlayers(uuids);
-            graphCache.clear();
-            plugin.getLogger().info("[Hacks] Web panel: " + playerInfo.get("player_name") + " deleted " + uuids.size() + " account(s) from the database: " + uuids);
-            sendJson(ex, 200, Map.of("success", true, "accounts", uuids.size()));
-            return;
-        }
-
-        if (path.startsWith("/api/head/")) {
-            String id = path.substring("/api/head/".length()); // getPath() is already decoded
-            String uuid;
-            if (id.length() == 36 && id.indexOf('-') > 0) {
-                uuid = id;
-            } else {
-                Map<String, Object> rec = plugin.database().getPlayerRecord(id);
-                uuid = rec == null ? "" : (String) rec.getOrDefault("uuid", "");
-            }
-            String skin = uuid.isEmpty() ? null : plugin.database().getSkin(uuid);
-            byte[] png = skin != null ? com.veneer.core.Heads.face(skin) : null;
-            if (png == null) { sendJson(ex, 404, Map.of("error", "no head")); return; }
-            ex.getResponseHeaders().set("Content-Type", "image/png");
-            ex.getResponseHeaders().set("Cache-Control", "private, max-age=3600");
-            ex.sendResponseHeaders(200, png.length);
-            try (OutputStream os = ex.getResponseBody()) { os.write(png); }
             return;
         }
 
@@ -568,9 +446,6 @@ public class WebServerManager {
         ex.getResponseHeaders().set("X-Content-Type-Options", "nosniff");
         ex.getResponseHeaders().set("X-Frame-Options", "DENY");
         ex.getResponseHeaders().set("Referrer-Policy", "no-referrer");
-        ex.getResponseHeaders().set("Cache-Control", "no-store");
-        // The page replaces this with its own policy; everything else (JSON, errors) loads nothing
-        ex.getResponseHeaders().set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
     }
 
     private void sendJson(HttpExchange ex, int code, Object obj) throws IOException {
@@ -603,7 +478,6 @@ public class WebServerManager {
     }
 
     public void stop() {
-        if (cacheTask != null) cacheTask.cancel();
         if (server != null) server.stop(0);
         if (executor != null) executor.shutdownNow();
     }

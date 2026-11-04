@@ -1,10 +1,10 @@
 # ══════════════════════════════════════════════════════════════
-#  Veneer - one file per part, all in plugins/Veneer/
+#  Veneer - config.yml (the only configuration file)
 #
-#  config.yml:  settings shared by every module (language, prefix, debug, alerts, Bedrock, Discord, updates)
-#  spoof.yml:   client brand / channel spoof detection (from AntiSpoof)
-#  hacks.yml:   mod detection through sign translation (from CheckHacks)
-#  rptrack.yml: resource-pack cache fingerprint (off by default)
+#  general:   settings shared by every module (language, prefix, debug, alerts, Bedrock, Discord, updates)
+#  spoof:     client brand / channel spoof detection (from AntiSpoof)
+#  hacks:     mod detection through sign translation (from CheckHacks)
+#  rptrack:   resource-pack cache fingerprint (off by default)
 #
 #  Missing settings are added from the defaults when the plugin starts or reloads.
 #  Chat messages of the mod scan live in messages/<language>.yml.
@@ -38,7 +38,7 @@ general:
       - "*"
 
   # Discord webhook used by every module that has no URL of its own
-  # (spoof.yml discord.webhook, hacks.yml discord.webhook-url, hacks.yml language-check.discord.webhook-url).
+  # (spoof.discord.webhook, hacks.discord.webhook-url, hacks.language-check.discord.webhook-url).
   discord:
     webhook: ""
 

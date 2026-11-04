@@ -64,7 +64,7 @@ lang-join-check: "{prefix}<gray>Auto language checkin for <yellow>{player}<gray>
 # Placeholders: {url}.
 # ======================================================================
 editor-url: "{prefix}<white>Editur: <aqua><click:open_url:'{url}'>{url}</click>"
-editor-disabled: "{prefix}<red>Web editur iz disabled in hacks.yml."
+editor-disabled: "{prefix}<red>Web editur iz disabled in config.yml."
 editor-players-only: "{prefix}<red>Only playrz can open teh editur.</red>"
 
 # ======================================================================

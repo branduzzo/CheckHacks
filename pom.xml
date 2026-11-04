@@ -33,7 +33,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
         <packetevents.version>2.14.0</packetevents.version>
-        <paper.version>26.1.2.build.74-stable</paper.version>
+        <paper.version>1.21.4-R0.1-SNAPSHOT</paper.version>
         <placeholderapi.version>2.11.6</placeholderapi.version>
         <adventure.version>4.21.0</adventure.version>
         <sqlite.version>3.45.3.0</sqlite.version>

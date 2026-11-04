@@ -19,8 +19,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -518,8 +516,6 @@ public final class VeneerGui implements Listener {
         if (e.lastPlayer() != null)
             lore.add(m.get("gui-brand-last", Map.of("player", e.lastPlayer())).decoration(TextDecoration.ITALIC, false));
         lore.add(m.get("gui-brand-hint").decoration(TextDecoration.ITALIC, false));
-        // Hidden id line (same trick as the channels page): clicks resolve by id, not by list position
-        lore.add(Component.text("§1" + e.id()).color(NamedTextColor.BLACK).decoration(TextDecoration.ITALIC, false));
         meta.lore(lore);
         item.setItemMeta(meta);
         return item;
@@ -678,20 +674,6 @@ public final class VeneerGui implements Listener {
         }
     }
 
-    @EventHandler
-    public void onInventoryDrag(InventoryDragEvent event) {
-        if (!(event.getInventory().getHolder() instanceof VeneerMenuHolder)) return;
-        int topSize = event.getView().getTopInventory().getSize();
-        for (int raw : event.getRawSlots())
-            if (raw < topSize) { event.setCancelled(true); return; } // drag touches menu slots; own-inventory drags pass through
-    }
-
-    @EventHandler
-    public void onQuit(PlayerQuitEvent event) {
-        awaitingSearch.remove(event.getPlayer().getUniqueId());
-        if (grimTracker != null) grimTracker.onQuit(event.getPlayer().getUniqueId());
-    }
-
     private void handleMain(Player player, int slot) {
         switch (slot) {
             case SLOT_PLAYERS    -> { player.closeInventory(); openPlayers(player, 0, null); }
@@ -711,7 +693,6 @@ public final class VeneerGui implements Listener {
         if (slot < PAGE_SIZE) {
             if (item != null && item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
                 String name = plain(item.getItemMeta().displayName());
-                if (name.isEmpty()) return; // filler glass panes carry an empty label
                 player.closeInventory();
                 openPlayerInfo(player, name);
             }
@@ -730,7 +711,6 @@ public final class VeneerGui implements Listener {
         if (slot < PAGE_SIZE) {
             if (item != null && item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
                 String name = plain(item.getItemMeta().displayName());
-                if (name.isEmpty()) return; // filler glass panes carry an empty label
                 player.closeInventory();
                 openPlayerInfo(player, name);
             }
@@ -763,7 +743,7 @@ public final class VeneerGui implements Listener {
             else return; // drop, number keys and the like must not reset a verdict
             plugin.spoof().verdicts().decide(e.id(), next, player.getName());
             Messages m = plugin.messages().in(player);
-            event.getInventory().setItem(slot, buildBrandItem(plugin.spoof().verdicts().get(id), m));
+            event.getInventory().setItem(slot, buildBrandItem(plugin.spoof().verdicts().get(e.id()), m));
             return;
         }
         switch (slot) {
@@ -774,25 +754,10 @@ public final class VeneerGui implements Listener {
         }
     }
 
-    /** The brand id hidden in the item's lore; -1 when the item is not a brand entry (filler glass). */
-    private static int brandId(ItemStack item) {
-        if (item == null || !item.hasItemMeta()) return -1;
-        List<Component> lore = item.getItemMeta().lore();
-        if (lore == null) return -1;
-        for (Component line : lore) {
-            String text = plain(line);
-            if (text.startsWith("§1")) {
-                try { return Integer.parseInt(text.substring(2)); } catch (NumberFormatException e) { return -1; }
-            }
-        }
-        return -1;
-    }
-
     private void handleGrim(Player player, VeneerMenuHolder holder, int slot, ItemStack item) {
         if (slot < PAGE_SIZE) {
             if (item != null && item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
                 String name = plain(item.getItemMeta().displayName());
-                if (name.isEmpty()) return; // filler glass panes carry an empty label
                 player.closeInventory();
                 openPlayerInfo(player, name);
             }
@@ -821,7 +786,6 @@ public final class VeneerGui implements Listener {
         if (slot < PAGE_SIZE) {
             if (item != null && item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
                 String name = plain(item.getItemMeta().displayName());
-                if (name.isEmpty()) return; // filler glass panes carry an empty label
                 player.closeInventory();
                 openPlayerInfo(player, name);
             }

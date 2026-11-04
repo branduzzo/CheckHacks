@@ -150,7 +150,7 @@ public abstract class VeneerPlugin extends JavaPlugin {
         return getDescription().getVersion();
     }
 
-    /** Re-reads the config files and the language files, then lets every running module refresh itself. */
+    /** Re-reads config.yml and the language files, then lets every running module refresh itself. */
     public void reloadAll() {
         config.reload();
         messages.load();
@@ -158,7 +158,7 @@ public abstract class VeneerPlugin extends JavaPlugin {
             if (module.running()) {
                 module.refresh();
             } else if (module.wanted()) {
-                getLogger().info("Module '" + module.id() + "' is enabled in its config file but not running: restart the server to start it.");
+                getLogger().info("Module '" + module.id() + "' is enabled in config.yml but not running: restart the server to start it.");
             }
         }
         getLogger().info("Configuration reloaded.");
@@ -235,13 +235,12 @@ public abstract class VeneerPlugin extends JavaPlugin {
 
     /**
      * Whether the player skips the automatic {@code module} check ("spoof", "hacks" or "rptrack"); {@code join}
-     * for the check on joining, which {@code veneer.bypass.<module>.join} skips too. A denial wins over any grant:
-     * one explicit false anywhere on {@code veneer.bypass.<module>.join}, {@code veneer.bypass.<module>} or
-     * {@code veneer.bypass} - on the player or in any of their groups - skips nothing, even with a true set above
-     * or below it (veneer.bypass true and veneer.bypass.hacks false: mods are still scanned). Among grants the
-     * most specific node set on the player decides, then the ones inherited from groups. Unset everywhere means no
-     * bypass; {@code veneer.*} and {@code *} never grant one. Resolved here rather than through plugin.yml
-     * children: a child granted by its parent hides a false set on it.
+     * for the check on joining, which {@code veneer.bypass.<module>.join} skips too. The most specific of
+     * {@code veneer.bypass.<module>.join}, {@code veneer.bypass.<module>} and {@code veneer.bypass} that is set
+     * decides, so a false below a true wins (veneer.bypass true and veneer.bypass.hacks false: mods are still
+     * scanned). Nodes set on the player come before group ones (group veneer.bypass.hacks false and the player's
+     * own veneer.bypass: no scan). Unset everywhere means no bypass; {@code veneer.*} and {@code *} never grant one.
+     * Resolved here rather than through plugin.yml children: a child granted by its parent hides a false set on it.
      */
     public boolean bypasses(Player player, String module, boolean join) {
         return bypass(player, module, join).value();

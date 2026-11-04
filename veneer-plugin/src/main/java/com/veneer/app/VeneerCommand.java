@@ -116,13 +116,6 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    /** Tab completion lists a subcommand only when its help entry's permission is held (or there is none). */
-    private static boolean subAllowed(CommandSender sender, String sub) {
-        for (HelpEntry e : HELP)
-            if (e.key().equals(sub)) return e.permission() == null || sender.hasPermission(e.permission());
-        return true;
-    }
-
     /** The commands the sender can use, grouped by module, each clickable to put it into the chat box. */
     private void help(CommandSender sender) {
         Messages m = plugin.messages().in(sender);
@@ -360,8 +353,7 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (args.length == 1) {
-            List<String> options = SUBCOMMANDS.stream().filter(s -> subAllowed(sender, s))
-                    .collect(Collectors.toCollection(ArrayList::new));
+            List<String> options = new ArrayList<>(SUBCOMMANDS);
             PASSTHROUGH.forEach((name, target) -> {
                 PluginCommand c = plugin.getCommand(target);
                 if (c != null && c.testPermissionSilent(sender)) options.add(name);

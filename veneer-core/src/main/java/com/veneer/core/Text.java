@@ -2,6 +2,7 @@ package com.veneer.core;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
 
 import java.util.regex.Matcher;
@@ -9,7 +10,7 @@ import java.util.regex.Pattern;
 
 /**
  * Text helpers shared by all modules. Config messages may mix legacy {@code &} codes, {@code &#RRGGBB}
- * and MiniMessage tags; {@link #rich} turns them into one component with the colours intact.
+ * and MiniMessage tags; {@link #legacy} turns them into one plain string, {@link #mini} into a component.
  */
 public final class Text {
     private Text() {}
@@ -45,18 +46,19 @@ public final class Text {
             Pattern.compile("([&§]#[A-Fa-f0-9]{6})|([&§]x([&§][A-Fa-f0-9]){6})");
 
     /**
-     * Parses a string containing legacy colour codes, hex colours or MiniMessage markup and returns a
-     * component that keeps them intact: true gradients, hex, MiniMessage tags.
+     * Parses a string containing legacy color codes or MiniMessage markup and
+     * returns a legacy formatted string compatible with older Bukkit
+     * versions. Hex color codes using the &#RRGGBB or &x&F&F&F&F&F&F formats
+     * are also supported.
      *
      * @param input the input string
-     * @return the component
+     * @return the parsed string with legacy colour codes
      */
-    public static Component rich(String input) {
-        return input == null || input.isEmpty() ? Component.empty() : MM.deserialize(normalize(input));
-    }
+    public static String legacy(String input) {
+        if (input == null || input.isEmpty()) {
+            return "";
+        }
 
-    /** Mixed-format input as pure MiniMessage: &#RRGGBB and legacy & codes become tags. */
-    private static String normalize(String input) {
         // Unescape common sequences when received via commands
         input = input.replace("\\n", "\n").replace("\\\"", "\"");
 
@@ -96,6 +98,8 @@ public final class Text {
                 .replace("§m", "<strikethrough>")
                 .replace("§n", "<underlined>")
                 .replace("§o", "<italic>");
-        return input;
+
+        Component component = MM.deserialize(input).compact();
+        return LegacyComponentSerializer.legacySection().serialize(component);
     }
 }
