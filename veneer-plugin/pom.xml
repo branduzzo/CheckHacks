@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.veneer</groupId>
+        <artifactId>veneer-parent</artifactId>
+        <version>0.9.8</version>
+    </parent>
+
+    <artifactId>veneer</artifactId>
+    <name>Veneer</name>
+    <description>The Veneer plugin: wires the modules together, /veneer and the chest GUI; builds the server jars</description>
+
+    <!-- The single-module build got JetBrains annotations 23.0.0 through PlaceholderAPI; keep shipping that one -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.jetbrains</groupId>
+                <artifactId>annotations</artifactId>
+                <version>23.0.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- First, as in the single-module build: Maven picks the versions of shared libraries (SLF4J, annotations)
+             by declaration order, and the jar should keep shipping the same ones -->
+        <dependency>
+            <groupId>io.papermc.paper</groupId>
+            <artifactId>paper-api</artifactId>
+            <version>${paper.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.veneer</groupId>
+            <artifactId>veneer-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.veneer</groupId>
+            <artifactId>veneer-hacks</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.veneer</groupId>
+            <artifactId>veneer-spoof</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.veneer</groupId>
+            <artifactId>veneer-rptrack</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.veneer</groupId>
+            <artifactId>veneer-hooks</artifactId>
+        </dependency>
+        <!-- Shipped in the jar (see the shade executions below) -->
+        <dependency>
+            <groupId>net.kyori</groupId>
+            <artifactId>adventure-text-minimessage</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.kyori</groupId>
+            <artifactId>adventure-text-serializer-legacy</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.retrooper</groupId>
+            <artifactId>packetevents-spigot</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+        </dependency>
+        <!-- Optional plugins the GUI talks to -->
+        <dependency>
+            <groupId>ac.grim.grimac</groupId>
+            <artifactId>GrimAPI</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>veneer-${project.version}</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>plugin.yml</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>plugin.yml</exclude>
+                </excludes>
+            </resource>
+        </resources>
+
+        <plugins>
+            <!-- Always rebuild the plain jar: shade replaces it with the full jar, and a stale one is newer than the
+                 classes, so a second `package` without `clean` would feed the full jar into the lite execution -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <forceCreation>true</forceCreation>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <!-- veneer-<version>-lite.jar: no PacketEvents, runs on the PacketEvents plugin. Runs first:
+                         the next execution replaces the main artifact with the full jar. -->
+                    <execution>
+                        <id>lite</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>lite</shadedClassifierName>
+                            <artifactSet>
+                                <!-- Also what the server already provides (plugin classes load parent-first, so these copies
+                                     are never used): netty, SQLite, Gson, SLF4J. Adventure stays for plain Spigot. -->
+                                <excludes>
+                                    <exclude>com.github.retrooper:*</exclude>
+                                    <exclude>io.netty:*</exclude>
+                                    <exclude>org.xerial:sqlite-jdbc</exclude>
+                                    <exclude>com.google.code.gson:gson</exclude>
+                                    <exclude>org.slf4j:*</exclude>
+                                    <exclude>org.jetbrains:annotations</exclude>
+                                    <exclude>net.kyori:adventure-nbt</exclude>
+                                </excludes>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>full</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <relocations>
+                                <relocation>
+                                    <pattern>com.github.retrooper.packetevents</pattern>
+                                    <shadedPattern>com.veneer.libs.packetevents</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>io.github.retrooper.packetevents</pattern>
+                                    <shadedPattern>com.veneer.libs.packetevents.internal</shadedPattern>
+                                </relocation>
+                            </relocations>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

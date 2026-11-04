@@ -5,7 +5,6 @@ on:
     branches: [main, beta, dev]
     tags: ['v*']
   pull_request:
-  # Allows manual triggering with an optional tag
   workflow_dispatch:
     inputs:
       tag:
@@ -30,16 +29,16 @@ jobs:
           java-version: '25'
           cache: maven
 
-      - name: Clean and Package
+      - name: Build
         run: mvn -B -DskipTests clean package
 
       - uses: actions/upload-artifact@v4
         with:
           name: veneer
-          path: target/veneer-*.jar
+          path: veneer-plugin/target/veneer-*.jar
 
-      - name: Determine Release Channel
-        id: release_channel
+      - name: Determine release channel
+        id: channel
         run: |
           VERSION=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
@@ -77,12 +76,11 @@ jobs:
             TAG_NAME="beta-latest"
             RELEASE_TITLE="Beta Build (v$VERSION-beta)"
           elif [ "$REF" = "refs/heads/main" ]; then
-            # Auto-publish release on main if tag does not exist yet
             git fetch --tags --force
             if git rev-parse "v$VERSION" >/dev/null 2>&1; then
               echo "Tag v$VERSION already exists. Skipping auto-release on main."
             else
-              echo "New version detected on main: v$VERSION. Publishing release."
+              echo "New version on main: v$VERSION — publishing release."
               DO_RELEASE=true
               TAG_NAME="v$VERSION"
               RELEASE_TITLE="Release v$VERSION"
@@ -90,20 +88,20 @@ jobs:
             fi
           fi
 
-          echo "do_release=$DO_RELEASE" >> $GITHUB_OUTPUT
+          echo "do_release=$DO_RELEASE"       >> $GITHUB_OUTPUT
           echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
-          echo "is_latest=$IS_LATEST" >> $GITHUB_OUTPUT
-          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "is_latest=$IS_LATEST"         >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME"           >> $GITHUB_OUTPUT
           echo "release_title=$RELEASE_TITLE" >> $GITHUB_OUTPUT
 
-      - name: Publish Release
-        if: steps.release_channel.outputs.do_release == 'true'
+      - name: Publish release
+        if: steps.channel.outputs.do_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.release_channel.outputs.tag_name }}
+          tag_name:        ${{ steps.channel.outputs.tag_name }}
           target_commitish: ${{ github.sha }}
-          name: ${{ steps.release_channel.outputs.release_title }}
-          prerelease: ${{ steps.release_channel.outputs.is_prerelease == 'true' }}
-          make_latest: ${{ steps.release_channel.outputs.is_latest == 'true' }}
-          files: target/veneer-*.jar
+          name:            ${{ steps.channel.outputs.release_title }}
+          prerelease:      ${{ steps.channel.outputs.is_prerelease == 'true' }}
+          make_latest:     ${{ steps.channel.outputs.is_latest == 'true' }}
+          files:           veneer-plugin/target/veneer-*.jar
           generate_release_notes: true

@@ -1,0 +1,396 @@
+﻿# Veneer messages (uwu). Each section below is one part of the plugin.
+# Texts are MiniMessage. Keep the {placeholders}; a key you delete falls back to en.yml.
+
+# ======================================================================
+# GENERAL
+# Shared by every command. {prefix} is general.prefix from config.yml; {player}, {label} and similar are filled in by the plugin.
+# ======================================================================
+no-permission: "{prefix}<red>You don't haz da pewmission to do dat, sowwy uwu."
+player-not-found: "{prefix}<red>Pwayew <white>{player} <red>wasn't found, nya~."
+reload-done: "{prefix}<green>Configy-wiggy wewoaded successfuwwy~"
+alerts-enabled: "{prefix}<green>Awerts awe now on~"
+alerts-disabled: "{prefix}<red>Awerts awe now off~"
+bedrock-skip: "{prefix}<yellow>{player} <gray>is a Bedwock pwayew - checky skipped, nya."
+client-too-old: "{prefix}<yellow>{player} <gray>pways on {version}: sign checks nyeed {min} ow nyewew - check skipped."
+module-not-running: "{prefix}<red>Da {module} moduwe is nyot wunning (check '{module}.enabled' in config.yml).</red>"
+update-available: "{prefix}<green>Veneer {latest} is avaiwabwe</green> <gray>(wunning {current})</gray> <aqua><click:open_url:'{url}'>{url}</click></aqua>"
+
+# ======================================================================
+# MOD SCAN  (/hackcheck, join and anticheat checks)
+# Placeholders: {player}. Scan results go to staff with veneer.alerts and to the player who started the scan.
+# ======================================================================
+check-started: "{prefix}<white>Stawting a widdle checky on <yellow><click:run_command:'/veneer player {player}'><hover:show_text:'<gray>Open profile'>{player}</hover></click><white>..."
+check-complete: "{prefix}<white>Checky-check compwete fow <yellow>{player}<white>:"
+doublecheck: "{prefix}<yellow>DoubweCheck<gray>: <white>{player} <gray>flagged - wunning confiwmation scan, nya~"
+anticheat-trigger: "{prefix}<gray>Da anticheat noticed <yellow><click:run_command:'/veneer player {player}'><hover:show_text:'<gray>Open profile'>{player}</hover></click><gray> being a wittle sus... stawting auto-checky now~"
+join-check: "{prefix}<gray>Doing an automatic checky on <yellow><click:run_command:'/veneer player {player}'><hover:show_text:'<gray>Open profile'>{player}</hover></click> <gray>when dey join~"
+already-checking: "{prefix}<yellow>{player} <white>is awweady being checkied, hehe~."
+invalid-hack: "{prefix}<red>Unknown hacky-wacky: <white>{hack}"
+hackcheck-usage: "{prefix}<red>Usage: /hackcheck \\<player> [hack1,hack2,...]</red>"
+hackcheck-no-valid: "{prefix}<red>No vawid hacks to check, sowwy.</red>"
+
+# ======================================================================
+# MOD SCAN  (result block)
+# check-result-line: {hack}, {result}. The result texts are shown as they are; the words match the values kept in the history database.
+# check-nothing-found is shown when every mod was clean and hide-clean is on; check-channels shows {channels} when show-channels is on.
+# ======================================================================
+check-translation-header: "{prefix}<gray>  Translation Detect:"
+check-result-line: "{prefix}  <white>{hack}<gray>: {result}"
+result-detected: "<red>DETECTED"
+result-not-detected: "<green>NOT_DETECTED"
+result-protected: "<yellow>PROTECTED"
+result-timeout: "<yellow>TIMEOUT"
+result-skipped: "<gray>SKIPPED"
+check-nothing-found: "{prefix}<green>    Nothing detected owo"
+check-channels: "{prefix}<white>  Channyews<gray>: <aqua>{channels}"
+check-brand: "{prefix}<white>  Software<gray>: <yellow>{brand}"
+
+# ======================================================================
+# LANGUAGE CHECK  (/hacklang)
+# Placeholders: {player}, {lang}, {response}.
+# ======================================================================
+hacklang-usage: "{prefix}<red>Usage: /hacklang \\<player> [lang1,lang2,...]</red>"
+hacklang-unknown: "{prefix}<red>Unknown wanguage: <white>{lang}</white></red>"
+lang-check-started: "{prefix}<white>Checking da wanguage of <yellow>{player}<white>..."
+lang-check-complete: "{prefix}<white>Wanguage of <yellow>{player}<white>: <yellow>{lang} <gray>({response})"
+lang-check-unknown: "{prefix}<white>Wanguage of <yellow>{player}<white>: <red>Uny-known <gray>({response})"
+lang-check-protected: "{prefix}<white>Wanguage of <yellow>{player}<white>: <yellow>PWOTECTED"
+version-mismatch: "{prefix}<red>{player}</red> <white>connyects as <yellow>{claimed}</yellow> but da cwient is weawwy <yellow>{real}</yellow> <gray>(ViaFabricPlus, ViaProxy ow simiwaw)"
+lang-check-timeout: "{prefix}<yellow>{player} <white>didn't wespond - wanguage checky faiwed, sob sob."
+lang-join-check: "{prefix}<gray>Automatic wanguage checky fow <yellow>{player}<gray>..."
+
+# ======================================================================
+# WEB EDITOR  (/hackeditor)
+# Placeholders: {url}.
+# ======================================================================
+editor-url: "{prefix}<white>Editow: <aqua><click:open_url:'{url}'>{url}</click>"
+editor-disabled: "{prefix}<red>Da web editow is disabled in hacks.yml, sowwy."
+editor-players-only: "{prefix}<red>Onwy pwayews can open da editow.</red>"
+
+# ======================================================================
+# SPOOF  /spoof - general
+# Texts use MiniMessage. Values that come from the game (brands, channels, names) are escaped, so they never become tags.
+# Placeholders: {label} {sub} {count} {player} {value}. {value} and {mode} receive the short texts from the 'words' block below.
+# ======================================================================
+spoof-usage: "<red>Usage: /{label} {sub} \\<player>, nya~"
+spoof-no-data: "<yellow>No data avaiwabwe fow dis pwayew, sowwy."
+spoof-unknown-sub: "<red>Unknown subcommand: {sub} owo"
+spoof-run-all: "<aqua>Wunning checky fow aww onwine pwayews..."
+spoof-run-done: "<green>Checky twiggewed fow {count} pwayews, nya~"
+spoof-run-note: "<yellow>Note: Dis onwy we-anawyzes existing data, pwayews might need to wejoin fow fwesh data uwu."
+spoof-run-player: "<aqua>Wunning checky fow pwayew {player}..."
+spoof-run-player-done: "<green>Checky twiggewed fow {player}~"
+
+# ======================================================================
+# SPOOF  words used inside other lines
+# Short texts placed into {value}, {mode} and {brand}. No prefix, no placeholders.
+# ======================================================================
+spoof-yes: "<green>Yush"
+spoof-no: "<red>Nyo"
+spoof-mode-whitelist: "Whitewist"
+spoof-mode-blacklist: "Bwackwist"
+spoof-mode-whitelist-simple: "Whitewist (Simpwe)"
+spoof-mode-whitelist-strict: "Whitewist (Stwict)"
+spoof-mode-simple: "Simpwe"
+spoof-mode-strict: "Stwict"
+spoof-brand-unknown: "unknyown"
+
+# ======================================================================
+# SPOOF  /spoof blockedbrands and /spoof blockedchannels
+# Placeholders: {value} (an entry of the list, or yes/no), {mode}.
+# ======================================================================
+spoof-brands-title: "<aqua>=== Bwocked Bwands Configuwation ==="
+spoof-channels-title: "<aqua>=== Bwocked Channyews Configuwation ==="
+spoof-enabled: "<gray>Enabwed: {value}"
+spoof-match-type: "<gray>Match Type: <white>Regex Pattern"
+spoof-mode: "<gray>Mode: <white>{mode}"
+spoof-brands-none-blocked: "<yellow>No bwands awe cuwwentwy bwocked, nya."
+spoof-brands-none-whitelisted: "<yellow>No bwands awe cuwwentwy whitewisted, nya."
+spoof-brands-list-blocked: "<aqua>Bwocked Bwands:"
+spoof-brands-list-whitelisted: "<aqua>Whitewisted Bwands:"
+spoof-channels-none-blocked: "<yellow>No channyews awe cuwwentwy bwocked, nya."
+spoof-channels-none-whitelisted: "<yellow>No channyews awe cuwwentwy whitewisted, nya."
+spoof-channels-list-blocked: "<aqua>Bwocked Channyews:"
+spoof-channels-list-whitelisted: "<aqua>Whitewisted Channyews:"
+spoof-list-item: "<gray>- <white>{value}"
+
+# ======================================================================
+# SPOOF  /spoof check
+# Placeholders: {player}, {brand}, {count}, {reason}, {value}, {channel}, {mode}.
+# ======================================================================
+spoof-no-brand-yet: "<aqua>{player}<yellow> has no cwient bwand infowmation yet."
+spoof-flagged: "<aqua>{player}<red> has been fwagged, uh-oh!"
+spoof-not-spoofing: "<aqua>{player}<green> doesn't appeaw to be spoofing, yay~"
+spoof-client-brand: "<gray>Cwient bwand: <white>{brand}"
+spoof-violations: "<red>Viowations detected ({count}):"
+spoof-violation-item: "<red>• {reason}"
+spoof-brand-status-blocked: "<gray>Bwand status: <red>Bwocked"
+spoof-brand-status-blocked-noflag: "<gray>Bwand status: <red>Bwocked<gray> (but nyot counting as fwag)"
+spoof-brand-status-allowed: "<gray>Bwand status: <green>Awwowed"
+spoof-has-channels: "<gray>Has channyews: {value}"
+spoof-whitelist-mode: "<gray>Channyew whitewist mode: <white>{mode}"
+spoof-whitelist-status: "<gray>Channyew whitewist status:"
+spoof-channels-header: "<gray>Channyews:"
+spoof-channel-line: "<white>{channel}"
+spoof-channel-ok: "<green>{channel}"
+spoof-channel-not-whitelisted: "<red>{channel}<gray> (nyot in whitewist)"
+spoof-channel-bad: "<red>{channel}"
+spoof-missing-header: "<gray>Missing wequiwed channyews:"
+spoof-blocked-header: "<gray>Bwocked channyew detected:"
+spoof-flagging-title: "<aqua>=== Pwayews Cuwwentwy Fwagging ==="
+spoof-flagging-line: "<red>{player}<gray> - Bwand: <white>{brand}"
+spoof-none-flagging: "<green>No pwayews awe cuwwentwy detected as spoofing, yay~"
+
+# ======================================================================
+# SPOOF  violation reasons
+# Plain text, no tags. Listed under 'Violations detected', and %reason% of the spoof alerts in config.yml (server language). Placeholders: {channel}, {channels}, {brand}, {key}.
+# ======================================================================
+spoof-reason-non-vanilla: "Nyon-vanyiwwa cwient detected"
+spoof-reason-vanilla-channels: "Vanyiwwa cwient with pwugin channyews"
+spoof-reason-geyser: "Spoofing Geysew cwient"
+spoof-reason-brand-not-whitelisted: "Cwient bwand is nyot in whitewist"
+spoof-reason-brand-blocked: "Using bwocked cwient bwand"
+spoof-reason-missing-channels: "Missing wequiwed channyews: {channels}"
+spoof-reason-whitelist-mismatch: "Channyews don't match whitewist wequiwements"
+spoof-reason-no-whitelisted: "No whitewisted channyews detected"
+spoof-reason-blocked-channel: "Using bwocked channyew: {channel}"
+spoof-reason-missing-brand-channels: "Missing wequiwed channyews fow {brand}: {channels}"
+spoof-reason-unknown: "Unknyown weason (check configuwation)"
+spoof-reason-no-brand: "Nyo cwient bwand detected"
+spoof-reason-unknown-brand: "Using unknyown cwient bwand: {brand}"
+spoof-reason-flagged-brand: "Using fwagged cwient bwand: {brand} ({key})"
+spoof-reason-brand-with-channels: "Cwient cwaiming '{brand}' detected with pwugin channyews"
+
+# ======================================================================
+# SPOOF  /spoof channels and /spoof brand
+# Placeholders: {player}, {channel}, {brand}.
+# ======================================================================
+spoof-channels-for: "<aqua>Channyews fow {player}:"
+spoof-channels-empty: "<gray>No channyews wegistewed."
+spoof-ch-whitelisted: "<gray>- <green>{channel}<gray> (whitewisted)"
+spoof-ch-blocked: "<gray>- <red>{channel}<gray> (bwocked)"
+spoof-ch-not-whitelisted: "<gray>- <red>{channel}<gray> (nyot whitewisted)"
+spoof-ch-plain: "<gray>- <white>{channel}"
+spoof-brand-none: "<yellow>{player} has no cwient bwand infowmation."
+spoof-brand-blocked: "<aqua>Cwient bwand fow {player}: <red>{brand}<gray> (Bwocked)"
+spoof-brand-ok: "<aqua>Cwient bwand fow {player}: <green>{brand}"
+spoof-brand-plain: "<aqua>Cwient bwand fow {player}: <white>{brand}"
+spoof-status-not-whitelisted: "<gray>Status: <red>Nyot in whitewist"
+spoof-status-blocked: "<gray>Status: <red>Bwocked"
+spoof-status-in-whitelist: "<gray>Status: <green>In whitewist"
+spoof-status-allowed: "<gray>Status: <green>Awwowed"
+
+# ======================================================================
+# SPOOF  /spoof help
+# ======================================================================
+spoof-help-title: "<aqua>=== Veneer spoof commands, nya~ ==="
+spoof-help-channels: "<gray>/spoof channels \\<player> <white>- Show pwayew's pwugin channyews"
+spoof-help-brand: "<gray>/spoof brand \\<player> <white>- Show pwayew's cwient bwand"
+spoof-help-brands: "<gray>/spoof bwands [awwow|bwock|fowget \\<id>] <white>- Unknyown cwient bwands and staff vewdicts on them"
+spoof-unknown-brand: "{prefix}<gray>{player} joinyed with an unknyown client:</gray> <white>{brand}</white> <click:run_command:'/spoof brands allow {id}'><hover:show_text:'<gray>Awwow this exact bwand: nyo mowe awewts ow scans fow it'><green>[Allow]</green></hover></click> <click:run_command:'/spoof brands block {id}'><hover:show_text:'<gray>Bwock this exact bwand: fwagged and awewted, punyished as set in spoof.client-brands.staff-verdicts'><red>[Block]</red></hover></click>"
+spoof-verdict-usage: "{prefix}<red>Usage: /spoof bwands [awwow|bwock|fowget \\<id>]</red>"
+spoof-verdict-unknown-id: "{prefix}<red>Nyo bwand with id {id}, see /spoof brands</red>"
+spoof-verdict-allowed: "{prefix}<green>Allowed</green> <gray>cwient brand</gray> <white>{brand}</white>"
+spoof-verdict-blocked: "{prefix}<red>Blocked</red> <gray>cwient brand</gray> <white>{brand}</white>"
+spoof-verdict-forgotten: "{prefix}<gray>Vewdict cweawed, da bwand is unknyown again:</gray> <white>{brand}</white>"
+spoof-verdict-list-title: "{prefix}<gold>Cwient bwands seen as unknown</gold> <gray>({count}, watest 20)</gray>"
+spoof-verdict-list-empty: "{prefix}<gray>Nyonye yet.</gray>"
+spoof-verdict-list-undecided: "<gray>#{id}</gray> <white>{brand}</white> <gray>(wast: {player})</gray> <click:run_command:'/spoof brands allow {id}'><green>[Allow]</green></click> <click:run_command:'/spoof brands block {id}'><red>[Block]</red></click>"
+spoof-verdict-list-allowed: "<gray>#{id}</gray> <white>{brand}</white> <green>allowed</green> <gray>by {by}</gray> <click:run_command:'/spoof brands forget {id}'><hover:show_text:'<gray>Make it unknyown again'><gray>[Reset]</gray></hover></click>"
+spoof-verdict-list-blocked: "<gray>#{id}</gray> <white>{brand}</white> <red>blocked</red> <gray>by {by}</gray> <click:run_command:'/spoof brands forget {id}'><hover:show_text:'<gray>Make it unknyown again'><gray>[Reset]</gray></hover></click>"
+spoof-help-check: "<gray>/spoof check [player|*] <white>- Check if pwayew is spoofing"
+spoof-help-runcheck: "<gray>/spoof runcheck [player|*] <white>- We-wun checks on pwayew(s)"
+spoof-help-blockedchannels: "<gray>/spoof blockedchannels <white>- Show bwocked channyew config"
+spoof-help-blockedbrands: "<gray>/spoof blockedbrands <white>- Show bwocked bwand config"
+spoof-help-help: "<gray>/spoof help <white>- Show dis hewp message"
+
+# ======================================================================
+# VENEER  /veneer help, version, alerts
+# Placeholders: {label}, {version}, {latest}, {current}, {url}.
+# ======================================================================
+veneer-help-title: "{prefix}<gold>Veneer {version}</gold> <gray>- da commands you can use, cwick onye to type it</gray>"
+veneer-help-section: "<gold>{section}</gold>"
+veneer-help-section-general: "Genyewaw"
+veneer-help-section-spoof: "Cwient checks (spoof)"
+veneer-help-section-hacks: "Mod scan"
+veneer-help-section-rptrack: "RPTrack"
+veneer-help-line: " <click:suggest_command:'{typed}'><hover:show_text:'<gray>Cwick to type it</gray>'><aqua>{usage}</aqua></hover></click> <dark_gray>-</dark_gray> <white>{description}</white>"
+veneer-help-shortcut: "{prefix}<gray>Evewy moduwe command awso wowks as</gray> <white>/veneer \\<command></white><gray>, e.g.</gray> <white>/veneer hackwang Steve</white>"
+veneer-help-arg-player: "pwayew"
+veneer-help-arg-mods: "mod1,mod2"
+veneer-help-arg-languages: "wang1,wang2"
+veneer-help-arg-language: "wanguage"
+veneer-cmd-help: "this wist"
+veneer-cmd-lang: "da wanguage you wead Veneer messages in"
+veneer-cmd-alerts: "awewt and detection histowy; toggwe tuwns youw staff awewts on ow off"
+veneer-cmd-info: "cwient, mod scan, RPTrack and bypasses of a pwayew"
+veneer-cmd-reload: "wewoad config.yml and da messages"
+veneer-cmd-version: "wunnying and watest wewease"
+veneer-cmd-spoof-brand: "a pwayew's cwient bwand"
+veneer-cmd-spoof-channels: "a pwayew's pwugin channyews"
+veneer-cmd-spoof-runcheck: "wun da spoof checks again"
+veneer-cmd-spoof-check: "whethew a pwayew is fwagged and why"
+veneer-cmd-spoof-brands: "unknyown cwient bwands and staff vewdicts"
+veneer-cmd-spoof-blockedbrands: "bwocked bwand settings"
+veneer-cmd-spoof-blockedchannels: "bwocked channyew settings"
+veneer-cmd-hackcheck: "scan a pwayew fow mods"
+veneer-cmd-hacklang: "find out a pwayew's game wanguage"
+veneer-cmd-hackeditor: "wink to da web panyew"
+veneer-cmd-rptrack: "wesouwce-pack fingewpwint and winked accounts"
+veneer-cmd-player: "pwayew info page"
+veneer-cmd-find: "seawch a pwayew and open theiw info"
+veneer-cmd-check: "check diawog fow a pwayew"
+veneer-cmd-brands: "bwand fiwtews page"
+veneer-cmd-channels: "pwugin channyew gwoups"
+veneer-cmd-players-only: "{prefix}<red>This command can onwy be used by players."
+veneer-lang-players-only: "{prefix}<red>Onwy pwayews can choose a wanguage; da consowe uses general.language.</red>"
+veneer-lang-current-server: "{prefix}<gray>Youw language:</gray> <white>{lang}</white> <gray>(da server's). Available:</gray> <white>{available}</white><gray>, auto, reset</gray>"
+veneer-lang-current-auto: "{prefix}<gray>Youw language:</gray> <white>{lang}</white> <gray>(fowwows youw game language). Available:</gray> <white>{available}</white><gray>, auto, reset</gray>"
+veneer-lang-current: "{prefix}<gray>Youw language:</gray> <white>{lang}</white><gray>. Available:</gray> <white>{available}</white><gray>, auto, reset</gray>"
+veneer-lang-set: "{prefix}<green>Veneer messages fow you awe nyow in</green> <white>{lang}</white><green>.</green>"
+veneer-lang-auto: "{prefix}<green>Veneer messages nyow fowwow youw game language</green> <gray>({client}, now</gray> <white>{lang}</white><gray>; without a fiwe fow it da sewvew wanguage is used)</gray>"
+veneer-lang-reset: "{prefix}<green>Back to da sewvew language</green> <white>{lang}</white><green>.</green>"
+veneer-lang-unknown: "{prefix}<red>Nyo wanguage fiwe {lang}.</red> <gray>Available:</gray> <white>{available}</white><gray>, auto, reset</gray>"
+veneer-alerts-players-only: "{prefix}<red>Onwy pwayews can toggwe awerts, sowwy.</red>"
+veneer-running: "{prefix}<gray>Wunning Veneer</gray> <white>{version}</white>"
+veneer-latest-checking: "{prefix}<gray>Watest wewease: checking, wun dis again in a moment~</gray>"
+veneer-latest-none: "{prefix}<gray>No wewease is pubwished on GitHub yet.</gray>"
+veneer-update-available: "{prefix}<green>Vewsion {latest} is avaiwabwe:</green> <aqua>{url}</aqua>"
+veneer-latest-ok: "{prefix}<green>U awe on da watest wewease ({latest}), yay~</green>"
+veneer-latest-ahead: "{prefix}<aqua>Dis buiwd ({current}) is nyewew than da watest wewease ({latest}), wow~</aqua>"
+
+# ======================================================================
+# GUI  chest panel (/veneer with no arguments, requires veneer.admin)
+# Item names and lore are MiniMessage without {prefix}; chat lines (kicked, none-online) have it.
+# Placeholders: {date}, {player}, {brand}, {count}, {mods}, {type}, {checker}, {check}, {verbose}, {h}, {v}, {players}, {channels}.
+# ======================================================================
+gui-chest-title: "<dark_aqua><bold>Veneer</bold></dark_aqua>"
+gui-module-spoof: "Spoof"
+gui-module-hacks: "Hacks"
+gui-module-rptrack: "RPTrack"
+gui-module-on: "<green>✔ Enyabwed"
+gui-module-off: "<red>✘ Disabwed"
+gui-btn-editor: "Web Editow"
+gui-btn-editor-lore: "<gray>Sends you a wink to da web panyew"
+gui-btn-reload: "Wewoad Config"
+gui-btn-version: "Vewsion Info"
+gui-btn-reload-lore: "<gray>Wewoads config.yml and messages"
+gui-btn-version-lore: "<gray>Shows vewsion and update status"
+gui-btn-players: "Pwayews"
+gui-btn-players-lore: "<gray>Bwowse and seawch pwayew histowy"
+gui-btn-detections: "Detections"
+gui-btn-detections-lore: "<gray>View wecent mod detections"
+gui-btn-brands: "Bwand Fiwtews"
+gui-btn-brands-lore: "<gray>Awwow ow bwock cwient bwands"
+gui-btn-grim: "GrimAC Fwags"
+gui-btn-grim-lore: "<gray>Wecent GrimAC viowations"
+gui-page-players: "<dark_aqua><bold>Players</bold></dark_aqua>"
+gui-page-detections: "<red><bold>Detections</bold></red>"
+gui-page-brands: "<gold><bold>Bwand Filters</bold></gold>"
+gui-page-grim: "<yellow><bold>GrimAC Flags</bold></yellow>"
+gui-nav-prev: "<white>← Pwevious"
+gui-nav-next: "<white>Nyext →"
+gui-nav-back: "<gray>↩ Main Menyu"
+gui-nav-search: "<yellow>⌕ Search..."
+gui-nav-close: "<red>✕ Cwose"
+gui-player-online: "<green>● Onwinye"
+gui-player-offline: "<gray>○ Offwinye"
+gui-player-last-seen: "<gray>Wast seen: <white>{date}"
+gui-player-grim-flagged: "<yellow>⚑ GrimAC fwags"
+gui-detection-mods: "<gray>Mods: <red>{mods}"
+gui-detection-date: "<dark_gray>{date}"
+gui-detection-type: "<gray>[{type}]"
+gui-alert-type: "<gray>[{type}] by {checker}"
+gui-alerts-empty: "<gray>Nyo awewts found"
+gui-brand-undecided: "<yellow>⚠ Undecided"
+gui-brand-allowed: "<green>✔ Awwowed"
+gui-brand-blocked: "<red>✘ Bwocked"
+gui-brand-last: "<gray>Wast: <white>{player}"
+gui-brand-hint: "<dark_gray>Weft: Awwow  Wight: Bwock  Mid: Weset"
+gui-grim-check: "<gray>Check: <yellow>{check}"
+gui-grim-verbose: "<dark_gray>{verbose}"
+gui-grim-empty: "<gray>Nyo viowations wecowded yet"
+gui-search-prompt: "<yellow>Type pwayew nyame in chat (<gray>. <yellow>to cancew):"
+gui-btn-alerts-log: "Awewts Wog"
+gui-btn-alerts-log-lore: "<gray>View detected scan histowy"
+gui-btn-channels: "Channyew Gwoups"
+gui-btn-channels-lore: "<gray>Bwowse pwugin channyew gwoups seen"
+gui-page-alerts: "<yellow><bold>Alerts</bold></yellow>"
+gui-page-channels: "<aqua><bold>Channyew Groups</bold></aqua>"
+gui-player-brand: "<gray>Bwand: <white>{brand}"
+gui-player-channels: "<gray>Channyews: <white>{count}"
+gui-player-first-seen: "<gray>Fiwst seen: <white>{date}"
+gui-player-joins: "<gray>Joins: <white>{count}"
+gui-player-scans: "<gray>Scans in DB: <white>{count}"
+gui-grim-flags-count: "<yellow>⚑ GrimAC: <white>{count} fwags"
+gui-player-sensitivity: "<gray>Mouse: <white>H={h}%  V={v}%"
+gui-player-sensitivity-default: "<green>✔ Defauwt (100%)"
+gui-player-sensitivity-nondefault: "<yellow>⚠ Nyon-defauwt sensitivity"
+gui-player-sensitivity-nonvanilla: "<red>⚠ Nyon-vanyiwwa mouse math"
+gui-player-btn-check: "<green>Wun Check"
+gui-player-btn-check-lore: "<gray>Opens check diawog (onwinye onwy)"
+gui-player-btn-scans: "Detections"
+gui-player-btn-scans-lore: "<gray>View this pwayew's scan histowy"
+gui-player-btn-alerts: "Awewts"
+gui-player-btn-alerts-lore: "<gray>View this pwayew's awewts"
+gui-channel-players: "<gray>Pwayews seen: <white>{count}"
+gui-channel-online: "<green>Onwinye: {players}"
+gui-channel-kick-hint: "<red>Shift + wight-cwick to kick onwinye pwayews"
+gui-channel-kicked: "{prefix}<green>Kicked {count} pwayew(s) with channyews: <white>{channels}"
+gui-channel-none-online: "{prefix}<gray>Nyo onwinye pwayews have channyews: <white>{channels}"
+gui-channels-empty: "<gray>Nyo channyew gwoups wecowded"
+gui-channel-kick-reason: "<red>Kicked by an adminyistwatow"
+
+# ======================================================================
+# VENEER  /veneer info <player>
+# Placeholders: {player}, {offline}, {brand}, {type}, {channels}, {flags}, {group}, {when}, {count}, {result}, {packs}, {linked}.
+# The short 'words' (unknown, bedrock, none, clean) are put into the lines above.
+# ======================================================================
+veneer-info-usage: "{prefix}<red>Usage: /{label} info \\<player></red>"
+veneer-info-title: "{prefix}<gold>Veneer</gold> <gray>wepowt fow</gray> <white>{player}</white>{offline}"
+veneer-info-offline: " <gray>(offwine)</gray>"
+veneer-info-client: "{prefix}<gray>Cwient:</gray> <white>{brand}</white> <gray>({type}, {channels} channyews)</gray>"
+veneer-info-version: "{prefix}<gray>Version:</gray> <white>{claimed}</white> <gray>(sign pwobe: {real})</gray>"
+veneer-info-version-mismatch: "{prefix}<gray>Version:</gray> <white>{claimed}</white> <red>but da sign pwobe says {real}</red>"
+veneer-info-status: "{prefix}<gray>Status:</gray> <white>{flags}</white>"
+veneer-info-group: "{prefix}<gray>Gwoup:</gray> <white>{group}</white>"
+veneer-info-bypass: "{prefix}<gray>Bypass {module}:</gray> <white>{when}</white> <gray>{source}</gray>"
+veneer-info-bypass-always: "yes"
+veneer-info-bypass-join: "on join onwy"
+veneer-info-bypass-later: "aftew join onwy"
+veneer-info-bypass-node: "({node})"
+veneer-info-bypass-node-group: "({node}, gwoup {group})"
+veneer-scan-never: "{prefix}<gray>Mod scan:</gray> <white>nyevew scanned</white>"
+veneer-scan-line: "{prefix}<gray>Mod scan:</gray> <white>{when}</white> <gray>-</gray> {result} <gray>({count} scans on wecowd)</gray>"
+veneer-rp-none: "{prefix}<gray>RPTrack:</gray> <white>nyo fingewpwint stowed</white>"
+veneer-rp-line: "{prefix}<gray>RPTrack:</gray> <white>{packs} cached packs</white> <gray>- winked accounts:</gray> <white>{linked}</white>"
+veneer-unknown: "unknyown"
+veneer-flag-bedrock: "bedwock"
+veneer-flag-spoof: "<red>fwagged by spoof detection</red>"
+veneer-scan-clean: "<green>cwean</green>"
+veneer-scan-found: "<red>{found}</red>"
+veneer-rp-linked-none: "nyone"
+
+# ======================================================================
+# RPTRACK  /rptrack and staff report
+# Placeholders: {label}, {player}, {mask}, {packs}, {linked}, {text}. {text} of rptrack-report is one of the rptrack-text-* lines; {players} there lists the linked accounts.
+# ======================================================================
+rptrack-disabled: "{prefix}<red>RPTrack is disabwed (rptrack.enabled).</red>"
+rptrack-usage: "{prefix}<red>Usage: /{label} \\<player></red>"
+rptrack-none: "{prefix}<gray>No fingewpwint stowed fow</gray> <white>{player}</white><gray>.</gray>"
+rptrack-cache: "{prefix}<white>{player}</white> <gray>cache:</gray> <white>{mask}</white> <gray>({packs} packs)</gray>"
+rptrack-linked: "{prefix}<gray>Winked accounts:</gray> <white>{linked}</white>"
+rptrack-report: "{prefix}<gray>[RPTrack]</gray> <white>{player}</white><gray>:</gray> {text}"
+rptrack-text-liquidbounce: "LiquidBounce wocaw HTTP sewvew (powt 15000) weachabwe"
+rptrack-text-same-cache: "same cwient cache as: {players}"
+rptrack-text-probably-same: "pwobabwy da same cwient (onye pack missing) as: {players}"
+
+# ======================================================================
+# STARTUP BANNER  (console, shown inside the frame)
+# Plain text, no tags. {ms}, {modules}, {version} (running, then latest when known). The logo itself is in the plugin code.
+# ======================================================================
+banner-loaded: "Woaded in {ms} ms owo!"
+banner-modules: "Moduwes: {modules}"
+banner-version: "Wunning vewsion {version}"
+banner-author: "By: ReAndrew"
+banner-no-modules: "none"

@@ -1,0 +1,396 @@
+﻿# Veneer messages (lolcat). Each section below is one part of the plugin.
+# Texts are MiniMessage. Keep the {placeholders}; a key you delete falls back to en.yml.
+
+# ======================================================================
+# GENERAL
+# Shared by every command. {prefix} is general.prefix from config.yml; {player}, {label} and similar are filled in by the plugin.
+# ======================================================================
+no-permission: "{prefix}<red>U has no permissionz to do dat."
+player-not-found: "{prefix}<red>Player <white>{player} <red>not finded."
+reload-done: "{prefix}<green>Config reloaded."
+alerts-enabled: "{prefix}<green>Alertz enabled."
+alerts-disabled: "{prefix}<red>Alertz disabled."
+bedrock-skip: "{prefix}<yellow>{player} <gray>iz a Bedrock player - check skipped."
+client-too-old: "{prefix}<yellow>{player} <gray>playz on {version}: sign checkz need {min} or newer - check skipped."
+module-not-running: "{prefix}<red>Teh {module} module iz not runnin (check '{module}.enabled' in config.yml).</red>"
+update-available: "{prefix}<green>Veneer {latest} iz availabl</green> <gray>(runnin {current})</gray> <aqua><click:open_url:'{url}'>{url}</click></aqua>"
+
+# ======================================================================
+# MOD SCAN  (/hackcheck, join and anticheat checks)
+# Placeholders: {player}. Scan results go to staff with veneer.alerts and to the player who started the scan.
+# ======================================================================
+check-started: "{prefix}<white>Startin check on <yellow><click:run_command:'/veneer player {player}'><hover:show_text:'<gray>Open profile'>{player}</hover></click><white>..."
+check-complete: "{prefix}<white>Check complete for <yellow>{player}<white>:"
+doublecheck: "{prefix}<yellow>DoubleCheck<gray>: <white>{player} <gray>iz flagged - runnin comfirm check..."
+anticheat-trigger: "{prefix}<gray>Anticheat sez <yellow><click:run_command:'/veneer player {player}'><hover:show_text:'<gray>Open profile'>{player}</hover></click><gray> iz sus. Startin auto-check..."
+join-check: "{prefix}<gray>Auto-checkin <yellow><click:run_command:'/veneer player {player}'><hover:show_text:'<gray>Open profile'>{player}</hover></click> <gray>on join..."
+already-checking: "{prefix}<yellow>{player} <white>iz already gettin checked."
+invalid-hack: "{prefix}<red>Unknown hackz: <white>{hack}"
+hackcheck-usage: "{prefix}<red>Usage: /hackcheck \\<player> [hack1,hack2,...]</red>"
+hackcheck-no-valid: "{prefix}<red>No valid hackz 2 check.</red>"
+
+# ======================================================================
+# MOD SCAN  (result block)
+# check-result-line: {hack}, {result}. The result texts are shown as they are; the words match the values kept in the history database.
+# check-nothing-found is shown when every mod was clean and hide-clean is on; check-channels shows {channels} when show-channels is on.
+# ======================================================================
+check-translation-header: "{prefix}<gray>  Translation Detect:"
+check-result-line: "{prefix}  <white>{hack}<gray>: {result}"
+result-detected: "<red>DETECTED"
+result-not-detected: "<green>NOT_DETECTED"
+result-protected: "<yellow>PROTECTED"
+result-timeout: "<yellow>TIMEOUT"
+result-skipped: "<gray>SKIPPED"
+check-nothing-found: "{prefix}<green>    Nothing detected"
+check-channels: "{prefix}<white>  Channels<gray>: <aqua>{channels}"
+check-brand: "{prefix}<white>  Software<gray>: <yellow>{brand}"
+
+# ======================================================================
+# LANGUAGE CHECK  (/hacklang)
+# Placeholders: {player}, {lang}, {response}.
+# ======================================================================
+hacklang-usage: "{prefix}<red>Usage: /hacklang \\<player> [lang1,lang2,...]</red>"
+hacklang-unknown: "{prefix}<red>Unknown languaj: <white>{lang}</white></red>"
+lang-check-started: "{prefix}<white>Checkin language of <yellow>{player}<white>..."
+lang-check-complete: "{prefix}<white>Language of <yellow>{player}<white>: <yellow>{lang} <gray>({response})"
+lang-check-unknown: "{prefix}<white>Language of <yellow>{player}<white>: <red>Unknon <gray>({response})"
+lang-check-protected: "{prefix}<white>Language of <yellow>{player}<white>: <yellow>PROTEKTED"
+version-mismatch: "{prefix}<red>{player}</red> <white>connectz as <yellow>{claimed}</yellow> but teh client iz really <yellow>{real}</yellow> <gray>(ViaFabricPlus, ViaProxy or similar)"
+lang-check-timeout: "{prefix}<yellow>{player} <white>did not reply - language check faileded."
+lang-join-check: "{prefix}<gray>Auto language checkin for <yellow>{player}<gray>..."
+
+# ======================================================================
+# WEB EDITOR  (/hackeditor)
+# Placeholders: {url}.
+# ======================================================================
+editor-url: "{prefix}<white>Editur: <aqua><click:open_url:'{url}'>{url}</click>"
+editor-disabled: "{prefix}<red>Web editur iz disabled in hacks.yml."
+editor-players-only: "{prefix}<red>Only playrz can open teh editur.</red>"
+
+# ======================================================================
+# SPOOF  /spoof - general
+# Texts use MiniMessage. Values that come from the game (brands, channels, names) are escaped, so they never become tags.
+# Placeholders: {label} {sub} {count} {player} {value}. {value} and {mode} receive the short texts from the 'words' block below.
+# ======================================================================
+spoof-usage: "<red>Usage: /{label} {sub} \\<player>, kthx"
+spoof-no-data: "<yellow>No datas for dis playr."
+spoof-unknown-sub: "<red>Unknown subcommand: {sub}"
+spoof-run-all: "<aqua>Runnin check for all onlien playrz..."
+spoof-run-done: "<green>Check triggerd for {count} playrz."
+spoof-run-note: "<yellow>Note: Dis only re-analyzez existin datas, playrz mite need 2 rejoin 4 fresh datas."
+spoof-run-player: "<aqua>Runnin check for playr {player}..."
+spoof-run-player-done: "<green>Check triggerd for {player}."
+
+# ======================================================================
+# SPOOF  words used inside other lines
+# Short texts placed into {value}, {mode} and {brand}. No prefix, no placeholders.
+# ======================================================================
+spoof-yes: "<green>Yez"
+spoof-no: "<red>Noes"
+spoof-mode-whitelist: "Whitelizt"
+spoof-mode-blacklist: "Blacklizt"
+spoof-mode-whitelist-simple: "Whitelizt (Simpl)"
+spoof-mode-whitelist-strict: "Whitelizt (Strikt)"
+spoof-mode-simple: "Simpl"
+spoof-mode-strict: "Strikt"
+spoof-brand-unknown: "unknwn"
+
+# ======================================================================
+# SPOOF  /spoof blockedbrands and /spoof blockedchannels
+# Placeholders: {value} (an entry of the list, or yes/no), {mode}.
+# ======================================================================
+spoof-brands-title: "<aqua>=== Blockd Brandz Configurashun ==="
+spoof-channels-title: "<aqua>=== Blockd Channelz Configurashun ==="
+spoof-enabled: "<gray>Enabld: {value}"
+spoof-match-type: "<gray>Match Type: <white>Regex Pattern"
+spoof-mode: "<gray>Mode: <white>{mode}"
+spoof-brands-none-blocked: "<yellow>No brandz iz blockd rite now."
+spoof-brands-none-whitelisted: "<yellow>No brandz iz whitelistd rite now."
+spoof-brands-list-blocked: "<aqua>Blockd Brandz:"
+spoof-brands-list-whitelisted: "<aqua>Whitelistd Brandz:"
+spoof-channels-none-blocked: "<yellow>No channelz iz blockd rite now."
+spoof-channels-none-whitelisted: "<yellow>No channelz iz whitelistd rite now."
+spoof-channels-list-blocked: "<aqua>Blockd Channelz:"
+spoof-channels-list-whitelisted: "<aqua>Whitelistd Channelz:"
+spoof-list-item: "<gray>- <white>{value}"
+
+# ======================================================================
+# SPOOF  /spoof check
+# Placeholders: {player}, {brand}, {count}, {reason}, {value}, {channel}, {mode}.
+# ======================================================================
+spoof-no-brand-yet: "<aqua>{player}<yellow> haz no client brand infos yet."
+spoof-flagged: "<aqua>{player}<red> haz bin flaggd!"
+spoof-not-spoofing: "<aqua>{player}<green> dont look like spoofin."
+spoof-client-brand: "<gray>Client brand: <white>{brand}"
+spoof-violations: "<red>Violashunz detectd ({count}):"
+spoof-violation-item: "<red>• {reason}"
+spoof-brand-status-blocked: "<gray>Brand status: <red>Blockd"
+spoof-brand-status-blocked-noflag: "<gray>Brand status: <red>Blockd<gray> (but not countin as flag)"
+spoof-brand-status-allowed: "<gray>Brand status: <green>Allowd"
+spoof-has-channels: "<gray>Haz channelz: {value}"
+spoof-whitelist-mode: "<gray>Channel whitelizt mode: <white>{mode}"
+spoof-whitelist-status: "<gray>Channel whitelizt status:"
+spoof-channels-header: "<gray>Channelz:"
+spoof-channel-line: "<white>{channel}"
+spoof-channel-ok: "<green>{channel}"
+spoof-channel-not-whitelisted: "<red>{channel}<gray> (not in whitelizt)"
+spoof-channel-bad: "<red>{channel}"
+spoof-missing-header: "<gray>Missin requird channelz:"
+spoof-blocked-header: "<gray>Blockd channel detectd:"
+spoof-flagging-title: "<aqua>=== Playrz Currently Flaggin ==="
+spoof-flagging-line: "<red>{player}<gray> - Brand: <white>{brand}"
+spoof-none-flagging: "<green>No playrz iz detectd as spoofin rite now."
+
+# ======================================================================
+# SPOOF  violation reasons
+# Plain text, no tags. Listed under 'Violations detected', and %reason% of the spoof alerts in config.yml (server language). Placeholders: {channel}, {channels}, {brand}, {key}.
+# ======================================================================
+spoof-reason-non-vanilla: "Non-vanilla client detectd"
+spoof-reason-vanilla-channels: "Vanilla client wif plugin channelz"
+spoof-reason-geyser: "Spoofin Geyser client"
+spoof-reason-brand-not-whitelisted: "Client brand iz not in whitelizt"
+spoof-reason-brand-blocked: "Usin blockd client brand"
+spoof-reason-missing-channels: "Missin requird channelz: {channels}"
+spoof-reason-whitelist-mismatch: "Channelz dont match whitelizt requirements"
+spoof-reason-no-whitelisted: "No whitelistd channelz detectd"
+spoof-reason-blocked-channel: "Usin blockd channel: {channel}"
+spoof-reason-missing-brand-channels: "Missin requird channelz for {brand}: {channels}"
+spoof-reason-unknown: "Unknwn reezon (check configurashun)"
+spoof-reason-no-brand: "Noes client brand detected"
+spoof-reason-unknown-brand: "Usin unknown client brand: {brand}"
+spoof-reason-flagged-brand: "Usin flagged client brand: {brand} ({key})"
+spoof-reason-brand-with-channels: "Client claimin '{brand}' detected wif plugin channelz"
+
+# ======================================================================
+# SPOOF  /spoof channels and /spoof brand
+# Placeholders: {player}, {channel}, {brand}.
+# ======================================================================
+spoof-channels-for: "<aqua>Channelz for {player}:"
+spoof-channels-empty: "<gray>No channelz registerd."
+spoof-ch-whitelisted: "<gray>- <green>{channel}<gray> (whitelistd)"
+spoof-ch-blocked: "<gray>- <red>{channel}<gray> (blockd)"
+spoof-ch-not-whitelisted: "<gray>- <red>{channel}<gray> (not whitelistd)"
+spoof-ch-plain: "<gray>- <white>{channel}"
+spoof-brand-none: "<yellow>{player} haz no client brand infos."
+spoof-brand-blocked: "<aqua>Client brand for {player}: <red>{brand}<gray> (Blockd)"
+spoof-brand-ok: "<aqua>Client brand for {player}: <green>{brand}"
+spoof-brand-plain: "<aqua>Client brand for {player}: <white>{brand}"
+spoof-status-not-whitelisted: "<gray>Status: <red>Not in whitelizt"
+spoof-status-blocked: "<gray>Status: <red>Blockd"
+spoof-status-in-whitelist: "<gray>Status: <green>In whitelizt"
+spoof-status-allowed: "<gray>Status: <green>Allowd"
+
+# ======================================================================
+# SPOOF  /spoof help
+# ======================================================================
+spoof-help-title: "<aqua>=== Veneer spoof commandz ==="
+spoof-help-channels: "<gray>/spoof channels \\<player> <white>- Show playr's plugin channelz"
+spoof-help-brand: "<gray>/spoof brand \\<player> <white>- Show playr's client brand"
+spoof-help-brands: "<gray>/spoof brandz [allow|block|forget \\<id>] <white>- Unknown client brandz an staff verdictz on them"
+spoof-unknown-brand: "{prefix}<gray>{player} joined wif an unknown client:</gray> <white>{brand}</white> <click:run_command:'/spoof brands allow {id}'><hover:show_text:'<gray>Allow dis exact brand: noes more alertz or scanz 4 it'><green>[Allow]</green></hover></click> <click:run_command:'/spoof brands block {id}'><hover:show_text:'<gray>Block dis exact brand: flagged an alerted, punished as set in spoof.client-brands.staff-verdicts'><red>[Block]</red></hover></click>"
+spoof-verdict-usage: "{prefix}<red>Usage: /spoof brandz [allow|block|forget \\<id>]</red>"
+spoof-verdict-unknown-id: "{prefix}<red>Noes brand wif id {id}, see /spoof brands</red>"
+spoof-verdict-allowed: "{prefix}<green>Allowed</green> <gray>client brand</gray> <white>{brand}</white>"
+spoof-verdict-blocked: "{prefix}<red>Blocked</red> <gray>client brand</gray> <white>{brand}</white>"
+spoof-verdict-forgotten: "{prefix}<gray>Verdict cleared, teh brand iz unknown again:</gray> <white>{brand}</white>"
+spoof-verdict-list-title: "{prefix}<gold>Client brandz seen as unknown</gold> <gray>({count}, latest 20)</gray>"
+spoof-verdict-list-empty: "{prefix}<gray>None yet.</gray>"
+spoof-verdict-list-undecided: "<gray>#{id}</gray> <white>{brand}</white> <gray>(last: {player})</gray> <click:run_command:'/spoof brands allow {id}'><green>[Allow]</green></click> <click:run_command:'/spoof brands block {id}'><red>[Block]</red></click>"
+spoof-verdict-list-allowed: "<gray>#{id}</gray> <white>{brand}</white> <green>allowed</green> <gray>by {by}</gray> <click:run_command:'/spoof brands forget {id}'><hover:show_text:'<gray>Make it unknown again'><gray>[Reset]</gray></hover></click>"
+spoof-verdict-list-blocked: "<gray>#{id}</gray> <white>{brand}</white> <red>blocked</red> <gray>by {by}</gray> <click:run_command:'/spoof brands forget {id}'><hover:show_text:'<gray>Make it unknown again'><gray>[Reset]</gray></hover></click>"
+spoof-help-check: "<gray>/spoof check [player|*] <white>- Check if playr iz spoofin"
+spoof-help-runcheck: "<gray>/spoof runcheck [player|*] <white>- Re-run checkz on playr(z)"
+spoof-help-blockedchannels: "<gray>/spoof blockedchannels <white>- Show blockd channel config"
+spoof-help-blockedbrands: "<gray>/spoof blockedbrands <white>- Show blockd brand config"
+spoof-help-help: "<gray>/spoof help <white>- Show dis help message, kthx"
+
+# ======================================================================
+# VENEER  /veneer help, version, alerts
+# Placeholders: {label}, {version}, {latest}, {current}, {url}.
+# ======================================================================
+veneer-help-title: "{prefix}<gold>Veneer {version}</gold> <gray>- teh commandz u cn use, click one 2 type it</gray>"
+veneer-help-section: "<gold>{section}</gold>"
+veneer-help-section-general: "General"
+veneer-help-section-spoof: "Client checkz (spoof)"
+veneer-help-section-hacks: "Mod scan"
+veneer-help-section-rptrack: "RPTrack"
+veneer-help-line: " <click:suggest_command:'{typed}'><hover:show_text:'<gray>Click 2 type it</gray>'><aqua>{usage}</aqua></hover></click> <dark_gray>-</dark_gray> <white>{description}</white>"
+veneer-help-shortcut: "{prefix}<gray>Every module command also workz as</gray> <white>/veneer \\<command></white><gray>, e.g.</gray> <white>/veneer hacklang Steve</white>"
+veneer-help-arg-player: "playr"
+veneer-help-arg-mods: "mod1,mod2"
+veneer-help-arg-languages: "lang1,lang2"
+veneer-help-arg-language: "language"
+veneer-cmd-help: "dis list"
+veneer-cmd-lang: "teh language u read Veneer messagez in"
+veneer-cmd-alerts: "alert an detection history; toggle turnz ur staff alertz on or off"
+veneer-cmd-info: "client, mod scan, RPTrack an bypassez ov a playr"
+veneer-cmd-reload: "reload config.yml an teh messagez"
+veneer-cmd-version: "runnin an latest release"
+veneer-cmd-spoof-brand: "a playr's client brand"
+veneer-cmd-spoof-channels: "a playr's plugin channelz"
+veneer-cmd-spoof-runcheck: "run teh spoof checkz again"
+veneer-cmd-spoof-check: "whether a playr iz flagged an why"
+veneer-cmd-spoof-brands: "unknown client brandz an staff verdictz"
+veneer-cmd-spoof-blockedbrands: "blocked brand settingz"
+veneer-cmd-spoof-blockedchannels: "blocked channel settingz"
+veneer-cmd-hackcheck: "scan a playr 4 modz"
+veneer-cmd-hacklang: "find out a playr's game language"
+veneer-cmd-hackeditor: "link 2 teh web panel"
+veneer-cmd-rptrack: "resource-pack fingerprint an linked accountz"
+veneer-cmd-player: "playr info page"
+veneer-cmd-find: "search a playr an open their info"
+veneer-cmd-check: "check dialog 4 a playr"
+veneer-cmd-brands: "brand filterz page"
+veneer-cmd-channels: "plugin channel groupz"
+veneer-cmd-players-only: "{prefix}<red>Dis command cn onli be used by players."
+veneer-lang-players-only: "{prefix}<red>Onli playerz cn choose a language; teh console usez general.language.</red>"
+veneer-lang-current-server: "{prefix}<gray>Ur language:</gray> <white>{lang}</white> <gray>(teh server's). Available:</gray> <white>{available}</white><gray>, auto, reset</gray>"
+veneer-lang-current-auto: "{prefix}<gray>Ur language:</gray> <white>{lang}</white> <gray>(followz ur game language). Available:</gray> <white>{available}</white><gray>, auto, reset</gray>"
+veneer-lang-current: "{prefix}<gray>Ur language:</gray> <white>{lang}</white><gray>. Available:</gray> <white>{available}</white><gray>, auto, reset</gray>"
+veneer-lang-set: "{prefix}<green>Veneer messagez 4 u r now in</green> <white>{lang}</white><green>.</green>"
+veneer-lang-auto: "{prefix}<green>Veneer messagez now follow ur game language</green> <gray>({client}, now</gray> <white>{lang}</white><gray>; without a file 4 it teh server language iz used)</gray>"
+veneer-lang-reset: "{prefix}<green>Back 2 teh server language</green> <white>{lang}</white><green>.</green>"
+veneer-lang-unknown: "{prefix}<red>Noes language file {lang}.</red> <gray>Available:</gray> <white>{available}</white><gray>, auto, reset</gray>"
+veneer-alerts-players-only: "{prefix}<red>Only playrz can toggle alertz.</red>"
+veneer-running: "{prefix}<gray>Runnin Veneer</gray> <white>{version}</white>"
+veneer-latest-checking: "{prefix}<gray>Latest release: checkin, run dis again in a sec.</gray>"
+veneer-latest-none: "{prefix}<gray>No release iz publishd on GitHub yet.</gray>"
+veneer-update-available: "{prefix}<green>Version {latest} iz availabl:</green> <aqua>{url}</aqua>"
+veneer-latest-ok: "{prefix}<green>U iz on teh latest release ({latest}).</green>"
+veneer-latest-ahead: "{prefix}<aqua>Dis build ({current}) iz newer than teh latest release ({latest}).</aqua>"
+
+# ======================================================================
+# GUI  chest panel (/veneer with no arguments, requires veneer.admin)
+# Item names and lore are MiniMessage without {prefix}; chat lines (kicked, none-online) have it.
+# Placeholders: {date}, {player}, {brand}, {count}, {mods}, {type}, {checker}, {check}, {verbose}, {h}, {v}, {players}, {channels}.
+# ======================================================================
+gui-chest-title: "<dark_aqua><bold>Veneer</bold></dark_aqua>"
+gui-module-spoof: "Spoof"
+gui-module-hacks: "Hackz"
+gui-module-rptrack: "RPTrack"
+gui-module-on: "<green>✔ Enabled"
+gui-module-off: "<red>✘ Disabled"
+gui-btn-editor: "Web Editor"
+gui-btn-editor-lore: "<gray>Sendz u a link 2 teh web panel"
+gui-btn-reload: "Reload Config"
+gui-btn-version: "Version Info"
+gui-btn-reload-lore: "<gray>Reloadz config.yml an messagez"
+gui-btn-version-lore: "<gray>Showz version an update statuz"
+gui-btn-players: "Playerz"
+gui-btn-players-lore: "<gray>Browse an search playr history"
+gui-btn-detections: "Detectionz"
+gui-btn-detections-lore: "<gray>View recent mod detectionz"
+gui-btn-brands: "Brand Filterz"
+gui-btn-brands-lore: "<gray>Allow or block client brandz"
+gui-btn-grim: "GrimAC Flagz"
+gui-btn-grim-lore: "<gray>Recent GrimAC violationz"
+gui-page-players: "<dark_aqua><bold>Players</bold></dark_aqua>"
+gui-page-detections: "<red><bold>Detections</bold></red>"
+gui-page-brands: "<gold><bold>Brand Filters</bold></gold>"
+gui-page-grim: "<yellow><bold>GrimAC Flags</bold></yellow>"
+gui-nav-prev: "<white>← Previouz"
+gui-nav-next: "<white>Next →"
+gui-nav-back: "<gray>↩ Main Menu"
+gui-nav-search: "<yellow>⌕ Search..."
+gui-nav-close: "<red>✕ Close"
+gui-player-online: "<green>● Online"
+gui-player-offline: "<gray>○ Offline"
+gui-player-last-seen: "<gray>Last seen: <white>{date}"
+gui-player-grim-flagged: "<yellow>⚑ GrimAC flagz"
+gui-detection-mods: "<gray>Modz: <red>{mods}"
+gui-detection-date: "<dark_gray>{date}"
+gui-detection-type: "<gray>[{type}]"
+gui-alert-type: "<gray>[{type}] by {checker}"
+gui-alerts-empty: "<gray>Noes alertz found"
+gui-brand-undecided: "<yellow>⚠ Undecided"
+gui-brand-allowed: "<green>✔ Allowed"
+gui-brand-blocked: "<red>✘ Blocked"
+gui-brand-last: "<gray>Last: <white>{player}"
+gui-brand-hint: "<dark_gray>Left: Allow  Right: Block  Mid: Reset"
+gui-grim-check: "<gray>Check: <yellow>{check}"
+gui-grim-verbose: "<dark_gray>{verbose}"
+gui-grim-empty: "<gray>Noes violationz recorded yet"
+gui-search-prompt: "<yellow>Type playr name in chat (<gray>. <yellow>2 cancel):"
+gui-btn-alerts-log: "Alertz Log"
+gui-btn-alerts-log-lore: "<gray>View detected scan history"
+gui-btn-channels: "Channel Groupz"
+gui-btn-channels-lore: "<gray>Browse plugin channel groupz seen"
+gui-page-alerts: "<yellow><bold>Alerts</bold></yellow>"
+gui-page-channels: "<aqua><bold>Channel Groups</bold></aqua>"
+gui-player-brand: "<gray>Brand: <white>{brand}"
+gui-player-channels: "<gray>Channelz: <white>{count}"
+gui-player-first-seen: "<gray>First seen: <white>{date}"
+gui-player-joins: "<gray>Joinz: <white>{count}"
+gui-player-scans: "<gray>Scanz in DB: <white>{count}"
+gui-grim-flags-count: "<yellow>⚑ GrimAC: <white>{count} flagz"
+gui-player-sensitivity: "<gray>Mouse: <white>H={h}%  V={v}%"
+gui-player-sensitivity-default: "<green>✔ Default (100%)"
+gui-player-sensitivity-nondefault: "<yellow>⚠ Non-default sensitivity"
+gui-player-sensitivity-nonvanilla: "<red>⚠ Non-vanilla mouse math"
+gui-player-btn-check: "<green>Run Check"
+gui-player-btn-check-lore: "<gray>Openz check dialog (online onli)"
+gui-player-btn-scans: "Detectionz"
+gui-player-btn-scans-lore: "<gray>View dis playr's scan history"
+gui-player-btn-alerts: "Alertz"
+gui-player-btn-alerts-lore: "<gray>View dis playr's alertz"
+gui-channel-players: "<gray>Playerz seen: <white>{count}"
+gui-channel-online: "<green>Online: {players}"
+gui-channel-kick-hint: "<red>Shift + right-click 2 kick online playerz"
+gui-channel-kicked: "{prefix}<green>Kicked {count} playr(s) wif channelz: <white>{channels}"
+gui-channel-none-online: "{prefix}<gray>Noes online playerz haz channelz: <white>{channels}"
+gui-channels-empty: "<gray>Noes channel groupz recorded"
+gui-channel-kick-reason: "<red>Kicked by an administrator"
+
+# ======================================================================
+# VENEER  /veneer info <player>
+# Placeholders: {player}, {offline}, {brand}, {type}, {channels}, {flags}, {group}, {when}, {count}, {result}, {packs}, {linked}.
+# The short 'words' (unknown, bedrock, none, clean) are put into the lines above.
+# ======================================================================
+veneer-info-usage: "{prefix}<red>Usage: /{label} info \\<player></red>"
+veneer-info-title: "{prefix}<gold>Veneer</gold> <gray>report for</gray> <white>{player}</white>{offline}"
+veneer-info-offline: " <gray>(offlien)</gray>"
+veneer-info-client: "{prefix}<gray>Client:</gray> <white>{brand}</white> <gray>({type}, {channels} channelz)</gray>"
+veneer-info-version: "{prefix}<gray>Version:</gray> <white>{claimed}</white> <gray>(sign probe: {real})</gray>"
+veneer-info-version-mismatch: "{prefix}<gray>Version:</gray> <white>{claimed}</white> <red>but teh sign probe sayz {real}</red>"
+veneer-info-status: "{prefix}<gray>Status:</gray> <white>{flags}</white>"
+veneer-info-group: "{prefix}<gray>Group:</gray> <white>{group}</white>"
+veneer-info-bypass: "{prefix}<gray>Bypass {module}:</gray> <white>{when}</white> <gray>{source}</gray>"
+veneer-info-bypass-always: "yes"
+veneer-info-bypass-join: "on join onli"
+veneer-info-bypass-later: "after join onli"
+veneer-info-bypass-node: "({node})"
+veneer-info-bypass-node-group: "({node}, group {group})"
+veneer-scan-never: "{prefix}<gray>Mod scan:</gray> <white>nevar scannd</white>"
+veneer-scan-line: "{prefix}<gray>Mod scan:</gray> <white>{when}</white> <gray>-</gray> {result} <gray>({count} scanz on recrd)</gray>"
+veneer-rp-none: "{prefix}<gray>RPTrack:</gray> <white>no fingerprint storrd</white>"
+veneer-rp-line: "{prefix}<gray>RPTrack:</gray> <white>{packs} cachd packz</white> <gray>- linkd accountz:</gray> <white>{linked}</white>"
+veneer-unknown: "unknwn"
+veneer-flag-bedrock: "bedrok"
+veneer-flag-spoof: "<red>flaggd by spoof detecshun</red>"
+veneer-scan-clean: "<green>clean</green>"
+veneer-scan-found: "<red>{found}</red>"
+veneer-rp-linked-none: "none"
+
+# ======================================================================
+# RPTRACK  /rptrack and staff report
+# Placeholders: {label}, {player}, {mask}, {packs}, {linked}, {text}. {text} of rptrack-report is one of the rptrack-text-* lines; {players} there lists the linked accounts.
+# ======================================================================
+rptrack-disabled: "{prefix}<red>RPTrack iz disabld (rptrack.enabled).</red>"
+rptrack-usage: "{prefix}<red>Usage: /{label} \\<player></red>"
+rptrack-none: "{prefix}<gray>No fingerprint storrd for</gray> <white>{player}</white><gray>.</gray>"
+rptrack-cache: "{prefix}<white>{player}</white> <gray>cache:</gray> <white>{mask}</white> <gray>({packs} packz)</gray>"
+rptrack-linked: "{prefix}<gray>Linkd accountz:</gray> <white>{linked}</white>"
+rptrack-report: "{prefix}<gray>[RPTrack]</gray> <white>{player}</white><gray>:</gray> {text}"
+rptrack-text-liquidbounce: "LiquidBounce local HTTP server (port 15000) reachable"
+rptrack-text-same-cache: "same client cache as: {players}"
+rptrack-text-probably-same: "probably teh same client (one pack missin) as: {players}"
+
+# ======================================================================
+# STARTUP BANNER  (console, shown inside the frame)
+# Plain text, no tags. {ms}, {modules}, {version} (running, then latest when known). The logo itself is in the plugin code.
+# ======================================================================
+banner-loaded: "Loaded in {ms} ms kthx!"
+banner-modules: "Modules: {modules}"
+banner-version: "Runnin version {version}"
+banner-author: "By: ReAndrew"
+banner-no-modules: "none"

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.veneer</groupId>
+        <artifactId>veneer-parent</artifactId>
+        <version>0.9.8</version>
+    </parent>
+
+    <artifactId>veneer-hacks</artifactId>
+    <name>Veneer Hacks</name>
+    <description>Mod scans (sign probe, language check) and the web panel</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.veneer</groupId>
+            <artifactId>veneer-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.retrooper</groupId>
+            <artifactId>packetevents-spigot</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.kyori</groupId>
+            <artifactId>adventure-text-minimessage</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>ac.grim.grimac</groupId>
+            <artifactId>GrimAPI</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+</project>
