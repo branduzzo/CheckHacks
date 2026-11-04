@@ -124,19 +124,38 @@ debug: false                          # log every step; also turns on the experi
 ## Build
 
 ```
-mvn -q -DskipTests package
+mvn -q package
 ```
 
-Produces two jars (Java 21 or newer):
+Produces two jars in `veneer-plugin/target/` (Java 21 or newer):
 
-- `target/veneer-<version>.jar` (about 24 MB): PacketEvents bundled and relocated, nothing else to install.
-- `target/veneer-<version>-lite.jar` (about 1.5 MB): runs on the [PacketEvents plugin](https://modrinth.com/plugin/packetevents), which must be installed; without it Veneer disables itself. Use it when the server already has PacketEvents or you want to update PacketEvents on its own.
+- `veneer-plugin/target/veneer-<version>.jar` (about 24 MB): PacketEvents bundled and relocated, nothing else to install.
+- `veneer-plugin/target/veneer-<version>-lite.jar` (about 1.5 MB): runs on the [PacketEvents plugin](https://modrinth.com/plugin/packetevents), which must be installed; without it Veneer disables itself. Use it when the server already has PacketEvents or you want to update PacketEvents on its own.
+
+The project is a Maven multi-module build; each feature area compiles on its own against `veneer-core`:
+
+| Module | Contents |
+|---|---|
+| `veneer-core` | Shared services: config, messages, alerts, webhooks, player profiles, Folia scheduler, the module API (`VeneerModule`, `VeneerPlugin`) and storage (`com.veneer.core.db`) |
+| `veneer-hacks` | Mod scans (sign probe, language check), `/hackcheck`, `/hacklang`, `/hackeditor` and the web panel |
+| `veneer-spoof` | Client brand and channel spoof detection, `/spoof` |
+| `veneer-rptrack` | Resource pack cache fingerprints, `/rptrack` |
+| `veneer-hooks` | LuckPerms and PlaceholderAPI |
+| `veneer-plugin` | The plugin class that puts the modules together, `/veneer`, the chest GUI, `plugin.yml`, `config.yml`, language files; builds the jars |
+
+A module reaches another one through `plugin.module(SpoofModule.class)`; core never depends on a feature module. To change the version of all modules: `mvn versions:set -DnewVersion=<version> -DgenerateBackupPoms=false`.
+
+### Storage
+
+Everything is kept in one SQLite file, `plugins/Veneer/data.db`, behind `Storage` (`plugin.database()`), split into `scans()`, `players()`, `fingerprints()`, `tokens()`, `settings()` and `links()`. Writes go through one connection, one at a time; reads use a pool of four read-only connections (WAL mode), so a heavy web panel request never holds up a scan or join being saved, and no query runs on the main thread. The first start of a new version upgrades an older file in place (new indexes, the `accounts` table behind the player list).
+
+`mvn test` includes `StorageLoadTest`, which saves scans while four threads read like a busy web panel; `-Dveneer.load.accounts=20000` runs it on more data.
 
 ## Notes
 
 - The web panel (`/hackeditor`) listens on `127.0.0.1` by default; set `hacks.web-editor.bind` to `0.0.0.0` (and put it behind HTTPS) to reach it from elsewhere. Access needs the short-lived token from the command (10 minutes by default; anyone with the link can use it until then, so don't share it). Scan starts and deletions from the panel are logged in the server console. Join addresses and skins are kept for `hacks.web-editor.links.retention-days` (90) after the player was last seen, scans for `hacks.web-editor.history.retention-days` (180).
 - The provider and country data (about 50 MB) is downloaded to `plugins/Veneer/geo/` through jsDelivr and refreshed weekly (`hacks.web-editor.links.ip-database`, on by default; the plugin works without it). The country is where the network is registered, not a precise location. Which providers count as weak is set by `weak-provider-asns` and `weak-provider-keywords`, the weight factor by `weak-provider-factor` (0.3). Client links need the spoof module and are recorded when a player leaves.
-- To translate the panel, add `src/main/resources/web/lang/<language>.json` (English text as keys, see `ru.json`).
+- To translate the panel, add `veneer-hacks/src/main/resources/web/lang/<language>.json` (English text as keys, see `ru.json`).
 - Version `0.9.7` is independent of the originals (AntiSpoof 1.2.7, CheckHacks 1.3.1).
 - **Folia:** every task goes through `FoliaScheduler` (global, per-entity and async schedulers; Bukkit's scheduler is no longer used anywhere), and punishments run as console commands on the global region. Tested on Folia 1.21.11 (mod scan, language check, web panel scans, death, world change and quitting mid-scan). A probe sign Folia does not let the plugin remove on shutdown is removed on the next start.
 - Compiled against Paper API 1.21.4, `api-version: 1.21`. Legacy 1.8.x servers are untested.
@@ -148,6 +167,6 @@ Veneer merges two open-source plugins and adds new modules:
 - **AntiSpoof** by GigaZelensky (GPLv3)
 - **CheckHacks** by Branduzzo (MIT)
 
-The web panel bundles [3d-force-graph](https://github.com/vasturiano/3d-force-graph) and [three.js](https://github.com/mrdoob/three.js) (both MIT, texts in `src/main/resources/web/THIRD-PARTY-LICENSES.txt`). IP provider data: [IPtoASN](https://iptoasn.com) (PDDL); country data: [geo-whois-asn-country](https://github.com/sapics/ip-location-db) (CC BY 4.0, from NRO), both via ip-location-db.
+The web panel bundles [3d-force-graph](https://github.com/vasturiano/3d-force-graph) and [three.js](https://github.com/mrdoob/three.js) (both MIT, texts in `veneer-hacks/src/main/resources/web/THIRD-PARTY-LICENSES.txt`). IP provider data: [IPtoASN](https://iptoasn.com) (PDDL); country data: [geo-whois-asn-country](https://github.com/sapics/ip-location-db) (CC BY 4.0, from NRO), both via ip-location-db.
 
 The combined work is released under **GPLv3**, see `LICENSE`; the CheckHacks MIT text is appended there for attribution.

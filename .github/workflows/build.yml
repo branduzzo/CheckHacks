@@ -32,17 +32,17 @@ jobs:
       - name: Tag matches pom.xml version
         if: env.TAG != ''
         run: |
-          version=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)
+          version=$(mvn -q -N -DforceStdout help:evaluate -Dexpression=project.version)
           [ "v$version" = "$TAG" ] || { echo "Tag $TAG but pom.xml says $version"; exit 1; }
-      - run: mvn -B -DskipTests package
+      - run: mvn -B package
       - uses: actions/upload-artifact@v4
         with:
           name: veneer
-          path: target/veneer-*.jar
+          path: veneer-plugin/target/veneer-*.jar
       - name: Publish release
         if: env.TAG != ''
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
-          files: target/veneer-*.jar
+          files: veneer-plugin/target/veneer-*.jar
           generate_release_notes: true

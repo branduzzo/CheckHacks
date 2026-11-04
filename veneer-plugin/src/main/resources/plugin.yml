@@ -1,0 +1,131 @@
+name: Veneer
+version: ${project.version}
+main: com.veneer.app.Veneer
+api-version: '1.21'
+folia-supported: true
+description: Client spoof detection, mod detection and cache-based account linking in one plugin.
+authors: [GigaZelensky, Branduzzo]
+website: https://github.com/ReAndrew/veneer
+
+softdepend: [packetevents, ProtocolLib, ProtocolSupport, ViaVersion, ViaBackwards, ViaRewind, Geyser-Spigot, PlaceholderAPI, LuckPerms, GrimAC, Vulcan, Spartan, Matrix, Intave, AAC, floodgate]
+
+commands:
+  veneer:
+    description: Veneer help, per-player report, your message language, reload, alert toggle; module commands as /veneer <command>
+    usage: /veneer help
+  spoof:
+    description: Inspect client brand/channels and re-run spoof checks
+    usage: /spoof help
+    permission: veneer.spoof.use
+  hackcheck:
+    description: Scan a player for installed mods
+    usage: /hackcheck <player> [hack1,hack2,...]
+    permission: veneer.hacks.check
+  hacklang:
+    description: Check the client language of a player
+    usage: /hacklang <player> [lang1,lang2,...]
+    permission: veneer.hacks.lang
+  hackeditor:
+    description: Open the web panel (scan history and manual scans)
+    usage: /hackeditor
+    permission: veneer.hacks.editor
+  rptrack:
+    description: Show a player's resource-pack cache fingerprint and linked accounts
+    usage: /rptrack <player>
+    permission: veneer.rptrack
+
+permissions:
+  veneer.admin:
+    description: The /veneer panel (players, detections, brands, channels, alert history), info, check, reload and version; update notices
+    default: op
+  veneer.lang:
+    description: Choose your own message language with /veneer lang
+    default: true
+  veneer.alerts:
+    description: Receive spoof, mod scan and RPTrack alerts (toggle with /veneer alerts toggle)
+    default: op
+  veneer.spoof.use:
+    description: Use /spoof
+    default: op
+  veneer.spoof.admin:
+    description: Admin /spoof subcommands (check, brands allow/block/forget, blockedchannels, blockedbrands) and brand verdicts in the panel
+    default: op
+  # Bypasses have no children: the plugin resolves them itself, the most specific one set wins (a false on
+  # veneer.bypass.hacks beats a true on veneer.bypass). veneer.* and * never grant them.
+  veneer.bypass:
+    description: Skip every automatic check (spoof, mod scan, RPTrack), join and later
+    default: false
+  veneer.bypass.spoof:
+    description: Skip all spoof checks
+    default: false
+  veneer.bypass.spoof.join:
+    description: Skip the spoof check on join only
+    default: false
+  veneer.bypass.hacks:
+    description: Skip the automatic mod scans (join, anticheat flag, spoof flag); /hackcheck still works
+    default: false
+  veneer.bypass.hacks.join:
+    description: Skip the mod scan and language check on join only
+    default: false
+  veneer.bypass.rptrack:
+    description: Skip the RPTrack resource pack fingerprint
+    default: false
+  veneer.bypass.rptrack.join:
+    description: Skip the RPTrack fingerprint on join (it only runs on join)
+    default: false
+  veneer.hacks.check:
+    description: Use /hackcheck
+    default: op
+  veneer.hacks.lang:
+    description: Use /hacklang
+    default: op
+  veneer.hacks.editor:
+    description: Use /hackeditor
+    default: op
+  veneer.web.scan:
+    description: Run scans from the web panel
+    default: op
+  veneer.web.delete:
+    description: Delete scans from the web panel
+    default: op
+  veneer.web.links:
+    description: See the account graph in the web panel
+    default: op
+  veneer.web.ips:
+    description: See players' IP addresses in the web panel
+    default: op
+  veneer.web.*:
+    description: All web panel rights
+    default: false
+    children:
+      veneer.web.scan: true
+      veneer.web.delete: true
+      veneer.web.links: true
+      veneer.web.ips: true
+  veneer.rptrack:
+    description: Use /rptrack
+    default: op
+  veneer.spoof.*:
+    description: All spoof permissions
+    default: false
+    children:
+      veneer.spoof.use: true
+      veneer.spoof.admin: true
+  veneer.hacks.*:
+    description: All mod scan permissions
+    default: false
+    children:
+      veneer.hacks.check: true
+      veneer.hacks.lang: true
+      veneer.hacks.editor: true
+  veneer.*:
+    description: Everything
+    default: false
+    children:
+      veneer.admin: true
+      veneer.alerts: true
+      veneer.lang: true
+      veneer.rptrack: true
+      veneer.spoof.*: true
+      veneer.hacks.*: true
+      veneer.web.*: true
