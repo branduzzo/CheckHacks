@@ -2,15 +2,14 @@ name: Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta, dev]
     tags: ['v*']
   pull_request:
-  # Builds the release of a tag pushed before this workflow existed (or whose run failed)
   workflow_dispatch:
     inputs:
       tag:
-        description: Tag to build and release, e.g. v0.9.5
-        required: true
+        description: Tag to build and release (e.g. v0.9.7)
+        required: false
 
 permissions:
   contents: write
@@ -18,31 +17,91 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      TAG: ${{ inputs.tag || (startsWith(github.ref, 'refs/tags/v') && github.ref_name || '') }}
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           ref: ${{ inputs.tag || github.ref }}
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '25'
           cache: maven
-      - name: Tag matches pom.xml version
-        if: env.TAG != ''
-        run: |
-          version=$(mvn -q -N -DforceStdout help:evaluate -Dexpression=project.version)
-          [ "v$version" = "$TAG" ] || { echo "Tag $TAG but pom.xml says $version"; exit 1; }
-      - run: mvn -B package
+
+      - name: Build
+        run: mvn -B -DskipTests clean package
+
       - uses: actions/upload-artifact@v4
         with:
           name: veneer
           path: veneer-plugin/target/veneer-*.jar
+
+      - name: Determine release channel
+        id: channel
+        run: |
+          VERSION=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          REF="${{ github.ref }}"
+          INPUT_TAG="${{ inputs.tag }}"
+
+          DO_RELEASE=false
+          IS_PRERELEASE=false
+          IS_LATEST=false
+          TAG_NAME=""
+          RELEASE_TITLE=""
+
+          if [ -n "$INPUT_TAG" ]; then
+            DO_RELEASE=true
+            TAG_NAME="$INPUT_TAG"
+            RELEASE_TITLE="Release $INPUT_TAG"
+            IS_LATEST=true
+          elif [[ "$REF" == refs/tags/v* ]]; then
+            TAG_NAME="${REF#refs/tags/}"
+            if [ "v$VERSION" != "$TAG_NAME" ]; then
+              echo "Error: Tag $TAG_NAME does not match pom.xml version $VERSION"
+              exit 1
+            fi
+            DO_RELEASE=true
+            RELEASE_TITLE="Release $TAG_NAME"
+            IS_LATEST=true
+          elif [ "$REF" = "refs/heads/dev" ]; then
+            DO_RELEASE=true
+            IS_PRERELEASE=true
+            TAG_NAME="dev-latest"
+            RELEASE_TITLE="Development Build ($SHORT_SHA)"
+          elif [ "$REF" = "refs/heads/beta" ]; then
+            DO_RELEASE=true
+            IS_PRERELEASE=true
+            TAG_NAME="beta-latest"
+            RELEASE_TITLE="Beta Build (v$VERSION-beta)"
+          elif [ "$REF" = "refs/heads/main" ]; then
+            git fetch --tags --force
+            if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+              echo "Tag v$VERSION already exists. Skipping auto-release on main."
+            else
+              echo "New version on main: v$VERSION — publishing release."
+              DO_RELEASE=true
+              TAG_NAME="v$VERSION"
+              RELEASE_TITLE="Release v$VERSION"
+              IS_LATEST=true
+            fi
+          fi
+
+          echo "do_release=$DO_RELEASE"       >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          echo "is_latest=$IS_LATEST"         >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME"           >> $GITHUB_OUTPUT
+          echo "release_title=$RELEASE_TITLE" >> $GITHUB_OUTPUT
+
       - name: Publish release
-        if: env.TAG != ''
+        if: steps.channel.outputs.do_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.TAG }}
-          files: veneer-plugin/target/veneer-*.jar
+          tag_name:        ${{ steps.channel.outputs.tag_name }}
+          target_commitish: ${{ github.sha }}
+          name:            ${{ steps.channel.outputs.release_title }}
+          prerelease:      ${{ steps.channel.outputs.is_prerelease == 'true' }}
+          make_latest:     ${{ steps.channel.outputs.is_latest == 'true' }}
+          files:           veneer-plugin/target/veneer-*.jar
           generate_release_notes: true
