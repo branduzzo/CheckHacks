@@ -186,7 +186,6 @@ public abstract class VeneerPlugin extends JavaPlugin {
     public UpdateChecker updates() { return updates; }
     public PermissionSource permissions() { return permissions; }
     public List<VeneerModule> modules() { return modules; }
-    public VeneerGui gui() { return gui; }
 
     /**
      * The module of this type (whether it runs or not: check {@link VeneerModule#running()}).
