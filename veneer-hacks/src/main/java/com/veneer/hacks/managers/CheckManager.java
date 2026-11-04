@@ -261,11 +261,19 @@ public class CheckManager {
         // did not resolve the sign at all, so empty mod lines say nothing either: the scan cannot run on this client
         boolean unsupported = ctrlResp.isEmpty();
 
+        var profile = plugin.profileOf(uuid);
+        Set<String> channels = profile != null ? profile.getChannels() : Set.of();
+
         StringBuilder log = new StringBuilder("[Hacks] Batch ").append(data.getCurrentBatch())
                 .append(" from ").append(target.getName());
         if (exploitPreventer) log.append(" [ExploitPreventer DETECTED]");
         if (unsupported) {
-            log.append(": the control line came back empty, the client does not resolve signs; the scan stops (SKIPPED)");
+            // A built-in keybind failing to resolve on its own is not proof of a protection mod: a headless
+            // client (e.g. mineflayer) that never implements lang/keybind resolution looks the same. No plugin
+            // channels at all is the extra tell, since a real client registers them before any player logic runs.
+            boolean likelyBot = channels.isEmpty();
+            log.append(": the control line came back empty, the client does not resolve signs; the scan stops (SKIPPED)")
+               .append(likelyBot ? " [likely headless/bot client, no plugin channels]" : "");
             plugin.getLogger().info(log.toString());
             finishCheck(uuid);
             return;
@@ -274,6 +282,11 @@ public class CheckManager {
             HackDefinition hack = batch.get(i);
             String resp = i < lines.length ? lines[i].strip() : "";
             HackResult result = evaluateResponse(hack, resp, exploitPreventer);
+            // The translation/keybind side says clean or PROTECTED, but a channel known for this mod is
+            // registered: an exploit preventer that lets built-in keybinds resolve normally (so the
+            // CTRL_KEYBIND marker above never trips) still cannot hide the channel handshake at login.
+            if ((result == HackResult.NOT_DETECTED || result == HackResult.PROTECTED) && hack.matchesAnyChannel(channels))
+                result = HackResult.SUSPECTED;
             data.getResults().put(hack.getId(), result);
             log.append(' ').append(hack.getDisplayName()).append('=').append(result).append(" ('").append(resp).append("')");
         }
@@ -360,7 +373,7 @@ public class CheckManager {
         for (HackDefinition hack : allHacks) {
             HackResult r = results.getOrDefault(hack.getId(), HackResult.SKIPPED);
             if (r == HackResult.DETECTED)  { anyDetected = true;  allClean = false; }
-            if (r == HackResult.PROTECTED || r == HackResult.TIMEOUT) { anyProtected = true; allClean = false; }
+            if (r == HackResult.PROTECTED || r == HackResult.TIMEOUT || r == HackResult.SUSPECTED) { anyProtected = true; allClean = false; }
             if (r == HackResult.SKIPPED)     allClean = false;
         }
 
@@ -372,7 +385,7 @@ public class CheckManager {
             List<HackDefinition> flagged = new ArrayList<>();
             for (HackDefinition hack : allHacks) {
                 HackResult r = results.getOrDefault(hack.getId(), HackResult.SKIPPED);
-                if (r == HackResult.DETECTED || r == HackResult.PROTECTED || r == HackResult.TIMEOUT) flagged.add(hack);
+                if (r == HackResult.DETECTED || r == HackResult.PROTECTED || r == HackResult.TIMEOUT || r == HackResult.SUSPECTED) flagged.add(hack);
             }
             if (!flagged.isEmpty() && targetPlayer != null && targetPlayer.isOnline()
                     && startConfirmScan(targetPlayer, data, allHacks, flagged)) return;
@@ -496,14 +509,14 @@ public class CheckManager {
         String protectedList = allHacks.stream()
                 .filter(h -> {
                     HackResult r = results.getOrDefault(h.getId(), HackResult.SKIPPED);
-                    return r == HackResult.PROTECTED || r == HackResult.TIMEOUT;
+                    return r == HackResult.PROTECTED || r == HackResult.TIMEOUT || r == HackResult.SUSPECTED;
                 })
                 .map(HackDefinition::getDisplayName)
                 .reduce((a, b) -> a + ", " + b).orElse("");
         String detectedOrProtectedList = allHacks.stream()
                 .filter(h -> {
                     HackResult r = results.getOrDefault(h.getId(), HackResult.SKIPPED);
-                    return r == HackResult.DETECTED || r == HackResult.PROTECTED || r == HackResult.TIMEOUT;
+                    return r == HackResult.DETECTED || r == HackResult.PROTECTED || r == HackResult.TIMEOUT || r == HackResult.SUSPECTED;
                 })
                 .map(HackDefinition::getDisplayName)
                 .reduce((a, b) -> a + ", " + b).orElse("");

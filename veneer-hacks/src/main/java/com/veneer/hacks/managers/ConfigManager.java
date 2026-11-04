@@ -65,7 +65,8 @@ public class ConfigManager {
             } catch (IllegalArgumentException e) {
                 mode = DetectionMode.TRANSLATE;
             }
-            hacks.put(id, new HackDefinition(id, displayName, key, mode));
+            List<String> channels = section.getStringList(id + ".channels");
+            hacks.put(id, new HackDefinition(id, displayName, key, mode, channels));
         }
         plugin.getLogger().info("Loaded " + hacks.size() + " hacks.");
     }

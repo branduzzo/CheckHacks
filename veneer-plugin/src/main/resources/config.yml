@@ -507,6 +507,12 @@ hacks:
     #   display-name: shown in alerts / web editor / discord
     #   key: translation or keybind key registered by the mod
     #   mode: METEOR | TRANSLATE | KEYBIND
+    #   channels (optional): regexes matched against the player's registered plugin channels. A hit upgrades
+    #     an otherwise clean or PROTECTED result to SUSPECTED: a protection mod that lets built-in Minecraft
+    #     keybinds resolve normally (so it never trips the usual ExploitPreventer marker on the control probe)
+    #     still cannot hide its own channel handshake, which happens at login before any client-side logic runs.
+    #     Only add a channel here once you have actually seen that mod register it — a wrong mapping produces
+    #     false positives on unrelated clients that happen to share the channel name.
     # ──────────────────────────────────────────────
     hacks:
       meteor-client:
@@ -583,6 +589,10 @@ hacks:
         display-name: "World Downloader"
         key: "key.wdl.startStop"
         mode: TRANSLATE
+        # Same channel names as blocked-channels above (1.13+ and legacy forms)
+        channels:
+          - "^wdl:(init|control|request)$"
+          - "(?i)^wdl\\|(init|control|request)$"
 
       autoclicker-fabric:
         display-name: "AutoClicker"

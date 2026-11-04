@@ -1,6 +1,9 @@
 package com.veneer.hacks;
 
+import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 public class HackDefinition {
 
@@ -11,8 +14,19 @@ public class HackDefinition {
     private final String fallback;
     private final String lowerKey;
     private final String lowerFallback;
+    private final List<Pattern> channels;
 
     public HackDefinition(String id, String displayName, String key, DetectionMode mode) {
+        this(id, displayName, key, mode, List.of());
+    }
+
+    /**
+     * @param channels plugin-channel regexes known to belong to this mod (optional). A channel match on a
+     *                  clean or protected translation result raises it to {@link HackResult#SUSPECTED}: channel
+     *                  registration happens at login handshake, before client-side logic can selectively hide it,
+     *                  so it survives a translation/keybind exploit-preventer that the sign check alone misses.
+     */
+    public HackDefinition(String id, String displayName, String key, DetectionMode mode, List<String> channels) {
         this.id            = id;
         this.displayName   = displayName;
         this.key           = key;
@@ -20,6 +34,10 @@ public class HackDefinition {
         this.fallback      = "\u27e6NO_" + id.toUpperCase(Locale.ROOT).replace("-", "_") + "\u27e7";
         this.lowerKey      = key.toLowerCase(Locale.ROOT);
         this.lowerFallback = this.fallback.toLowerCase(Locale.ROOT);
+        this.channels      = channels.stream().flatMap(p -> {
+            try { return java.util.stream.Stream.of(Pattern.compile(p, Pattern.CASE_INSENSITIVE)); }
+            catch (PatternSyntaxException e) { return java.util.stream.Stream.empty(); }
+        }).toList();
     }
 
     public String getId()           { return id; }
@@ -29,4 +47,13 @@ public class HackDefinition {
     public String getFallback()     { return fallback; }
     public String getLowerKey()     { return lowerKey; }
     public String getLowerFallback(){ return lowerFallback; }
+
+    /** Whether any of this hack's known channels is among the player's registered plugin channels. */
+    public boolean matchesAnyChannel(java.util.Collection<String> playerChannels) {
+        if (channels.isEmpty() || playerChannels.isEmpty()) return false;
+        for (String channel : playerChannels)
+            for (Pattern p : channels)
+                if (p.matcher(channel).find()) return true;
+        return false;
+    }
 }

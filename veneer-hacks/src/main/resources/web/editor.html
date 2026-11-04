@@ -76,6 +76,7 @@
         .badge-DETECTED{background:#3d1a1a;border:1px solid #7c2020;color:var(--red)}
         .badge-NOT_DETECTED{background:#1a2e1a;border:1px solid #2d5a2d;color:var(--green)}
         .badge-PROTECTED{background:#2e2410;border:1px solid #5a3d10;color:var(--yellow)}
+        .badge-SUSPECTED{background:#2e2410;border:1px dashed #5a3d10;color:var(--yellow)}
         .badge-SKIPPED{background:var(--surface2);border:1px solid var(--border);color:var(--gray)}
         .badge-lang{background:var(--blue-dim);border:1px solid var(--blue);color:var(--blue)}
         .empty-state{text-align:center;padding:40px 20px;color:var(--text2)}
@@ -795,7 +796,7 @@
           if (results.length === 0) {
             body = '<div class="empty-state"><p>' + t('No results saved for this scan.') + '</p></div>';
           } else {
-            const order = {DETECTED: 0, PROTECTED: 1, TIMEOUT: 2, NOT_DETECTED: 3, SKIPPED: 4};
+            const order = {DETECTED: 0, SUSPECTED: 1, PROTECTED: 2, TIMEOUT: 3, NOT_DETECTED: 4, SKIPPED: 5};
             const sorted = results.slice().sort((a, b) => (order[a.result] ?? 5) - (order[b.result] ?? 5));
             const counts = {};
             results.forEach(r => { counts[r.result] = (counts[r.result] || 0) + 1; });
