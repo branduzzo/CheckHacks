@@ -19,6 +19,14 @@ public class PlayerProfile {
     private volatile String versionReal;
     private volatile String versionClaimed;
     private volatile boolean versionMismatch;
+    private volatile boolean fakePlayer;
+    private volatile boolean exploitPreventer;
+
+    public boolean isFakePlayer() { return fakePlayer; }
+    public void setFakePlayer(boolean fakePlayer) { this.fakePlayer = fakePlayer; }
+
+    public boolean isExploitPreventer() { return exploitPreventer; }
+    public void setExploitPreventer(boolean exploitPreventer) { this.exploitPreventer = exploitPreventer; }
 
     /** An unmodifiable view of the plugin channels the client registered. */
     public Set<String> getChannels() {

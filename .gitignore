@@ -21,3 +21,5 @@ __pycache__/
 # local test servers
 run/
 *.log
+
+CHANGES.txt

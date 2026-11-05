@@ -9,7 +9,6 @@ import com.veneer.core.ClientVersions;
 import com.veneer.hacks.utils.SignUtil;
 import com.veneer.core.WrappedTask;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -124,7 +123,18 @@ public class CheckManager {
 
         if (autoCheck) lastAutoCheck.put(uuid, System.currentTimeMillis());
 
-        List<List<HackDefinition>> batches = buildBatches(hacks);
+        var profile = plugin.profileOf(uuid);
+        Set<String> channels = profile != null ? profile.getChannels() : Set.of();
+        List<HackDefinition> scanHacks = new ArrayList<>(hacks);
+        if (!channels.isEmpty()) {
+            for (HackDefinition h : plugin.module(HacksModule.class).config().getHacks().values()) {
+                if (h.matchesAnyChannel(channels) && !scanHacks.contains(h)) {
+                    scanHacks.add(0, h);
+                }
+            }
+        }
+
+        List<List<HackDefinition>> batches = buildBatches(scanHacks, channels);
         if (batches.isEmpty()) return;
 
         CheckPlayerData data = new CheckPlayerData(uuid,
@@ -139,10 +149,21 @@ public class CheckManager {
         FoliaScheduler.runAtEntity(plugin, target, () -> processBatch(target, data));
     }
 
-    private List<List<HackDefinition>> buildBatches(List<HackDefinition> hacks) {
+    private List<List<HackDefinition>> buildBatches(List<HackDefinition> hacks, Set<String> channels) {
+        List<HackDefinition> sorted = new ArrayList<>(hacks);
+        if (channels != null && !channels.isEmpty()) {
+            List<HackDefinition> matching = new ArrayList<>();
+            List<HackDefinition> rest = new ArrayList<>();
+            for (HackDefinition h : sorted) {
+                if (h.matchesAnyChannel(channels)) matching.add(h);
+                else rest.add(h);
+            }
+            sorted = new ArrayList<>(matching);
+            sorted.addAll(rest);
+        }
         List<List<HackDefinition>> batches = new ArrayList<>();
-        for (int i = 0; i < hacks.size(); i += LINES_PER_SIGN)
-            batches.add(new ArrayList<>(hacks.subList(i, Math.min(i + LINES_PER_SIGN, hacks.size()))));
+        for (int i = 0; i < sorted.size(); i += LINES_PER_SIGN)
+            batches.add(new ArrayList<>(sorted.subList(i, Math.min(i + LINES_PER_SIGN, sorted.size()))));
         return batches;
     }
 
@@ -256,7 +277,7 @@ public class CheckManager {
         List<HackDefinition> batch = data.getCurrentBatchHacks();
         String ctrlResp = lines.length > 3 ? lines[3].strip() : "";
 
-        boolean exploitPreventer = ctrlResp.equalsIgnoreCase(CTRL_KEYBIND);
+        boolean classicEp = ctrlResp.equalsIgnoreCase(CTRL_KEYBIND);
         // Every vanilla client names the forward key ("W", or "Not Bound"); an empty control line means the client
         // did not resolve the sign at all, so empty mod lines say nothing either: the scan cannot run on this client
         boolean unsupported = ctrlResp.isEmpty();
@@ -264,37 +285,53 @@ public class CheckManager {
         var profile = plugin.profileOf(uuid);
         Set<String> channels = profile != null ? profile.getChannels() : Set.of();
 
+        if (classicEp && profile != null) {
+            profile.setExploitPreventer(true);
+        }
+
         StringBuilder log = new StringBuilder("[Hacks] Batch ").append(data.getCurrentBatch())
                 .append(" from ").append(target.getName());
-        if (exploitPreventer) log.append(" [ExploitPreventer DETECTED]");
+        if (classicEp) log.append(" [ExploitPreventer DETECTED (raw control key)]");
         if (unsupported) {
+            if (profile != null) {
+                profile.setFakePlayer(true);
+            }
             // A built-in keybind failing to resolve on its own is not proof of a protection mod: a headless
-            // client (e.g. mineflayer) that never implements lang/keybind resolution looks the same. No plugin
-            // channels at all is the extra tell, since a real client registers them before any player logic runs.
+            // client (e.g. mineflayer) that never implements lang/keybind resolution looks the same.
             boolean likelyBot = channels.isEmpty();
-            log.append(": the control line came back empty, the client does not resolve signs; the scan stops (SKIPPED)")
-               .append(likelyBot ? " [likely headless/bot client, no plugin channels]" : "");
+            log.append(": the control line came back empty, the client does not resolve signs; marked as FakePlayer (SKIPPED)")
+               .append(likelyBot ? " [no plugin channels]" : "");
             plugin.getLogger().info(log.toString());
             finishCheck(uuid);
             return;
         }
+
+        boolean channelSuppressionEp = false;
         for (int i = 0; i < batch.size(); i++) {
             HackDefinition hack = batch.get(i);
             String resp = i < lines.length ? lines[i].strip() : "";
-            HackResult result = evaluateResponse(hack, resp, exploitPreventer);
+            HackResult result = evaluateResponse(hack, resp, classicEp);
             // The translation/keybind side says clean or PROTECTED, but a channel known for this mod is
             // registered: an exploit preventer that lets built-in keybinds resolve normally (so the
             // CTRL_KEYBIND marker above never trips) still cannot hide the channel handshake at login.
-            if ((result == HackResult.NOT_DETECTED || result == HackResult.PROTECTED) && hack.matchesAnyChannel(channels))
-                result = HackResult.SUSPECTED;
+            boolean channelMatches = hack.matchesAnyChannel(channels);
+            if ((result == HackResult.NOT_DETECTED || result == HackResult.PROTECTED) && channelMatches) {
+                channelSuppressionEp = true;
+                result = HackResult.PROTECTED;
+            }
             data.getResults().put(hack.getId(), result);
             log.append(' ').append(hack.getDisplayName()).append('=').append(result).append(" ('").append(resp).append("')");
+        }
+
+        if (channelSuppressionEp) {
+            if (profile != null) profile.setExploitPreventer(true);
+            log.append(" [ExploitPreventer DETECTED (channel mod suppressed)]");
         }
         plugin.getLogger().info(log.toString());
 
         data.incrementBatch();
-        if (exploitPreventer) {
-            // The client answers every key with the raw key, so the remaining batches cannot tell anything; they stay SKIPPED.
+        if (classicEp || channelSuppressionEp) {
+            // The client answers every key with the raw key or selectively suppresses mod translations; remaining batches cannot tell anything.
             finishCheck(uuid);
             return;
         }
@@ -477,7 +514,9 @@ public class CheckManager {
 
     private boolean startConfirmScan(Player target, CheckPlayerData original,
                                      List<HackDefinition> allHacks, List<HackDefinition> flagged) {
-        List<List<HackDefinition>> batches = buildBatches(flagged);
+        var profile = plugin.profileOf(target.getUniqueId());
+        Set<String> channels = profile != null ? profile.getChannels() : Set.of();
+        List<List<HackDefinition>> batches = buildBatches(flagged, channels);
         if (batches.isEmpty()) return false;
 
         CheckPlayerData data = new CheckPlayerData(target.getUniqueId(),

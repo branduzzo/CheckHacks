@@ -1,13 +1,10 @@
 package com.veneer.spoof.managers;
 
 import com.veneer.spoof.SpoofModule;
-import net.kyori.adventure.text.Component;
-import com.veneer.core.Messages;
 import com.veneer.VeneerPlugin;
 import org.bukkit.entity.Player;
 import com.veneer.core.Text;
 
-import java.util.function.Function;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 

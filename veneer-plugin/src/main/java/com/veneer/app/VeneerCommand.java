@@ -171,7 +171,7 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
             messages.send(sender, "veneer-lang-reset", "lang", messages.language());
         } else if (code.equals(Messages.AUTO)) {
             messages.choose(player.getUniqueId(), Messages.AUTO);
-            messages.send(sender, "veneer-lang-auto", "lang", messages.in(player).language(), "client", player.getLocale());
+            messages.send(sender, "veneer-lang-auto", "lang", messages.in(player).language(), "client", player.locale().toString());
         } else if (messages.exists(code)) {
             messages.choose(player.getUniqueId(), code);
             messages.send(sender, "veneer-lang-set", "lang", code);

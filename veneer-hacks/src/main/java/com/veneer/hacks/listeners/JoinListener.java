@@ -1,14 +1,11 @@
 package com.veneer.hacks.listeners;
 
 import com.veneer.hacks.HacksModule;
-import net.kyori.adventure.text.Component;
-import com.veneer.core.Messages;
 import com.veneer.VeneerPlugin;
 import com.veneer.hacks.HackDefinition;
 import com.veneer.core.FoliaScheduler;
 import org.bukkit.entity.Player;
 
-import java.util.function.Function;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;

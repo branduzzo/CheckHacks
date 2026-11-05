@@ -529,6 +529,8 @@ hacks:
         display-name: "Freecam"
         key: "key.freecam.toggle"
         mode: KEYBIND
+        channels:
+          - "^freecam(:.*)?$"
 
       wurst:
         display-name: "Wurst"
@@ -648,6 +650,9 @@ hacks:
         display-name: "Litematica"
         key: "litematica.hotkey.name.openmainmenuscreen"
         mode: TRANSLATE
+        channels:
+          - "^litematica:.*$"
+          - "^servux:litematics$"
 
       itemscroller:
         display-name: "Item Scroller"
@@ -658,11 +663,38 @@ hacks:
         display-name: "Xaero's Minimap"
         key: "gui.xaero_minimap"
         mode: TRANSLATE
+        channels:
+          - "^xaerominimap:.*$"
+
+      xaeros-worldmap:
+        display-name: "Xaero's World Map"
+        key: "gui.xaero_world_map"
+        mode: TRANSLATE
+        channels:
+          - "^xaeroworldmap:.*$"
+
+      tweakeroo:
+        display-name: "Tweakeroo"
+        key: "tweakeroo.gui.title.configs"
+        mode: TRANSLATE
+        channels:
+          - "^tweakeroo:.*$"
+          - "^servux:tweaks$"
+
+      minihud:
+        display-name: "MiniHUD"
+        key: "minihud.gui.title.configs"
+        mode: TRANSLATE
+        channels:
+          - "^minihud:.*$"
+          - "^servux:structures$"
 
       baritone:
         display-name: "Baritone"
         key: "baritone.setting.allowBreak"
         mode: TRANSLATE
+        channels:
+          - "^baritone:.*$"
 
     # Hacks checked with /hackcheck <player> (no args)
     default-check-hacks:

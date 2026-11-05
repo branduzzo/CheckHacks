@@ -432,6 +432,8 @@ public class WebServerManager {
         client.put("version_real", profile.getVersionReal());
         client.put("version_claimed", profile.getVersionClaimed());
         client.put("version_mismatch", profile.isVersionMismatch());
+        client.put("fake_player", profile.isFakePlayer());
+        client.put("exploit_preventer", profile.isExploitPreventer());
         client.put("live", true);
         return client;
     }

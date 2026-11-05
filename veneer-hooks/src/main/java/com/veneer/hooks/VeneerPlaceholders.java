@@ -54,6 +54,17 @@ public class VeneerPlaceholders extends PlaceholderExpansion {
             }
             case "is_spoofing": return String.valueOf(plugin.module(SpoofModule.class).running() && plugin.module(SpoofModule.class).isPlayerSpoofing(player));
             case "is_bedrock": return String.valueOf(plugin.bedrock().isBedrock(player));
+            case "fake":
+            case "is_fake": {
+                PlayerProfile data = plugin.profileOf(player.getUniqueId());
+                return String.valueOf(data != null && data.isFakePlayer());
+            }
+            case "expreventer":
+            case "is_expreventer":
+            case "exploit_preventer": {
+                PlayerProfile data = plugin.profileOf(player.getUniqueId());
+                return String.valueOf(data != null && data.isExploitPreventer());
+            }
             case "client_type": {
                 PlayerProfile data = plugin.profileOf(player.getUniqueId());
                 return data == null ? "unknown" : data.clientType().name().toLowerCase(Locale.ROOT);

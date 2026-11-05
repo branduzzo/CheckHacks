@@ -12,9 +12,11 @@
   "Delete scan #{0}? This cannot be undone.": "Удалить проверку #{0}? Это нельзя отменить.",
   "Detections": "Обнаружения",
   "Error: {0}": "Ошибка: {0}",
+  "ExploitPreventer detected (mod translations blocked)": "Обнаружен ExploitPreventer (переводы модов скрыты)",
   "Failed to load player.": "Не удалось загрузить игрока.",
   "Failed to load scan #{0}": "Не удалось загрузить проверку #{0}",
   "Failed to run scan: {0}": "Не удалось запустить проверку: {0}",
+  "FakePlayer / Headless bot detected": "Обнаружен FakePlayer / бот",
   "Find account or IP...": "Найти аккаунт или IP...",
   "Fingerprint": "Отпечаток",
   "First seen": "Первый вход",
@@ -130,8 +132,8 @@
   "{0} players": "игроков: {0}",
   "{0}h ago": "{0} ч назад",
   "{0}m ago": "{0} мин назад",
-  "⌂ Home": "⌂ Главная",
-  "☢ Mods detected": "☢ Найденные моды",
-  "☰ History": "☰ История",
-  "⚯ Links": "⚯ Связи"
+  "Home": "Главная",
+  "Mods detected": "Найденные моды",
+  "History": "История",
+  "Links": "Связи"
 }
