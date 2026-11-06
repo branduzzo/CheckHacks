@@ -451,19 +451,34 @@ hacks:
   # Web panel (/hackeditor): scan history and manual scans, served by the plugin itself.
   web-editor:
     enabled: true
-    # Host in the link that /hackeditor gives to the player
+    # Address in the links /hackeditor gives. Either a host name (the port below is added and the panel runs on plain
+    # HTTP), or a full address such as "https://panel.example.com" when an HTTPS proxy (Caddy, nginx) is in front.
+    # Open the panel at exactly this address: browsers keep the login per address.
+    # Without HTTPS on a public address the login cookie can be read on the network.
     host: "localhost"
+    # true: the panel itself serves HTTPS on the port below, with a certificate it creates for itself
+    # (plugins/Veneer/web-https.p12). Everything between the browser and the panel is encrypted; no domain or proxy needed.
+    # Browsers warn once about such a certificate: accept it only if its SHA-256 matches the one in the console and in
+    # /hackeditor. The old http:// address stops working, and browsers log in again. Applied on a server restart.
+    # Leave false behind an HTTPS proxy that talks plain HTTP to the panel.
+    https: false
     # Address the panel listens on. 127.0.0.1 only accepts connections from this machine
     # (use a reverse proxy or tunnel); 0.0.0.0 listens on every interface.
     bind: "127.0.0.1"
     port: 8080
-    token-expire-minutes: 10
+    # How long the one-time link of /hackeditor new can be opened
+    link-expire-minutes: 5
+    # A connected browser is logged out after this many days without use
+    session-expire-days: 30
     # Account graph: addresses accounts join from are stored to link accounts that share one
     links:
       # Days to keep an address after the account last used it (0 = forever)
       retention-days: 90
       # An address shared by more accounts than this is ignored (shared networks, mobile data)
       max-accounts-per-ip: 8
+      # With AuthMe installed: also link accounts by its registration and last addresses (also of accounts not
+      # seen since Veneer was installed) and by the same e-mail. Only a hash of the e-mail is stored. Copied every 6 hours.
+      authme: true
       # Provider and country of each address, shown in the panel, from ip-location-db (IPtoASN, PDDL; NRO country
       # data, CC BY 4.0). About 50 MB is downloaded to plugins/Veneer/geo/ via cdn.jsdelivr.net.
       ip-database: true
@@ -474,9 +489,38 @@ hacks:
       weak-provider-asns: [13335, 209242, 9009, 60068, 212238, 16276, 24940, 14061, 16509, 14618, 15169, 396982,
                            8075, 63949, 20473, 51167, 60781, 28753, 39351, 136787, 44477, 49505, 9123, 210644]
       weak-provider-keywords: [vpn, proxy, hosting, datacenter, "data center", cloud, vps, dedicated, colocation]
-      # Same client: accounts with the same brand and the same set of plugin channels (needs the spoof module).
+      # Same client: accounts with exactly the same set of plugin channels (needs the spoof module).
       # Only sets with at least client-min-channels channels count, shared by no more than max-accounts-per-client
-      # accounts: a common client (plain vanilla, a popular modpack) says nothing.
+      # accounts: a common client (plain vanilla, a popular modpack) says nothing. Same channels alone link nobody: they
+      # only add to a pair whose other links (address, fingerprint, e-mail, name) together reach at least 50%.
+      # Chances below are percent, 0 to 100. Changes apply on /veneer reload.
+      # Nearly the same name. Names of under 5 letters and names many accounts share do not count.
+      same-name: true
+      name-chance:
+        symbols: 80    # only case and symbols differ: Ryzen_, Ryzen
+        digits: 50     # only digits differ: kilyou708, kilyou709
+        similar: 35    # one character differs, or one starts with the other
+      # Bot batches: accounts with one fixed part between random ones, like u726_once_oh_v0l
+      batches:
+        enabled: true
+        min-accounts: 4
+        window-minutes: 30          # seen within this time: "chance"; otherwise "spread-chance"
+        chance: 90
+        spread-chance: 60
+        # An account named just the fixed part. Low on purpose: anyone can put someone else's name into their bots.
+        named-account-chance: 35
+        # Generators you already know: matching accounts are a batch whenever they were seen. Case is ignored.
+        # patterns:
+        #   - name: "once_oh wave"
+        #     regex: "^[a-z0-9]{4}_once_oh_[a-z0-9]{3}$"
+        #     chance: 90
+        patterns: []
+        # These names are never linked by name or batch (other links still apply), e.g. "^Player\\d+$"
+        ignore-names: []
+      # With AuthMe: same e-mail. Lower it when e-mails are not verified: anyone can type someone else's address.
+      email-chance: 90
+      # Same channels count only for a pair whose other links together reach this.
+      client-min-support: 50
       client-min-channels: 3
       max-accounts-per-client: 5
     # Scan history (mod scans and language checks with their results)
@@ -717,6 +761,9 @@ hacks:
     auto-check-on-join:
       enabled: false
       only-first-join: false
+      # BETA: start this scan when the client has downloaded the server resource pack, so the probe sign opens behind
+      # the reload screen. Players who get no pack are scanned 20 seconds after joining instead of 3.
+      during-resource-pack: false
       hacks:
         - meteor-client
         - freecam

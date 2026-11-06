@@ -7,7 +7,7 @@ description: Client spoof detection, mod detection and cache-based account linki
 authors: [GigaZelensky, Branduzzo]
 website: https://github.com/ReAndrew/veneer
 
-softdepend: [packetevents, ProtocolLib, ProtocolSupport, ViaVersion, ViaBackwards, ViaRewind, Geyser-Spigot, PlaceholderAPI, LuckPerms, GrimAC, Vulcan, Spartan, Matrix, Intave, AAC, floodgate]
+softdepend: [packetevents, ProtocolLib, ProtocolSupport, ViaVersion, ViaBackwards, ViaRewind, Geyser-Spigot, PlaceholderAPI, LuckPerms, AuthMe, GrimAC, Vulcan, Spartan, Matrix, Intave, AAC, floodgate]
 
 commands:
   veneer:
@@ -19,15 +19,15 @@ commands:
     permission: veneer.spoof.use
   hackcheck:
     description: Scan a player for installed mods
-    usage: /hackcheck <player> [hack1,hack2,...]
+    usage: /hackcheck <player> [all|version|lang|hack] [list]
     permission: veneer.hacks.check
   hacklang:
     description: Check the client language of a player
     usage: /hacklang <player> [lang1,lang2,...]
     permission: veneer.hacks.lang
   hackeditor:
-    description: Open the web panel (scan history and manual scans)
-    usage: /hackeditor
+    description: Open the web panel, connect a browser or disconnect browsers
+    usage: /hackeditor [new|links [player]|unauth <player> [id]|block <player> <id>|unblock <ip>]
     permission: veneer.hacks.editor
   rptrack:
     description: Show a player's resource-pack cache fingerprint and linked accounts
@@ -82,6 +82,9 @@ permissions:
   veneer.hacks.editor:
     description: Use /hackeditor
     default: op
+  veneer.hacks.editor.admin:
+    description: List and disconnect the web panel browsers of other players
+    default: op
   veneer.web.scan:
     description: Run scans from the web panel
     default: op
@@ -118,6 +121,7 @@ permissions:
       veneer.hacks.check: true
       veneer.hacks.lang: true
       veneer.hacks.editor: true
+      veneer.hacks.editor.admin: true
   veneer.*:
     description: Everything
     default: false

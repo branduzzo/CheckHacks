@@ -47,4 +47,18 @@ final class LuckPermsHook {
         }
         return List.copyOf(found.values());
     }
+
+    /** Loads the account from LuckPerms storage; a node LuckPerms leaves undefined follows the Bukkit default (op). */
+    java.util.concurrent.CompletableFuture<java.util.Set<String>> offlinePermissions(java.util.UUID uuid, java.util.Collection<String> nodes) {
+        boolean op = org.bukkit.Bukkit.getOfflinePlayer(uuid).isOp();
+        return lp.getUserManager().loadUser(uuid).thenApply(user -> {
+            java.util.Set<String> granted = new java.util.HashSet<>();
+            var data = user.getCachedData().getPermissionData();
+            for (String node : nodes) {
+                var value = data.checkPermission(node);
+                if (value.asBoolean() || (op && value == net.luckperms.api.util.Tristate.UNDEFINED)) granted.add(node);
+            }
+            return granted;
+        });
+    }
 }

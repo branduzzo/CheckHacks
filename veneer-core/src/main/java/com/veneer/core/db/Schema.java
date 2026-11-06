@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 final class Schema {
 
     /** Bump with every step added to {@link #upgrade}. */
-    static final int VERSION = 1;
+    static final int VERSION = 4;
 
     private Schema() {}
 
@@ -54,6 +54,15 @@ final class Schema {
                     last_seen INTEGER NOT NULL
                 )""");
             s.execute("""
+                CREATE TABLE IF NOT EXISTS authme_accounts (
+                    uuid TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    reg_ip TEXT,
+                    last_ip TEXT,
+                    last_login INTEGER NOT NULL,
+                    email_hash TEXT
+                )""");
+            s.execute("""
                 CREATE TABLE IF NOT EXISTS joins (
                     uuid TEXT NOT NULL,
                     name TEXT NOT NULL,
@@ -85,6 +94,20 @@ final class Schema {
                     created_at INTEGER NOT NULL,
                     expires_at INTEGER NOT NULL
                 )""");
+            // Web panel access: one-time links and browser sessions, by the SHA-256 of their secret
+            s.execute("""
+                CREATE TABLE IF NOT EXISTS web_sessions (
+                    hash TEXT PRIMARY KEY,
+                    kind TEXT NOT NULL,
+                    player_uuid TEXT NOT NULL,
+                    player_name TEXT NOT NULL,
+                    perms TEXT NOT NULL DEFAULT '',
+                    created_at INTEGER NOT NULL,
+                    expires_at INTEGER NOT NULL,
+                    last_used INTEGER NOT NULL,
+                    last_ip TEXT
+                )""");
+            s.execute("CREATE TABLE IF NOT EXISTS web_blocked_ips (ip TEXT PRIMARY KEY, created_at INTEGER NOT NULL)");
             // Client brands staff were asked about: verdict "allow", "block" or null (not decided yet)
             s.execute("""
                 CREATE TABLE IF NOT EXISTS brand_verdicts (
@@ -140,6 +163,13 @@ final class Schema {
         upgrade(c, log);
     }
 
+    private static boolean hasColumn(Connection c, String table, String column) throws SQLException {
+        try (Statement s = c.createStatement(); ResultSet rs = s.executeQuery("PRAGMA table_info(" + table + ")")) {
+            while (rs.next()) if (column.equals(rs.getString("name"))) return true;
+        }
+        return false;
+    }
+
     private static void upgrade(Connection c, Logger log) throws SQLException {
         int version;
         try (Statement s = c.createStatement(); ResultSet rs = s.executeQuery("PRAGMA user_version")) {
@@ -159,6 +189,20 @@ final class Schema {
                         UNION ALL SELECT uuid, name, updated FROM clients
                         UNION ALL SELECT uuid, name, last_seen FROM rptrack
                     ) WHERE uuid <> '' AND uuid NOT IN (SELECT uuid FROM accounts) GROUP BY uuid""");
+            }
+            if (version < 2) {
+                // What each mod's probe asked and how the client answered, for the panel
+                s.execute("ALTER TABLE hack_results ADD COLUMN probe_key TEXT");
+                s.execute("ALTER TABLE hack_results ADD COLUMN probe_answer TEXT");
+                s.execute("ALTER TABLE hack_results ADD COLUMN probe_channels TEXT");
+            }
+            if (version < 3 && !hasColumn(c, "joins", "count")) {
+                // Databases from before join counting: without it no join could be recorded or read
+                s.execute("ALTER TABLE joins ADD COLUMN count INTEGER NOT NULL DEFAULT 1");
+            }
+            if (version < 4) {
+                // Tokens of the old URL log-in were stored in plain text and no longer open anything
+                s.execute("DELETE FROM editor_tokens");
             }
             s.execute("PRAGMA user_version = " + VERSION);
             c.commit();

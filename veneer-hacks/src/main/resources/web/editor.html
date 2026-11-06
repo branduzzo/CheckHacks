@@ -25,7 +25,7 @@
         --border-subtle: #212c3d;
         --border-strong: #2d3748;
         --accent-primary: #3b82f6;
-        --accent-indigo: #6366f1;
+        --accent-teal: #0ea5a4;
         --danger-fg: #ef4444;
         --danger-bg: rgba(239, 68, 68, 0.12);
         --danger-border: rgba(239, 68, 68, 0.3);
@@ -35,9 +35,9 @@
         --success-fg: #10b981;
         --success-bg: rgba(16, 185, 129, 0.12);
         --success-border: rgba(16, 185, 129, 0.3);
-        --suspected-fg: #818cf8;
-        --suspected-bg: rgba(99, 102, 241, 0.14);
-        --suspected-border: rgba(99, 102, 241, 0.32);
+        --suspected-fg: #facc15;
+        --suspected-bg: rgba(250, 204, 21, 0.12);
+        --suspected-border: rgba(250, 204, 21, 0.32);
         --text-main: #f1f5f9;
         --text-secondary: #94a3b8;
         --text-muted: #64748b;
@@ -143,7 +143,7 @@
         width: 24px;
         height: 24px;
         border-radius: 5px;
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(99, 102, 241, 0.12));
+        background: rgba(59, 130, 246, 0.18);
         border: 1px solid rgba(59, 130, 246, 0.45);
         display: flex;
         align-items: center;
@@ -677,14 +677,14 @@
         background: #2563eb;
       }
 
-      .btn-indigo {
-        background: var(--accent-indigo);
+      .btn-teal {
+        background: var(--accent-teal);
         color: #ffffff;
         border: 1px solid rgba(255, 255, 255, 0.12);
       }
 
-      .btn-indigo:hover:not(:disabled) {
-        background: #4f46e5;
+      .btn-teal:hover:not(:disabled) {
+        background: #0f766e;
       }
 
       .btn-secondary {
@@ -785,7 +785,7 @@
         align-items: start;
       }
 
-      @media (max-width: 980px) {
+      @media (max-width: 1240px) {
         .dossier-grid-top,
         .dossier-grid-bottom {
           grid-template-columns: 1fr;
@@ -808,8 +808,22 @@
       }
 
       .kv-row.kv-row-stack {
-        align-items: flex-start;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
       }
+      .kv-row-stack > .kv-val { text-align: left; }
+      .kv-row-stack .channel-list-box { justify-content: flex-start; }
+      #clientVersionVal { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+      .dossier-actions { flex-basis: 100%; }
+      .dossier-top-row > .dossier-identity { flex: 1 1 0; min-width: 0; }
+      @media (max-width: 600px) {
+        .dossier-top-row > .dossier-identity { flex: 1 1 100%; }
+        #deletePlayerBtn { margin-left: 0; order: 9; }
+      }
+      #deletePlayerBtn { margin-left: auto; align-self: center; flex-shrink: 0; padding: 5px 10px; font-size: 11.5px; }
+      body.no-delete #deletePlayerBtn { display: none; }
+      #modMatrixTableBody td:last-child, .mod-status-head { text-align: center; }
 
       .kv-row:last-child {
         border-bottom: none;
@@ -837,6 +851,12 @@
         max-width: 210px;
       }
 
+      .channel-group { display: block; width: 100%; text-align: left; border: 1px solid var(--border-subtle); border-radius: 6px; margin-bottom: 4px; }
+      .channel-group summary { cursor: pointer; padding: 5px 8px; font-size: 12px; display: flex; justify-content: space-between; gap: 8px; }
+      .channel-group[open] summary { border-bottom: 1px solid var(--border-subtle); }
+      .channel-group-items { padding: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+      .channel-group-count { color: var(--text-muted); }
+      [data-hint] { cursor: help; }
       .channel-list-box {
         display: flex;
         flex-wrap: wrap;
@@ -852,7 +872,8 @@
         border: 1px solid var(--border-subtle);
         border-radius: 3px;
         padding: 1px 5px;
-        white-space: nowrap;
+        max-width: 100%;
+        overflow-wrap: anywhere;
       }
 
       /* Filter Segmented Controls */
@@ -1015,7 +1036,7 @@
       .graph-canvas-wrap {
         flex: 1;
         position: relative;
-        background: radial-gradient(circle at 50% 50%, #111827 0%, #090d16 100%);
+        background: #090d16;
         overflow: hidden;
       }
 
@@ -1090,6 +1111,21 @@
       }
 
       @media (max-width: 720px) {
+        .top-header {
+          height: auto;
+          flex-wrap: wrap;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+        .header-center {
+          order: 3;
+          flex: 1 0 100%;
+          max-width: none;
+        }
+        .header-right {
+          flex-wrap: wrap;
+          max-width: 100%;
+        }
         .workspace-body {
           flex-direction: column;
           overflow-y: auto;
@@ -1137,8 +1173,8 @@
         .badge-PROTECTED{background:rgba(245, 158, 11, 0.15);border:1px solid rgba(245, 158, 11, 0.4);color:var(--warning-fg);border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;}
 
     </style>
-      <script src="/web/three.min.js" onerror="this.onerror=null;this.src='three.min.js'"></script>
-    <script src="/web/3d-force-graph.min.js" onerror="this.onerror=null;this.src='3d-force-graph.min.js'"></script>
+      <script src="three.min.js"></script>
+    <script src="3d-force-graph.min.js"></script>
   </head>
   <body>
     <div class="app-shell">
@@ -1168,7 +1204,7 @@
               type="search"
               id="globalSearchInput"
               class="search-input"
-              placeholder="Search player name, UUID, or IP..."
+              placeholder="Search player name..."
               aria-label="Search player name, UUID, or IP"
               autocomplete="off"
             />
@@ -1261,36 +1297,37 @@
                     <img
                       id="dossierAvatarImg"
                       class="dossier-avatar"
-                      src="https://mc-heads.net/avatar/Steve/64"
-                      alt="Steve Avatar"
+                      src="data:,"
+                      alt=""
                       referrerpolicy="no-referrer"
                     />
                   </div>
                   <div>
                     <div class="dossier-name-line">
-                      <h1 class="dossier-player-name" id="dossierPlayerName">Steve</h1>
-                      <span class="sec-pill success" id="dossierOnlineBadge">ONLINE</span>
-                      <span class="sec-pill danger" id="dossierRiskBadge">RISK: CRITICAL (100/100)</span>
+                      <h1 class="dossier-player-name" id="dossierPlayerName">—</h1>
+                      <span class="sec-pill neutral" id="dossierOnlineBadge">—</span>
+                      <span class="sec-pill neutral" id="dossierRiskBadge" title="Heuristic from the signals below, not proof">—</span>
                     </div>
                     <div class="dossier-meta-line">
                       <span>UUID:</span>
                       <button type="button" class="uuid-copy-btn" id="copyUuidBtn" title="Copy Player UUID">
-                        <span id="dossierUuidText">069a79f4-44e9-4726-a5be-fca90e38aaf5</span>
+                        <span id="dossierUuidText">—</span>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                           <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                         </svg>
                       </button>
                       <span aria-hidden="true">·</span>
-                      <span>First Seen: <strong class="mono" id="dossierFirstSeen">2024-10-27 03:33</strong></span>
+                      <span>First Seen: <strong class="mono" id="dossierFirstSeen">—</strong></span>
                       <span aria-hidden="true">·</span>
-                      <span>Last Seen: <strong class="mono" id="dossierLastSeen">2024-11-05 09:46</strong></span>
+                      <span>Last Seen: <strong class="mono" id="dossierLastSeen">—</strong></span>
                       <span aria-hidden="true">·</span>
-                      <span>Sessions: <strong class="mono" id="dossierJoins">35</strong></span>
+                      <span>Sessions: <strong class="mono" id="dossierJoins">—</strong></span>
                     </div>
                   </div>
                 </div>
 
+                  <button type="button" class="btn btn-danger-ghost" id="deletePlayerBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M6 6l1 15h10l1-15"></path></svg><span>Delete Player</span></button>
                 <!-- Scan Action Buttons -->
                 <div class="dossier-actions">
                   <button type="button" class="btn btn-primary" id="runHackCheckBtn">
@@ -1299,13 +1336,15 @@
                     </svg>
                     <span data-i18n="action.run_hack">Run Hack Check</span>
                   </button>
-                  <button type="button" class="btn btn-indigo" id="runLangCheckBtn">
+                  <button type="button" class="btn btn-teal" id="runLangCheckBtn">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
                       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                     </svg>
                     <span data-i18n="action.run_lang">Run Lang Check</span>
                   </button>
+                  <button type="button" class="btn btn-secondary" id="runVersionCheckBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12l-8 8-9-9V3h8z"></path><circle cx="7.5" cy="7.5" r="1"></circle></svg><span>Run Version Check</span></button>
+                  <button type="button" class="btn btn-secondary" id="runAllCheckBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg><span>Run All</span></button>
                   <button type="button" class="btn btn-secondary" id="openPlayerGraphBtn">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                       <circle cx="18" cy="5" r="3"></circle>
@@ -1340,15 +1379,19 @@
                 <div class="kv-list">
                   <div class="kv-row">
                     <span class="kv-key">Client Brand</span>
-                    <span class="kv-val mono" id="clientBrandVal">fabric</span>
+                    <span class="kv-val mono" id="clientBrandVal"></span>
                   </div>
                   <div class="kv-row">
                     <span class="kv-key">Protocol Version</span>
-                    <span class="kv-val mono" id="clientVersionVal">Real: 1.21.4 / Claimed: 1.20.1</span>
+                    <span class="kv-val" id="clientVersionVal"></span>
                   </div>
                   <div class="kv-row">
                     <span class="kv-key">Client Locale</span>
-                    <span class="kv-val mono" id="clientLocaleVal">ru_ru</span>
+                    <span class="kv-val mono" id="clientLocaleVal">—</span>
+                  </div>
+                  <div class="kv-row">
+                    <span class="kv-key">Language</span>
+                    <span class="kv-val" id="clientLanguageVal"></span>
                   </div>
                   <div class="kv-row">
                     <span class="kv-key">FakePlayer Heuristic</span>
@@ -1406,7 +1449,7 @@
                         <th>Key / Channel Probe</th>
                         <th>Date</th>
                         <th>Vector</th>
-                        <th>Status</th>
+                        <th class="mod-status-head">Status</th>
                       </tr>
                     </thead>
                     <tbody id="modMatrixTableBody"></tbody>
@@ -1484,23 +1527,23 @@
             <div class="stats-kpi-bar" aria-label="Global Server Telemetry">
               <div class="stat-kpi-card">
                 <span class="stat-kpi-label" data-i18n="stats.scans">Total Scans</span>
-                <span class="stat-kpi-value" id="statScans">1,240</span>
+                <span class="stat-kpi-value" id="statScans">—</span>
               </div>
               <div class="stat-kpi-card">
                 <span class="stat-kpi-label" data-i18n="stats.detections">Detections</span>
-                <span class="stat-kpi-value" style="color: var(--danger-fg);" id="statDetections">87</span>
+                <span class="stat-kpi-value" style="color: var(--danger-fg);" id="statDetections">—</span>
               </div>
               <div class="stat-kpi-card">
                 <span class="stat-kpi-label" data-i18n="stats.players">Known Players</span>
-                <span class="stat-kpi-value" id="statPlayers">450</span>
+                <span class="stat-kpi-value" id="statPlayers">—</span>
               </div>
               <div class="stat-kpi-card">
                 <span class="stat-kpi-label" data-i18n="stats.online">Online Now</span>
-                <span class="stat-kpi-value" style="color: var(--success-fg);" id="statOnline">18</span>
+                <span class="stat-kpi-value" style="color: var(--success-fg);" id="statOnline">—</span>
               </div>
               <div class="stat-kpi-card">
                 <span class="stat-kpi-label" data-i18n="stats.links">Alt Links</span>
-                <span class="stat-kpi-value" id="statLinks">34</span>
+                <span class="stat-kpi-value" id="statLinks">—</span>
               </div>
             </div>
 
@@ -1543,12 +1586,14 @@
           </section>
 
           <!-- VIEW 3: ALT GRAPH (2D FORCE-DIRECTED NETWORK VIEW) -->
-          <section class="view-section" id="viewGraph" aria-label="Alt Network Graph View" style="padding: 12px 16px; display: none; flex-direction: column; height: calc(100vh - 56px); box-sizing: border-box; overflow: hidden;">
+          <section class="view-section" id="viewGraph" aria-label="Alt Network Graph View" style="padding: 12px 16px; height: calc(100vh - 56px); box-sizing: border-box; overflow: hidden;">
             <div class="graph-bar" id="graph-controls-bar">
               <input id="g-search" placeholder="Find account or IP..." style="width: 220px;">
               <label><input type="checkbox" id="g-ip" checked> same address</label>
               <label><input type="checkbox" id="g-rp" checked> same fingerprint</label>
               <label><input type="checkbox" id="g-cl" checked> same client</label>
+              <label><input type="checkbox" id="g-em" checked> same e-mail</label>
+              <label><input type="checkbox" id="g-nm" checked> similar name</label>
               <label>at least <input type="range" id="g-min" min="0" max="90" step="5" value="0" style="width:90px;padding:0"> <span id="g-min-v">0%</span></label>
               <label>seen <select id="g-days">
                 <option value="0">any time</option>
@@ -1568,1963 +1613,7 @@
       </div>
     </div>
 
-    <script>
-      // ============================================================================
-      // 1. I18N & TOKEN AUTHENTICATION COMPATIBILITY (REQUIRED PLACEHOLDER)
-      // ============================================================================
-      const I18N = /*I18N*/{};
-
-      const DEFAULT_I18N = {
-        'stats.scans': 'Total Scans',
-        'stats.detections': 'Detections',
-        'stats.players': 'Known Players',
-        'stats.online': 'Online Now',
-        'stats.links': 'Alt Links',
-        'nav.overview': 'Overview',
-        'nav.history': 'History',
-        'nav.graph': 'Alt Graph',
-        'sidebar.online_players': 'Online Players',
-        'action.run_hack': 'Run Hack Check',
-        'action.run_lang': 'Run Lang Check',
-        'panel.client_details': 'Client Telemetry & Fingerprint',
-        'panel.mod_matrix': 'Mod Detection',
-        'panel.alts': 'Alts & Linked Accounts',
-        'panel.ips': 'Network ASN & IP Telemetry',
-        'flag.fake_player': 'FakePlayer / Headless Bot',
-        'flag.exploit_preventer': 'ExploitPreventer (Translations Blocked)',
-        'flag.version_mismatch': 'Version Mismatch ({0} vs {1})',
-        'flag.liquidbounce': 'LiquidBounce Fingerprint Match',
-      };
-
-      function t(k, ...args) {
-        let str = (I18N && I18N[k]) || DEFAULT_I18N[k] || k;
-        args.forEach((arg, idx) => {
-          str = str.replace(new RegExp('\\{' + idx + '\\}', 'g'), String(arg));
-          str = str.replace(/%[sd]/, String(arg));
-        });
-        return str;
-      }
-
-      function getAuthToken() {
-        const searchParams = new URLSearchParams(window.location.search);
-        const qToken = searchParams.get('token');
-        if (qToken && qToken.trim()) return qToken.trim();
-
-        const rawHash = window.location.hash ? window.location.hash.slice(1) : '';
-        if (rawHash.startsWith('token=')) {
-          const hToken = new URLSearchParams(rawHash).get('token');
-          if (hToken && hToken.trim()) return hToken.trim();
-        } else if (rawHash && !['overview', 'history', 'graph'].includes(rawHash.toLowerCase())) {
-          return rawHash.trim();
-        }
-        return 'vnr_live_audit_token_9f8a7b';
-      }
-
-      const AUTH_TOKEN = getAuthToken();
-
-      function withToken(url) {
-        const sep = url.indexOf('?') === -1 ? '?' : '&';
-        return url + sep + 'token=' + encodeURIComponent(AUTH_TOKEN);
-      }
-
-      // ============================================================================
-      // 2. DETERMINISTIC INLINE SVG AVATAR FALLBACK (ZERO BROKEN IMAGES OFFLINE)
-      // ============================================================================
-      function createFallbackAvatarDataUri(name) {
-        let hash = 0;
-        const s = String(name || 'Steve');
-        for (let i = 0; i < s.length; i++) {
-          hash = (hash * 31 + s.charCodeAt(i)) | 0;
-        }
-        const palettes = [
-          ['#1e293b', '#3b82f6', '#93c5fd', '#0f172a'],
-          ['#1f2937', '#10b981', '#6ee7b7', '#064e3b'],
-          ['#31102f', '#ef4444', '#fca5a5', '#450a0a'],
-          ['#1e1b4b', '#6366f1', '#a5b4fc', '#0f172a'],
-          ['#27272a', '#f59e0b', '#fcd34d', '#451a03'],
-        ];
-        const pal = palettes[Math.abs(hash) % palettes.length];
-        let rects = '';
-        for (let y = 0; y < 8; y++) {
-          for (let x = 0; x < 4; x++) {
-            const bit = (Math.abs(hash >> ((y * 4 + x) % 16)) + x * 7 + y * 13) % 4;
-            const color = pal[bit];
-            rects += '<rect x="' + x * 8 + '" y="' + y * 8 + '" width="8" height="8" fill="' + color + '"/>';
-            rects += '<rect x="' + (7 - x) * 8 + '" y="' + y * 8 + '" width="8" height="8" fill="' + color + '"/>';
-          }
-        }
-        const svg =
-          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="crispEdges">' +
-          rects +
-          '</svg>';
-        return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-      }
-
-      // ============================================================================
-      // 3. INTERACTIVE MOCK FALLBACK STORE (FOR FILE:// OR STANDALONE MODE)
-      // ============================================================================
-      const MOCK_STORE = {
-        operator: {
-          player_name: 'Console_SecOps',
-          permissions: ['veneer.admin', 'veneer.scan.run', 'veneer.scan.delete', 'veneer.links.view'],
-        },
-        stats: {
-          scans: 1240,
-          detections: 87,
-          players: 450,
-          online: 18,
-          links: 34,
-        },
-        nextScanId: 105,
-        players: {
-          Steve: {
-            name: 'Steve',
-            uuid: '069a79f4-44e9-4726-a5be-fca90e38aaf5',
-            online: true,
-            ping: 42,
-            known: true,
-            first_seen: 1730000000000,
-            last_seen: 1730800000000,
-            joins: 35,
-            client: {
-              live: true,
-              brand: 'fabric',
-              version_real: '1.21.4',
-              version_claimed: '1.20.1',
-              version_mismatch: true,
-              locale: 'ru_ru',
-              channels: ['xaeroworldmap:main', 'litematica:main'],
-              channel_count: 2,
-              fake_player: false,
-              exploit_preventer: true,
-            },
-            mods: [{ name: "Xaero's WorldMap", last_seen: 1730800000000, via: 'channel' }],
-            fingerprint: {
-              liquidbounce: false,
-              pack_hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-              last_seen: 1730800000000,
-              keys: ['key.xaero.open_map', 'key.litematica.open_gui', 'key.freecam.toggle'],
-            },
-            ips: [
-              {
-                ip: '194.87.12.34',
-                asn: 'AS49453',
-                country: 'RU',
-                provider: 'Selectel',
-                first_seen: 1730000000000,
-                last_seen: 1730800000000,
-              },
-              {
-                ip: '185.15.58.192',
-                asn: 'AS200350',
-                country: 'RU',
-                provider: 'Yandex Cloud',
-                first_seen: 1729500000000,
-                last_seen: 1730200000000,
-              },
-            ],
-            alts: [
-              {
-                uuid: '999a79f4-1111-2222-3333-fca90e38aaf5',
-                name: 'SteveAlt',
-                pct: 94,
-                types: ['ip', 'fingerprint'],
-              },
-              {
-                uuid: '771b22c1-8899-4455-a1b2-ccdd11223344',
-                name: 'xX_DarkPvP_Xx',
-                pct: 82,
-                types: ['fingerprint'],
-              },
-            ],
-            scans: [
-              {
-                id: 101,
-                player: 'Steve',
-                scan_type: 'hack',
-                created_at: 1730800000000,
-                results: [
-                  { name: "Xaero's Minimap", status: 'DETECTED', line: 'xaero.minimap' },
-                  { name: 'Litematica', status: 'PROTECTED', line: 'key.litematica.open_gui' },
-                  { name: 'Baritone', status: 'NOT_DETECTED', line: 'baritone.active' },
-                  { name: 'Meteor Client', status: 'NOT_DETECTED', line: 'key.meteor-client.open-gui' },
-                  { name: 'Freecam (Mod)', status: 'SUSPECTED', line: 'key.freecam.toggle' },
-                ],
-              },
-              {
-                id: 98,
-                player: 'Steve',
-                scan_type: 'lang',
-                created_at: 1730750000000,
-                results: [
-                  { name: "Xaero's WorldMap", status: 'DETECTED', line: 'gui.xaero_world_map' },
-                  { name: 'ReplayMod', status: 'SKIPPED', line: 'replaymod.gui.settings' },
-                  { name: 'Sodium', status: 'NOT_DETECTED', line: 'sodium.options.title' },
-                ],
-              },
-            ],
-          },
-          SteveAlt: {
-            name: 'SteveAlt',
-            uuid: '999a79f4-1111-2222-3333-fca90e38aaf5',
-            online: true,
-            ping: 46,
-            known: true,
-            first_seen: 1730100000000,
-            last_seen: 1730800500000,
-            joins: 12,
-            client: {
-              live: true,
-              brand: 'fabric',
-              version_real: '1.21.4',
-              version_claimed: '1.21.4',
-              version_mismatch: false,
-              locale: 'ru_ru',
-              channels: ['meteor:client', 'xaerominimap:main', 'fabric:registry/sync'],
-              channel_count: 3,
-              fake_player: true,
-              exploit_preventer: true,
-            },
-            mods: [
-              { name: 'Meteor Client', last_seen: 1730800500000, via: 'channel' },
-              { name: "Xaero's Minimap", last_seen: 1730800500000, via: 'channel' },
-            ],
-            fingerprint: {
-              liquidbounce: true,
-              pack_hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-              last_seen: 1730800500000,
-              keys: ['key.meteor-client.open-gui', 'baritone.active', 'key.wurst.zoom'],
-            },
-            ips: [
-              {
-                ip: '194.87.12.34',
-                asn: 'AS49453',
-                country: 'RU',
-                provider: 'Selectel',
-                first_seen: 1730100000000,
-                last_seen: 1730800500000,
-              },
-            ],
-            alts: [
-              {
-                uuid: '069a79f4-44e9-4726-a5be-fca90e38aaf5',
-                name: 'Steve',
-                pct: 94,
-                types: ['ip', 'fingerprint'],
-              },
-              {
-                uuid: '771b22c1-8899-4455-a1b2-ccdd11223344',
-                name: 'xX_DarkPvP_Xx',
-                pct: 89,
-                types: ['ip', 'fingerprint'],
-              },
-            ],
-            scans: [
-              {
-                id: 102,
-                player: 'SteveAlt',
-                scan_type: 'hack',
-                created_at: 1730800500000,
-                results: [
-                  { name: 'Meteor Client', status: 'DETECTED', line: 'key.meteor-client.open-gui' },
-                  { name: 'Baritone', status: 'DETECTED', line: 'baritone.active' },
-                  { name: 'Wurst Client', status: 'PROTECTED', line: 'key.wurst.zoom' },
-                ],
-              },
-            ],
-          },
-          xX_DarkPvP_Xx: {
-            name: 'xX_DarkPvP_Xx',
-            uuid: '771b22c1-8899-4455-a1b2-ccdd11223344',
-            online: true,
-            ping: 118,
-            known: true,
-            first_seen: 1729900000000,
-            last_seen: 1730800900000,
-            joins: 84,
-            client: {
-              live: true,
-              brand: 'lunarclient:v2.16.4',
-              version_real: '1.21.1',
-              version_claimed: '1.20.4',
-              version_mismatch: true,
-              locale: 'en_us',
-              channels: ['lunarclient:pm', 'badlion:mods', 'voicechat:main'],
-              channel_count: 3,
-              fake_player: false,
-              exploit_preventer: false,
-            },
-            mods: [{ name: 'Simple Voice Chat', last_seen: 1730800900000, via: 'channel' }],
-            fingerprint: {
-              liquidbounce: true,
-              pack_hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-              last_seen: 1730800900000,
-              keys: ['liquidbounce.module.killaura', 'key.hitboxes.expand'],
-            },
-            ips: [
-              {
-                ip: '95.216.14.88',
-                asn: 'AS24940',
-                country: 'DE',
-                provider: 'Hetzner Online GmbH',
-                first_seen: 1729900000000,
-                last_seen: 1730800900000,
-              },
-            ],
-            alts: [
-              {
-                uuid: '069a79f4-44e9-4726-a5be-fca90e38aaf5',
-                name: 'Steve',
-                pct: 82,
-                types: ['fingerprint'],
-              },
-              {
-                uuid: '999a79f4-1111-2222-3333-fca90e38aaf5',
-                name: 'SteveAlt',
-                pct: 89,
-                types: ['ip', 'fingerprint'],
-              },
-            ],
-            scans: [
-              {
-                id: 103,
-                player: 'xX_DarkPvP_Xx',
-                scan_type: 'hack',
-                created_at: 1730800900000,
-                results: [
-                  { name: 'LiquidBounce NextGen', status: 'DETECTED', line: 'liquidbounce.module.killaura' },
-                  { name: 'Hitboxes+', status: 'SUSPECTED', line: 'key.hitboxes.expand' },
-                  { name: 'ReplayMod', status: 'NOT_DETECTED', line: 'replaymod.gui' },
-                ],
-              },
-            ],
-          },
-          Alex_Builder: {
-            name: 'Alex_Builder',
-            uuid: '3b91a100-5512-409e-991a-001122334455',
-            online: true,
-            ping: 19,
-            known: true,
-            first_seen: 1728000000000,
-            last_seen: 1730801100000,
-            joins: 214,
-            client: {
-              live: true,
-              brand: 'vanilla',
-              version_real: '1.21.4',
-              version_claimed: '1.21.4',
-              version_mismatch: false,
-              locale: 'en_us',
-              channels: ['minecraft:brand'],
-              channel_count: 1,
-              fake_player: false,
-              exploit_preventer: false,
-            },
-            mods: [],
-            fingerprint: {
-              liquidbounce: false,
-              pack_hash: '8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4',
-              last_seen: 1730801100000,
-              keys: ['key.attack', 'key.use', 'key.inventory'],
-            },
-            ips: [
-              {
-                ip: '81.19.72.104',
-                asn: 'AS8402',
-                country: 'RU',
-                provider: 'VimpelCom',
-                first_seen: 1728000000000,
-                last_seen: 1730801100000,
-              },
-            ],
-            alts: [],
-            scans: [
-              {
-                id: 100,
-                player: 'Alex_Builder',
-                scan_type: 'lang',
-                created_at: 1730700000000,
-                results: [
-                  { name: "Xaero's Minimap", status: 'NOT_DETECTED', line: 'xaero.minimap' },
-                  { name: 'Litematica', status: 'NOT_DETECTED', line: 'key.litematica.open_gui' },
-                  { name: 'Baritone', status: 'NOT_DETECTED', line: 'baritone.active' },
-                ],
-              },
-            ],
-          },
-          KillauraBot_09: {
-            name: 'KillauraBot_09',
-            uuid: 'f1993011-dead-beef-cafe-998877665544',
-            online: true,
-            ping: 4,
-            known: true,
-            first_seen: 1730790000000,
-            last_seen: 1730801200000,
-            joins: 3,
-            client: {
-              live: true,
-              brand: 'fabric',
-              version_real: '1.21.4',
-              version_claimed: '1.19.4',
-              version_mismatch: true,
-              locale: 'en_us',
-              channels: ['baritone:main', 'meteor:client'],
-              channel_count: 2,
-              fake_player: true,
-              exploit_preventer: true,
-            },
-            mods: [{ name: 'Baritone Automation', last_seen: 1730801200000, via: 'channel' }],
-            fingerprint: {
-              liquidbounce: true,
-              pack_hash: '0000000000000000000000000000000000000000000000000000000000000000',
-              last_seen: 1730801200000,
-              keys: ['baritone.active', 'key.meteor-client.open-gui'],
-            },
-            ips: [
-              {
-                ip: '45.142.212.61',
-                asn: 'AS209605',
-                country: 'NL',
-                provider: 'HostKey B.V.',
-                first_seen: 1730790000000,
-                last_seen: 1730801200000,
-              },
-            ],
-            alts: [
-              {
-                uuid: 'e8821011-dead-beef-cafe-998877665500',
-                name: 'KillauraBot_08',
-                pct: 98,
-                types: ['ip', 'fingerprint'],
-              },
-            ],
-            scans: [
-              {
-                id: 104,
-                player: 'KillauraBot_09',
-                scan_type: 'hack',
-                created_at: 1730801200000,
-                results: [
-                  { name: 'Baritone', status: 'DETECTED', line: 'baritone.active' },
-                  { name: 'Meteor Client', status: 'DETECTED', line: 'key.meteor-client.open-gui' },
-                  { name: 'ExploitPreventer Shield', status: 'PROTECTED', line: 'translation.shield.block' },
-                ],
-              },
-            ],
-          },
-          KillauraBot_08: {
-            name: 'KillauraBot_08',
-            uuid: 'e8821011-dead-beef-cafe-998877665500',
-            online: false,
-            ping: 0,
-            known: true,
-            first_seen: 1730700000000,
-            last_seen: 1730785000000,
-            joins: 5,
-            client: {
-              live: false,
-              brand: 'fabric',
-              version_real: '1.21.4',
-              version_claimed: '1.19.4',
-              version_mismatch: true,
-              locale: 'en_us',
-              channels: ['baritone:main'],
-              channel_count: 1,
-              fake_player: true,
-              exploit_preventer: true,
-            },
-            mods: [{ name: 'Baritone Automation', last_seen: 1730785000000, via: 'channel' }],
-            fingerprint: {
-              liquidbounce: true,
-              pack_hash: '0000000000000000000000000000000000000000000000000000000000000000',
-              last_seen: 1730785000000,
-              keys: ['baritone.active'],
-            },
-            ips: [
-              {
-                ip: '45.142.212.61',
-                asn: 'AS209605',
-                country: 'NL',
-                provider: 'HostKey B.V.',
-                first_seen: 1730700000000,
-                last_seen: 1730785000000,
-              },
-            ],
-            alts: [
-              {
-                uuid: 'f1993011-dead-beef-cafe-998877665544',
-                name: 'KillauraBot_09',
-                pct: 98,
-                types: ['ip', 'fingerprint'],
-              },
-            ],
-            scans: [
-              {
-                id: 95,
-                player: 'KillauraBot_08',
-                scan_type: 'hack',
-                created_at: 1730785000000,
-                results: [{ name: 'Baritone', status: 'DETECTED', line: 'baritone.active' }],
-              },
-            ],
-          },
-        },
-        links: {
-          nodes: [
-            { id: '069a79f4-44e9-4726-a5be-fca90e38aaf5', name: 'Steve', detected: false, links: 2, ips: ['194.87.12.34'], last_seen: 1730800000000 },
-            { id: '999a79f4-1111-2222-3333-fca90e38aaf5', name: 'SteveAlt', detected: true, links: 2, ips: ['194.87.12.34'], last_seen: 1730790000000 },
-            { id: '853c80ef-3c37-49fd-aa49-938b674adae6', name: 'Alex', detected: false, links: 1, ips: ['185.15.58.192'], last_seen: 1730780000000 },
-            { id: '771b22c1-8899-4455-a1b2-ccdd11223344', name: 'DarkPvP', detected: true, links: 2, ips: ['194.87.12.34'], last_seen: 1730700000000 }
-          ],
-          edges: [
-            { source: '069a79f4-44e9-4726-a5be-fca90e38aaf5', target: '999a79f4-1111-2222-3333-fca90e38aaf5', type: 'ip', label: '194.87.12.34', p: 0.94, provider: 'Selectel', country: 'RU' },
-            { source: '069a79f4-44e9-4726-a5be-fca90e38aaf5', target: '999a79f4-1111-2222-3333-fca90e38aaf5', type: 'rptrack', label: '18 packs', p: 0.88 },
-            { source: '069a79f4-44e9-4726-a5be-fca90e38aaf5', target: '853c80ef-3c37-49fd-aa49-938b674adae6', type: 'client', label: 'fabric, 2 channels', p: 0.35 },
-            { source: '999a79f4-1111-2222-3333-fca90e38aaf5', target: '771b22c1-8899-4455-a1b2-ccdd11223344', type: 'ip', label: '194.87.12.34', p: 0.92, provider: 'Selectel', country: 'RU' }
-          ]
-        },
-      };
-
-      function mockFallbackHandler(path, options = {}) {
-        const method = (options.method || 'GET').toUpperCase();
-        const urlObj = new URL(path, 'http://localhost');
-        const pathname = urlObj.pathname;
-
-        if (method === 'GET' && pathname === '/api/validate') {
-          return MOCK_STORE.operator;
-        }
-        if (method === 'GET' && pathname === '/api/stats') {
-          return MOCK_STORE.stats;
-        }
-        if (method === 'GET' && pathname === '/api/players/online') {
-          return Object.values(MOCK_STORE.players)
-            .filter((p) => p.online)
-            .map((p) => {
-              const latestScan = (p.scans || [])[0];
-              return {
-                name: p.name,
-                uuid: p.uuid,
-                ping: p.ping,
-                last_check: latestScan ? latestScan.created_at : p.last_seen,
-              };
-            });
-        }
-        if (method === 'GET' && pathname === '/api/players/search') {
-          const q = (urlObj.searchParams.get('q') || '').toLowerCase();
-          return Object.values(MOCK_STORE.players)
-            .filter((p) => p.name.toLowerCase().includes(q) || p.uuid.toLowerCase().includes(q))
-            .map((p) => ({ name: p.name, uuid: p.uuid, online: p.online, ping: p.ping }));
-        }
-        if (method === 'GET' && pathname.startsWith('/api/player/')) {
-          const name = decodeURIComponent(pathname.replace('/api/player/', ''));
-          return (
-            MOCK_STORE.players[name] ||
-            Object.values(MOCK_STORE.players).find((p) => p.name.toLowerCase() === name.toLowerCase()) ||
-            MOCK_STORE.players.Steve
-          );
-        }
-        if (method === 'GET' && pathname === '/api/scans') {
-          const all = [];
-          Object.values(MOCK_STORE.players).forEach((p) => {
-            (p.scans || []).forEach((s) => all.push({ ...s, player: p.name, uuid: p.uuid }));
-          });
-          all.sort((a, b) => b.created_at - a.created_at);
-          return all;
-        }
-        if (method === 'POST' && pathname === '/api/scan/run') {
-          const body = options.body ? JSON.parse(options.body) : { player: 'Steve', type: 'hack' };
-          const target =
-            MOCK_STORE.players[body.player] ||
-            Object.values(MOCK_STORE.players).find(
-              (p) => p.name.toLowerCase() === String(body.player || '').toLowerCase()
-            ) ||
-            MOCK_STORE.players.Steve;
-          const scan = {
-            id: MOCK_STORE.nextScanId++,
-            player: target.name,
-            scan_type: body.type === 'lang' ? 'lang' : 'hack',
-            created_at: Date.now(),
-            results:
-              body.type === 'lang'
-                ? [
-                    { name: "Xaero's WorldMap", status: 'DETECTED', line: 'gui.xaero_world_map' },
-                    { name: 'Litematica', status: 'PROTECTED', line: 'litematica.gui.button.config_menu' },
-                    { name: 'MiniHUD', status: 'SUSPECTED', line: 'minihud.gui.title.configs' },
-                    { name: 'Sodium', status: 'NOT_DETECTED', line: 'sodium.options.buttons.donate' },
-                  ]
-                : [
-                    { name: "Xaero's Minimap", status: 'DETECTED', line: 'xaero.minimap' },
-                    { name: 'Litematica', status: 'PROTECTED', line: 'key.litematica.open_gui' },
-                    { name: 'Dojo / Grim Bypass', status: 'SUSPECTED', line: 'key.grim.blink_queue' },
-                    { name: 'Baritone', status: target.client.fake_player ? 'DETECTED' : 'NOT_DETECTED', line: 'baritone.active' },
-                    { name: 'ThunderHack Recode', status: 'NOT_DETECTED', line: 'key.thunderhack.clickgui' },
-                  ],
-          };
-          target.scans.unshift(scan);
-          MOCK_STORE.stats.scans += 1;
-          MOCK_STORE.stats.detections += scan.results.filter((r) => r.status === 'DETECTED').length;
-          return { ok: true, scan };
-        }
-        if (method === 'DELETE' && pathname.startsWith('/api/scan/')) {
-          const id = Number(pathname.replace('/api/scan/', ''));
-          Object.values(MOCK_STORE.players).forEach((p) => {
-            p.scans = (p.scans || []).filter((s) => s.id !== id);
-          });
-          return { ok: true, deleted_id: id };
-        }
-        if (method === 'GET' && pathname === '/api/links') {
-          return MOCK_STORE.links;
-        }
-        if (method === 'GET' && pathname.startsWith('/api/links/')) {
-          const uid = decodeURIComponent(pathname.replace('/api/links/', ''));
-          const p = Object.values(MOCK_STORE.players).find(x => x.uuid === uid || x.name === uid) || MOCK_STORE.players.Steve;
-          return {
-            ips: p.ips || [{ ip: '194.87.12.34', asn: 'AS49453', country: 'RU', provider: 'Selectel' }],
-            mods: p.mods || [{ name: "Xaero's WorldMap", last_seen: Date.now() - 3600000, via: 'channel' }],
-            fingerprint: { liquidbounce: false, last_seen: Date.now() - 3600000, mask: 0x1f }
-          };
-        }
-        return {};
-      }
-
-      async function apiRequest(path, options = {}) {
-        const tokenizedUrl = withToken(path);
-        if (window.location.protocol === 'file:') {
-          return mockFallbackHandler(tokenizedUrl, options);
-        }
-        try {
-          const res = await fetch(tokenizedUrl, {
-            ...options,
-            headers: {
-              'Content-Type': 'application/json',
-              ...(options.headers || {}),
-            },
-          });
-          if (res.status === 401) {
-            handleSessionExpired();
-            throw new Error('Session expired');
-          }
-          const contentType = res.headers.get('content-type') || '';
-          if (!res.ok) {
-            let errMsg = 'HTTP ' + res.status;
-            if (contentType.includes('application/json')) {
-              try {
-                const j = await res.json();
-                if (j.error) errMsg = j.error;
-              } catch (_) {}
-            }
-            throw new Error(errMsg);
-          }
-          return contentType.includes('application/json') ? await res.json() : {};
-        } catch (_err) {
-          if (window.location.protocol === 'file:' || _err.message === 'Failed to fetch') {
-            return mockFallbackHandler(tokenizedUrl, options);
-          }
-          throw _err;
-        }
-      }
-
-      function handleSessionExpired() {
-        showStatusBanner('Session expired. Run /hackeditor in Minecraft.', 'danger');
-        const badge = document.getElementById('sessionTimerBadge');
-        if (badge) {
-          badge.textContent = 'EXPIRED';
-          badge.style.color = 'var(--danger-fg)';
-        }
-      }
-
-      function startSessionClock(expiresAt) {
-        const badge = document.getElementById('sessionTimerBadge');
-        if (!badge || !expiresAt) return;
-        const tick = () => {
-          const left = expiresAt - Date.now();
-          if (left <= 0) {
-            badge.textContent = 'EXPIRED';
-            badge.style.color = 'var(--danger-fg)';
-            handleSessionExpired();
-            return;
-          }
-          const min = Math.ceil(left / 60000);
-          badge.textContent = min + 'm left';
-          badge.style.color = min <= 2 ? 'var(--warning-fg)' : 'var(--text-muted)';
-        };
-        setInterval(tick, 15000);
-        tick();
-      }
-
-      // ============================================================================
-      // 4. APPLICATION STATE & HELPERS
-      // ============================================================================
-      const STATE = {
-        activeView: 'overview',
-        selectedPlayerName: 'Steve',
-        currentPlayer: null,
-        onlinePlayers: [],
-        sidebarFilter: '',
-        modFilter: 'ALL',
-        historyScans: [],
-        historyFilter: 'ALL',
-        graphData: { nodes: [], edges: [] },
-        graphMinPct: 0,
-        selectedGraphNodeId: 'Steve',
-      };
-
-      function formatTimestamp(ms) {
-        if (!ms) return '—';
-        const d = new Date(ms);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const hh = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        return yyyy + '-' + mm + '-' + dd + ' ' + hh + ':' + min;
-      }
-
-      function formatShortCheckTime(ms) {
-        if (!ms) return 'Unchecked';
-        const d = new Date(ms);
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const hh = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        return mm + '-' + dd + ' ' + hh + ':' + min;
-      }
-
-      function formatCompactUuid(uuid) {
-        const s = String(uuid || '');
-        if (s.length <= 16) return s;
-        return s.slice(0, 8) + '...' + s.slice(-6);
-      }
-
-      function escapeHtml(str) {
-        return String(str ?? '')
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;');
-      }
-
-      function showStatusBanner(msg) {
-        const banner = document.getElementById('statusFeedbackBanner');
-        const text = document.getElementById('statusFeedbackText');
-        if (banner && text) {
-          text.textContent = msg;
-          banner.classList.add('visible');
-        }
-      }
-
-      function buildCombinedModMatrix(player) {
-        const map = new Map();
-        const scans = Array.isArray(player.scans) ? [...player.scans] : [];
-        scans.sort((a, b) => a.created_at - b.created_at);
-        scans.forEach((scan) => {
-          (scan.results || []).forEach((r) => {
-            map.set(r.name.toLowerCase(), {
-              name: r.name,
-              status: r.status,
-              line: r.line,
-              via: scan.scan_type,
-              timestamp: scan.created_at,
-            });
-          });
-        });
-        (player.mods || []).forEach((m) => {
-          const k = m.name.toLowerCase();
-          if (!map.has(k)) {
-            map.set(k, {
-              name: m.name,
-              status: 'DETECTED',
-              line: 'channel:' + m.via,
-              via: 'channel',
-              timestamp: m.last_seen || player.last_seen,
-            });
-          }
-        });
-        if (player.fingerprint) {
-          map.set('liquidbounce fingerprint', {
-            name: 'LiquidBounce Fingerprint',
-            status: player.fingerprint.liquidbounce ? 'DETECTED' : 'NOT_DETECTED',
-            line: player.fingerprint.pack_hash
-              ? 'pack_hash:' + player.fingerprint.pack_hash.slice(0, 12)
-              : 'rptrack.liquidbounce',
-            via: 'fingerprint',
-            timestamp: player.fingerprint.last_seen || player.last_seen,
-          });
-        }
-        const order = { DETECTED: 0, SUSPECTED: 1, PROTECTED: 2, SKIPPED: 3, NOT_DETECTED: 4 };
-        return Array.from(map.values()).sort(
-          (a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || a.name.localeCompare(b.name)
-        );
-      }
-
-      function calculateRisk(player) {
-        let score = 0;
-        if (player.client?.fake_player) score += 45;
-        if (player.client?.exploit_preventer) score += 20;
-        if (player.client?.version_mismatch) score += 20;
-        if (player.fingerprint?.liquidbounce) score += 50;
-        const matrix = buildCombinedModMatrix(player);
-        score += matrix.filter((m) => m.status === 'DETECTED').length * 25;
-        score += matrix.filter((m) => m.status === 'PROTECTED').length * 10;
-        score = Math.min(100, score);
-        const level = score >= 60 ? 'CRITICAL' : score >= 25 ? 'ELEVATED' : 'NOMINAL';
-        return { score, level };
-      }
-
-      function statusPillMarkup(status) {
-        const map = {
-          DETECTED: { cls: 'danger', label: 'DETECTED' },
-          PROTECTED: { cls: 'warning', label: 'PROTECTED' },
-          SUSPECTED: { cls: 'suspected', label: 'SUSPECTED' },
-          NOT_DETECTED: { cls: 'success', label: 'NOT_DETECTED' },
-          SKIPPED: { cls: 'neutral', label: 'SKIPPED' },
-        };
-        const cfg = map[status] || { cls: 'neutral', label: status };
-        return '<span class="sec-pill ' + cfg.cls + '">' + escapeHtml(cfg.label) + '</span>';
-      }
-
-      // ============================================================================
-      // 5. RENDER FUNCTIONS
-      // ============================================================================
-      function renderStats(stats) {
-        const elScans = document.getElementById('statScans');
-        const elDet = document.getElementById('statDetections');
-        const elPlayers = document.getElementById('statPlayers');
-        const elOnline = document.getElementById('statOnline');
-        const elLinks = document.getElementById('statLinks');
-        if (elScans) elScans.textContent = Number(stats.scans || 0).toLocaleString();
-        if (elDet) elDet.textContent = Number(stats.detections || 0).toLocaleString();
-        if (elPlayers) elPlayers.textContent = Number(stats.players || 0).toLocaleString();
-        if (elOnline) elOnline.textContent = Number(stats.online || 0).toLocaleString();
-        if (elLinks) elLinks.textContent = Number(stats.links || 0).toLocaleString();
-      }
-
-      function renderOnlineSidebar() {
-        const listEl = document.getElementById('onlinePlayersList');
-        const countEl = document.getElementById('sidebarOnlineCount');
-        const q = STATE.sidebarFilter.trim().toLowerCase();
-
-        const filtered = STATE.onlinePlayers.filter(
-          (p) => !q || p.name.toLowerCase().includes(q) || (p.uuid && p.uuid.toLowerCase().includes(q))
-        );
-
-        countEl.textContent = filtered.length + ' active';
-
-        if (filtered.length === 0) {
-          listEl.innerHTML = '<div class="empty-box">No matching online players</div>';
-          return;
-        }
-
-        listEl.innerHTML = filtered
-          .map((p) => {
-            const isSelected = p.name.toLowerCase() === STATE.selectedPlayerName.toLowerCase();
-            const pingCls = p.ping < 60 ? 'good' : p.ping < 110 ? 'warn' : '';
-            const fullRecord = MOCK_STORE.players[p.name];
-            const riskObj = fullRecord ? calculateRisk(fullRecord) : { level: 'NOMINAL' };
-            const riskCls =
-              riskObj.level === 'CRITICAL' ? 'crit' : riskObj.level === 'ELEVATED' ? 'warn' : 'clean';
-            const fallbackUri = createFallbackAvatarDataUri(p.name);
-            const latestScanTime =
-              p.last_check ||
-              (fullRecord && fullRecord.scans && fullRecord.scans[0] && fullRecord.scans[0].created_at) ||
-              (fullRecord && fullRecord.last_seen);
-
-            return (
-              '<button type="button" class="player-row-btn ' +
-              (isSelected ? 'selected' : '') +
-              '" data-select-player="' +
-              escapeHtml(p.name) +
-              '" aria-label="Inspect player ' +
-              escapeHtml(p.name) +
-              '">' +
-              '<div class="player-row-left">' +
-              '<img class="player-mini-avatar" src="https://mc-heads.net/avatar/' +
-              encodeURIComponent(p.name) +
-              '/64" alt="' +
-              escapeHtml(p.name) +
-              '" referrerpolicy="no-referrer" data-fallback="' +
-              fallbackUri +
-              '" onerror="if(this.src!==this.dataset.fallback)this.src=this.dataset.fallback;" />' +
-              '<div class="player-row-meta">' +
-              '<span class="player-row-name">' +
-              escapeHtml(p.name) +
-              '</span>' +
-              '<span class="player-row-sub mono" title="Last check timestamp">Check: ' +
-              escapeHtml(formatShortCheckTime(latestScanTime)) +
-              '</span>' +
-              '</div>' +
-              '</div>' +
-              '<div class="player-row-right">' +
-              '<span class="ping-tag ' +
-              pingCls +
-              '">' +
-              Number(p.ping || 0) +
-              'ms</span>' +
-              '<span class="risk-micro-label ' +
-              riskCls +
-              '">' +
-              riskObj.level +
-              '</span>' +
-              '</div>' +
-              '</button>'
-            );
-          })
-          .join('');
-      }
-
-      function renderPlayerDossier(player) {
-        if (!player) return;
-        STATE.currentPlayer = player;
-        STATE.selectedPlayerName = player.name;
-
-        const avatarImg = document.getElementById('dossierAvatarImg');
-        const fallbackUri = createFallbackAvatarDataUri(player.name);
-        avatarImg.onerror = function () {
-          if (this.src !== fallbackUri) {
-            this.src = fallbackUri;
-          }
-        };
-        avatarImg.src = 'https://mc-heads.net/avatar/' + encodeURIComponent(player.name) + '/64';
-        avatarImg.alt = player.name + ' Avatar';
-
-        document.getElementById('dossierPlayerName').textContent = player.name;
-        const onlineBadge = document.getElementById('dossierOnlineBadge');
-        onlineBadge.textContent = player.online ? 'ONLINE' : 'OFFLINE';
-        onlineBadge.className = 'sec-pill ' + (player.online ? 'success' : 'neutral');
-
-        const risk = calculateRisk(player);
-        const riskBadge = document.getElementById('dossierRiskBadge');
-        riskBadge.textContent = 'RISK: ' + risk.level + ' (' + risk.score + '/100)';
-        riskBadge.className =
-          'sec-pill ' +
-          (risk.level === 'CRITICAL' ? 'danger' : risk.level === 'ELEVATED' ? 'warning' : 'success');
-
-        document.getElementById('dossierUuidText').textContent = player.uuid;
-        document.getElementById('dossierFirstSeen').textContent = formatTimestamp(player.first_seen);
-        document.getElementById('dossierLastSeen').textContent = formatTimestamp(player.last_seen);
-        document.getElementById('dossierJoins').textContent = String(player.joins || 0);
-
-        // Security Flag Pills
-        const flagsStrip = document.getElementById('dossierFlagsStrip');
-        const pills = ['<span class="flags-strip-label">Security Heuristics</span>'];
-
-        if (player.client?.fake_player) {
-          pills.push(
-            '<span class="sec-pill danger">' +
-              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>' +
-              escapeHtml(t('flag.fake_player')) +
-              '</span>'
-          );
-        } else {
-          pills.push('<span class="sec-pill neutral">FakePlayer: Clean</span>');
-        }
-
-        if (player.client?.exploit_preventer) {
-          pills.push(
-            '<span class="sec-pill warning">' +
-              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
-              escapeHtml(t('flag.exploit_preventer')) +
-              '</span>'
-          );
-        } else {
-          pills.push('<span class="sec-pill neutral">ExploitPreventer: Inactive</span>');
-        }
-
-        if (player.client?.version_mismatch) {
-          pills.push(
-            '<span class="sec-pill warning">' +
-              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>' +
-              escapeHtml(
-                t('flag.version_mismatch', 'Real ' + player.client.version_real, 'Handshake ' + player.client.version_claimed)
-              ) +
-              '</span>'
-          );
-        } else {
-          pills.push(
-            '<span class="sec-pill neutral">Version Handshake Verified (' +
-              escapeHtml(player.client?.version_real || '1.21.4') +
-              ')</span>'
-          );
-        }
-
-        if (player.fingerprint?.liquidbounce) {
-          pills.push('<span class="sec-pill danger">' + escapeHtml(t('flag.liquidbounce')) + '</span>');
-        }
-
-        flagsStrip.innerHTML = pills.join('');
-
-        // Client Details Card
-        document.getElementById('clientBrandVal').textContent = player.client?.brand || 'unknown';
-        document.getElementById('clientVersionVal').innerHTML = player.client?.version_mismatch
-          ? '<span style="color: var(--warning-fg); font-weight: 600;">Real: ' +
-            escapeHtml(player.client.version_real) +
-            ' / Claimed: ' +
-            escapeHtml(player.client.version_claimed) +
-            '</span>'
-          : escapeHtml(player.client?.version_real || '—');
-        document.getElementById('clientLocaleVal').textContent = player.client?.locale || 'en_us';
-        document.getElementById('clientFakePlayerVal').innerHTML = player.client?.fake_player
-          ? '<span class="sec-pill danger">HEADLESS BOT DETECTED</span>'
-          : '<span class="sec-pill success">HUMAN INPUT TIMING</span>';
-        document.getElementById('clientExploitPreventerVal').innerHTML = player.client?.exploit_preventer
-          ? '<span class="sec-pill warning">TRANSLATIONS BLOCKED</span>'
-          : '<span class="sec-pill success">UNRESTRICTED</span>';
-
-        const channels = player.client?.channels || [];
-        document.getElementById('clientChannelCount').textContent = String(
-          player.client?.channel_count ?? channels.length
-        );
-        document.getElementById('clientChannelsBox').innerHTML =
-          channels.length > 0
-            ? channels.map((c) => '<span class="channel-token">' + escapeHtml(c) + '</span>').join('')
-            : '<span class="mono" style="color: var(--text-muted);">None</span>';
-        document.getElementById('clientPackHashVal').textContent = player.fingerprint?.pack_hash || '—';
-
-        // RPTrack Keys
-        const rpKeys =
-          player.fingerprint?.keys ||
-          player.fingerprint?.rptrack_keys ||
-          player.rptrack_keys ||
-          (player.scans && player.scans[0]
-            ? player.scans[0].results.map((r) => r.line).slice(0, 3)
-            : []);
-        document.getElementById('clientRpTrackCount').textContent = String(rpKeys.length);
-        document.getElementById('clientRpTrackKeysBox').innerHTML =
-          rpKeys.length > 0
-            ? rpKeys.map((k) => '<span class="channel-token">' + escapeHtml(k) + '</span>').join('')
-            : '<span class="mono" style="color: var(--text-muted);">None captured</span>';
-
-        renderModMatrixTable(player);
-        renderAltsTable(player);
-        renderIpsTable(player);
-        renderOnlineSidebar();
-      }
-
-      function renderModMatrixTable(player) {
-        const tbody = document.getElementById('modMatrixTableBody');
-        const allItems = buildCombinedModMatrix(player);
-        const filtered =
-          STATE.modFilter === 'ALL' ? allItems : allItems.filter((item) => item.status === STATE.modFilter);
-
-        if (filtered.length === 0) {
-          tbody.innerHTML =
-            '<tr><td colspan="5" class="empty-box">No mod signatures match filter (' +
-            escapeHtml(STATE.modFilter) +
-            '). Click "Run Hack Check" or "Run Lang Check" to probe client.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = filtered
-          .map(
-            (item) =>
-              '<tr>' +
-              '<td style="font-weight: 600;">' +
-              escapeHtml(item.name) +
-              '</td>' +
-              '<td class="mono" style="color: var(--text-secondary); font-size: 11px;">' +
-              escapeHtml(item.line) +
-              '</td>' +
-              '<td class="mono" style="color: var(--text-secondary); font-size: 11px; white-space: nowrap;">' +
-              escapeHtml(formatShortCheckTime(item.timestamp || player.last_seen)) +
-              '</td>' +
-              '<td class="mono" style="text-transform: uppercase; font-size: 10.5px; color: var(--text-muted);">' +
-              escapeHtml(item.via || 'hack') +
-              '</td>' +
-              '<td>' +
-              statusPillMarkup(item.status) +
-              '</td>' +
-              '</tr>'
-          )
-          .join('');
-      }
-
-      function renderAltsTable(player) {
-        const tbody = document.getElementById('altsTableBody');
-        const alts = player.alts || [];
-        document.getElementById('altsCountLabel').textContent =
-          alts.length + (alts.length === 1 ? ' linked account' : ' linked accounts');
-
-        if (alts.length === 0) {
-          tbody.innerHTML =
-            '<tr><td colspan="5" class="empty-box">No linked alternate accounts detected for this player.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = alts
-          .map((alt) => {
-            const barColor =
-              alt.pct >= 90 ? 'var(--danger-fg)' : alt.pct >= 75 ? 'var(--warning-fg)' : 'var(--accent-primary)';
-            return (
-              '<tr>' +
-              '<td>' +
-              '<button type="button" class="table-link-btn" data-select-player="' +
-              escapeHtml(alt.name) +
-              '">' +
-              escapeHtml(alt.name) +
-              '</button>' +
-              '</td>' +
-              '<td class="mono" style="color: var(--text-secondary); font-size: 11px; white-space: nowrap;" title="' +
-              escapeHtml(alt.uuid) +
-              '">' +
-              escapeHtml(formatCompactUuid(alt.uuid)) +
-              '</td>' +
-              '<td>' +
-              '<div class="conf-meter">' +
-              '<span class="mono" style="font-weight: 600;">' +
-              Number(alt.pct) +
-              '%</span>' +
-              '<div class="conf-track"><div class="conf-fill" style="width: ' +
-              Math.min(100, Number(alt.pct)) +
-              '%; background: ' +
-              barColor +
-              ';"></div></div>' +
-              '</div>' +
-              '</td>' +
-              '<td style="white-space: nowrap;">' +
-              (alt.types || [])
-                .map((tp) => '<span class="channel-token" style="margin-right:3px;">' + escapeHtml(tp) + '</span>')
-                .join('') +
-              '</td>' +
-              '<td>' +
-              '<button type="button" class="btn btn-secondary" style="padding: 3px 8px; font-size: 10.5px;" data-select-player="' +
-              escapeHtml(alt.name) +
-              '">Inspect</button>' +
-              '</td>' +
-              '</tr>'
-            );
-          })
-          .join('');
-      }
-
-      function renderIpsTable(player) {
-        const tbody = document.getElementById('ipsTableBody');
-        const ips = player.ips || [];
-        document.getElementById('ipsCountLabel').textContent =
-          ips.length + (ips.length === 1 ? ' endpoint' : ' endpoints');
-
-        if (ips.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" class="empty-box">No IP history recorded.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = ips
-          .map(
-            (row) =>
-              '<tr>' +
-              '<td class="mono" style="font-weight: 600; white-space: nowrap;">' +
-              escapeHtml(row.ip) +
-              '</td>' +
-              '<td class="mono" style="color: var(--accent-primary); white-space: nowrap;">' +
-              escapeHtml(row.asn) +
-              '</td>' +
-              '<td class="mono">' +
-              escapeHtml(row.country) +
-              '</td>' +
-              '<td>' +
-              escapeHtml(row.provider) +
-              '</td>' +
-              '<td class="mono" style="color: var(--text-secondary); font-size: 11px; white-space: nowrap;">' +
-              formatTimestamp(row.last_seen) +
-              '</td>' +
-              '</tr>'
-          )
-          .join('');
-      }
-
-      function renderHistoryView() {
-        const tbody = document.getElementById('historyTableBody');
-        const totalEl = document.getElementById('historyTotalLabel');
-        const filtered =
-          STATE.historyFilter === 'ALL'
-            ? STATE.historyScans
-            : STATE.historyScans.filter((s) => s.scan_type === STATE.historyFilter);
-
-        totalEl.textContent = 'Showing ' + filtered.length + ' scans';
-
-        if (filtered.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="empty-box">No scan records match current filter.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = filtered
-          .map((scan) => {
-            const results = scan.results || [];
-            const detCount = results.filter((r) => r.status === 'DETECTED').length;
-            const protCount = results.filter((r) => r.status === 'PROTECTED').length;
-            const cleanCount = results.filter((r) => r.status === 'NOT_DETECTED').length;
-            const primaryFindings = results
-              .filter((r) => r.status === 'DETECTED' || r.status === 'PROTECTED' || r.status === 'SUSPECTED')
-              .slice(0, 3)
-              .map((r) => escapeHtml(r.name) + ' (' + escapeHtml(r.status) + ')')
-              .join(' · ');
-
-            return (
-              '<tr>' +
-              '<td class="mono" style="font-weight: 600;">#' +
-              Number(scan.id) +
-              '</td>' +
-              '<td>' +
-              '<button type="button" class="table-link-btn" data-select-player="' +
-              escapeHtml(scan.player || 'Steve') +
-              '">' +
-              escapeHtml(scan.player || 'Steve') +
-              '</button>' +
-              '</td>' +
-              '<td><span class="channel-token" style="text-transform: uppercase;">' +
-              escapeHtml(scan.scan_type) +
-              '</span></td>' +
-              '<td class="mono" style="color: var(--text-secondary); font-size: 11px; white-space: nowrap;">' +
-              formatTimestamp(scan.created_at) +
-              '</td>' +
-              '<td class="mono" style="font-size: 11px; white-space: nowrap;">' +
-              '<span style="color: var(--danger-fg); font-weight:600;">' +
-              detCount +
-              ' Detected</span> · ' +
-              '<span style="color: var(--warning-fg);">' +
-              protCount +
-              ' Protected</span> · ' +
-              '<span style="color: var(--success-fg);">' +
-              cleanCount +
-              ' Clean</span>' +
-              '</td>' +
-              '<td style="color: var(--text-secondary); font-size: 11.5px;">' +
-              (primaryFindings || 'All signatures clean') +
-              '</td>' +
-              '<td>' +
-              '<button type="button" class="btn btn-danger-ghost" data-delete-scan="' +
-              Number(scan.id) +
-              '" aria-label="Delete Scan #' +
-              Number(scan.id) +
-              '">Delete</button>' +
-              '</td>' +
-              '</tr>'
-            );
-          })
-          .join('');
-      }
-
-      // ============================================================================
-      // 6. 3D FORCE-DIRECTED ALT GRAPH ENGINE (THREE.JS + 3D-FORCE-GRAPH)
-      // ============================================================================
-      let graph3d = null, graphRaf = 0;
-
-      function stopGraph() {
-        if (graphRaf) cancelAnimationFrame(graphRaf);
-        graphRaf = 0;
-        if (!graph3d) return;
-        const g = graph3d;
-        graph3d = null;
-        try {
-          g.scene().traverse(o => {
-            if (o.geometry) o.geometry.dispose();
-            [].concat(o.material || []).forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });
-          });
-          if (typeof g._destructor === 'function') g._destructor();
-          const r = g.renderer();
-          if (r && r.dispose) {
-            r.dispose();
-            if (r.forceContextLoss) r.forceContextLoss();
-          }
-          const c = g.controls();
-          if (c && c.dispose) c.dispose();
-        } catch (e) { console.warn('[links] stopGraph', e); }
-      }
-
-      const FACES = [
-        [16, 8], [0, 8], [8, 0], [16, 0], [8, 8], [24, 8]
-      ];
-
-      function textSprite(text, height, colour) {
-        if (typeof THREE === 'undefined') return { visible: false };
-        const c = document.createElement('canvas'), g = c.getContext('2d');
-        const font = '600 48px system-ui, -apple-system, Segoe UI, sans-serif';
-        g.font = font;
-        c.width = Math.ceil(g.measureText(text).width) + 20; c.height = 64;
-        g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.lineWidth = 8; g.strokeStyle = 'rgba(0,0,0,.85)'; g.lineJoin = 'round';
-        g.strokeText(text, c.width / 2, 33);
-        g.fillStyle = '#ffffff'; g.fillText(text, c.width / 2, 33);
-        const t = new THREE.CanvasTexture(c);
-        t.colorSpace = THREE.SRGBColorSpace; t.minFilter = THREE.LinearFilter; t.generateMipmaps = false;
-        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: t, color: colour, transparent: true, depthWrite: false}));
-        sprite.scale.set(height * c.width / c.height, height, 1);
-        sprite.raycast = () => {};
-        return sprite;
-      }
-
-      function skinCube(n, size) {
-        if (typeof THREE === 'undefined') return null;
-        const edge = size, colour = n.detected ? 0xf85149 : 0x4493f8;
-        const group = new THREE.Group();
-        const canvases = FACES.map(() => { const c = document.createElement('canvas'); c.width = c.height = 8; return c; });
-        const mats = canvases.map(c => {
-          const t = new THREE.CanvasTexture(c);
-          t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
-          t.colorSpace = THREE.SRGBColorSpace;
-          return new THREE.MeshBasicMaterial({map: t, color: n.skin ? 0xffffff : colour});
-        });
-        if (n.skin) {
-          const img = new Image();
-          img.onload = () => {
-            const probe = document.createElement('canvas'); probe.width = 32; probe.height = 16;
-            const pg = probe.getContext('2d'); pg.drawImage(img, 32, 0, 32, 16, 0, 0, 32, 16);
-            const px = pg.getImageData(0, 0, 32, 16).data;
-            let hat = false; for (let i = 3; i < px.length; i += 4) if (px[i] < 128) { hat = true; break; }
-            canvases.forEach((c, i) => {
-              const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
-              g.drawImage(img, FACES[i][0], FACES[i][1], 8, 8, 0, 0, 8, 8);
-              if (hat) g.drawImage(img, FACES[i][0] + 32, FACES[i][1], 8, 8, 0, 0, 8, 8);
-              mats[i].map.needsUpdate = true;
-            });
-          };
-          img.src = 'data:image/png;base64,' + n.skin;
-        } else {
-          // Draw deterministic 8x8 face fallback
-          canvases.forEach((c) => {
-            const g = c.getContext('2d');
-            g.fillStyle = n.detected ? '#ef4444' : '#3b82f6';
-            g.fillRect(0, 0, 8, 8);
-            g.fillStyle = '#1e293b';
-            g.fillRect(1, 2, 2, 2);
-            g.fillRect(5, 2, 2, 2);
-            mats.forEach(m => { m.map.needsUpdate = true; });
-          });
-        }
-        const cube = new THREE.Mesh(new THREE.BoxGeometry(edge, edge, edge), mats);
-        group.add(cube);
-        cube.raycast = () => {};
-        const hit = new THREE.Mesh(new THREE.BoxGeometry(edge, edge, edge), new THREE.MeshBasicMaterial({visible: false}));
-        group.add(hit);
-        n._hit = hit;
-        const frame = new THREE.Mesh(new THREE.BoxGeometry(edge * 1.12, edge * 1.12, edge * 1.12),
-          new THREE.MeshBasicMaterial({color: colour, side: THREE.BackSide}));
-        frame.raycast = () => {};
-        group.add(frame);
-        const label = textSprite(n.name, 6.5, 0xc9d1d9);
-        label.center.set(0.5, 1 + edge * 0.866 / 6.5);
-        group.add(label);
-        n._cube = cube; n._frame = frame; n._label = label;
-        return group;
-      }
-
-      function provider(r) {
-        return [r.org || r.provider, r.asn ? 'AS' + r.asn : '', r.country].filter(Boolean).join(' · ');
-      }
-
-      function describeEdge(e) {
-        if (e.type === 'rptrack' || e.type === 'fingerprint') return t('fingerprint {0}', t('{0} packs', parseInt(e.label) || 5));
-        if (e.type === 'client') return t('client {0}', e.label);
-        let s = t('address {0}', e.label === '(hidden)' ? t('(hidden)') : (e.label || 'shared IP'));
-        if (e.org !== undefined || e.provider !== undefined) s += ' (' + provider(e) + ')';
-        if (e.weak) s += ' — ' + t('VPN / hosting, counts less');
-        return s;
-      }
-
-      async function showLinks(focus) {
-        const box = document.getElementById('graph-box');
-        if (!box) return;
-        if (typeof ForceGraph3D === 'undefined') {
-          box.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;">Loading 3D Force Graph library (/web/3d-force-graph.min.js)...</div>';
-          return;
-        }
-        box.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;">' + t('Loading Alt Graph...') + '</div>';
-
-        let data;
-        try {
-          data = await apiRequest('/api/links');
-        } catch(e) {
-          box.innerHTML = '<div style="padding:20px;color:var(--danger-fg);">' + escapeHtml(e.message) + '</div>';
-          return;
-        }
-        if (!data || !data.nodes || !data.nodes.length) {
-          box.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;">' + t('No linked accounts yet. Links appear when accounts join from the same address, share an RPTrack fingerprint or play with the same uncommon client.') + '</div>';
-          return;
-        }
-
-        let hl = '', searchScale = 1, hover = null, selected = null, fitted = false, ownMoveUntil = 0, lastCam = null, lastLog = 0;
-        const matches = n => (n.name || '').toLowerCase().includes(hl) || (n.ips || []).some(ip => ip.startsWith(hl));
-        const dbgBox = document.createElement('pre'); dbgBox.className = 'dbg-log'; dbgBox.style.display = 'none';
-        const dbgOn = () => document.getElementById('g-dbg') && document.getElementById('g-dbg').checked;
-        const dbg = msg => {
-          if (!dbgOn()) return;
-          const tNow = new Date().toISOString().slice(11, 23);
-          console.log('[links] ' + msg);
-          dbgBox.textContent = (dbgBox.textContent + tNow + ' ' + msg + '
-').split('
-').slice(-16).join('
-');
-          dbgBox.scrollTop = dbgBox.scrollHeight;
-        };
-        const v3 = p => '(' + Math.round(p.x) + ', ' + Math.round(p.y) + ', ' + Math.round(p.z) + ')';
-        const moveCamera = (pos, look, ms, why) => {
-          if (!graph3d) return;
-          const from = graph3d.camera().position;
-          dbg('camera ' + why + ': ' + v3(from) + ' -> ' + v3(pos) + ' looking at ' + v3(look) + ', ' + ms + ' ms');
-          ownMoveUntil = Date.now() + ms + 100;
-          graph3d.cameraPosition(pos, look, ms);
-        };
-
-        const card = document.createElement('div'); card.className = 'node-card'; card.style.display = 'none';
-        const info = document.createElement('div'); info.className = 'graph-info';
-
-        const build = () => {
-          const gIp = document.getElementById('g-ip');
-          const gRp = document.getElementById('g-rp');
-          const gCl = document.getElementById('g-cl');
-          const gMin = document.getElementById('g-min');
-          const gDays = document.getElementById('g-days');
-          const g2d = document.getElementById('g-2d');
-
-          const use = {
-            ip: gIp ? gIp.checked : true,
-            rptrack: gRp ? gRp.checked : true,
-            fingerprint: gRp ? gRp.checked : true,
-            client: gCl ? gCl.checked : true
-          };
-          const minPct = gMin ? +gMin.value / 100 : 0;
-          const days = gDays ? +gDays.value : 0;
-          const recent = new Set(data.nodes.filter(n => !days || !n.last_seen || Date.now() - n.last_seen <= days * 86400000).map(n => n.id));
-
-          const pairs = new Map();
-          (data.edges || []).filter(e => use[e.type] && recent.has(e.source) && recent.has(e.target)).forEach(e => {
-            const key = e.source < e.target ? e.source + '|' + e.target : e.target + '|' + e.source;
-            const l = pairs.get(key) || {source: e.source, target: e.target, miss: 1, types: new Set(), why: []};
-            const prob = e.p !== undefined ? e.p : (e.pct ? e.pct / 100 : 0.5);
-            l.miss *= 1 - prob;
-            l.types.add(e.type);
-            l.why.push(describeEdge(e));
-            pairs.set(key, l);
-          });
-          const links = [...pairs.values()].map(l => ({...l, pct: 1 - l.miss})).filter(l => l.pct >= minPct);
-          const deg = {};
-          links.forEach(l => { deg[l.source] = (deg[l.source]||0) + 1; deg[l.target] = (deg[l.target]||0) + 1; });
-          const nodes = data.nodes.filter(n => deg[n.id]).map(n => ({...n, links: deg[n.id]}));
-
-          stopGraph();
-          box.innerHTML = '';
-          box.appendChild(card);
-          box.appendChild(info);
-          box.appendChild(dbgBox);
-
-          selected = null; hover = null; fitted = false;
-          card.style.display = 'none';
-
-          graph3d = ForceGraph3D({controlType: 'orbit'})(box)
-            .width(box.clientWidth).height(box.clientHeight)
-            .backgroundColor('#05080d')
-            .showNavInfo(false)
-            .numDimensions(g2d && g2d.checked ? 2 : 3)
-            .nodeThreeObject(n => skinCube(n, 9 + Math.min(n.links, 8) * 1.5))
-            .nodeLabel(n => escapeHtml(n.name) + ' (' + (n.links === 1 ? '1 link' : n.links + ' links') + ')')
-            .linkColor(l => l.types.has('rptrack') || l.types.has('fingerprint') ? '#3fb950' : l.types.has('ip') ? '#8b949e' : '#a371f7')
-            .linkWidth(l => 0.4 + l.pct * 2.2)
-            .linkLabel(l => Math.round(l.pct * 100) + '% — ' + l.why.map(escapeHtml).join(', '))
-            .linkThreeObjectExtend(true)
-            .linkThreeObject(l => {
-              const tSp = textSprite(Math.round(l.pct * 100) + '%', 6, 0x8b949e);
-              tSp.visible = false; l._label = tSp; return tSp;
-            })
-            .linkPositionUpdate((tSp, {start, end}) => {
-              if (tSp.position) {
-                tSp.position.set((start.x + end.x) / 2, (start.y + end.y) / 2, ((start.z || 0) + (end.z || 0)) / 2);
-              }
-            })
-            .onNodeClick((n, ev) => { dbg('click on node ' + n.name); select(n); })
-            .onBackgroundClick(() => { dbg('click on background'); select(null); })
-            .onNodeHover(n => { hover = n ? n.id : null; })
-            .warmupTicks(120)
-            .cooldownTicks(Infinity)
-            .cooldownTime(6000)
-            .d3VelocityDecay(0.55)
-            .onEngineStop(() => {
-              if (fitted || selected) return;
-              fitted = true;
-              const target = focus && nodes.find(n => n.id === focus || n.name === focus);
-              focus = null;
-              if (target) { select(target); return; }
-              fit(600, 'fit after layout');
-            })
-            .graphData({nodes, links});
-
-          const select = async n => {
-            if (n && n === selected) n = null;
-            selected = n;
-            if (!n) { card.style.display = 'none'; fit(700, 'back to overview'); return; }
-            const d = n.x === undefined ? null : n;
-            if (d) moveCamera({x: n.x + 50, y: n.y + 30, z: (n.z || 0) + 75}, {x: n.x, y: n.y, z: n.z || 0}, 700, 'zoom to ' + n.name);
-            card.style.display = '';
-            card.innerHTML = '<div class="loading">' + t('Loading...') + '</div>';
-            let det;
-            try {
-              det = await apiRequest('/api/links/' + encodeURIComponent(n.id));
-            } catch(e) {
-              card.innerHTML = '<div class="error-msg">' + escapeHtml(e.message) + '</div>';
-              return;
-            }
-            if (selected !== n) return;
-            const alts = links.filter(l => (l.source.id || l.source) === n.id || (l.target.id || l.target) === n.id)
-              .map(l => ({o: (l.source.id || l.source) === n.id ? l.target : l.source, pct: l.pct, why: l.why}))
-              .sort((a, b) => b.pct - a.pct || b.why.length - a.why.length || (a.o.name || '').localeCompare(b.o.name || ''));
-            const fp = det ? det.fingerprint : null;
-            const cheats = (det && det.mods ? det.mods.slice() : []);
-            if (fp && fp.liquidbounce && !cheats.some(m => m.name.toLowerCase() === 'liquidbounce'))
-              cheats.push({name: 'LiquidBounce', last_seen: fp.last_seen, via: t('resource-pack fingerprint')});
-            card.innerHTML =
-              '<h3>' + escapeHtml(n.name) + '<button title="Close" id="closeNodeCardBtn">&times;</button></h3>' +
-              '<div style="color:var(--text-secondary);font-size:11.5px;">' + (cheats.length ? '<span style="color:var(--danger-fg);font-weight:600;">' + t('mods detected') + '</span>' : t('no mods detected')) + '</div>' +
-              (cheats.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">' + cheats.map(m => '<span class="badge-DETECTED" title="Last detected: ' + new Date(Number(m.last_seen)).toLocaleString() + '">' + escapeHtml(m.name) + '</span>').join('') + '</div>' : '') +
-              '<h4>' + t('Addresses') + '</h4>' +
-              ((det && det.ips && det.ips.length) ? det.ips.map(r => '<div class="row"><span>' + escapeHtml(r.ip) + '</span><span>' + escapeHtml(provider(r) || '') + '</span></div>').join('') : '<div style="color:var(--text-muted);font-size:11px;">' + t('None captured') + '</div>') +
-              (fp ? '<h4>' + t('RPTrack') + '</h4><div class="row"><span>' + t('Seen') + '</span><span>' + timeAgo(fp.last_seen) + '</span></div>' +
-                (fp.mask !== undefined ? '<div class="row"><span>' + t('Bitmask') + '</span><span class="bits">' + (Number(fp.mask).toString(2).padStart(16, '0')) + '</span></div>' : '') : '') +
-              '<h4>' + t('Linked Accounts ({0})', alts.length) + '</h4>' +
-              (alts.length ? alts.map(a => '<div class="row alt" data-focus="' + escapeHtml(a.o.id || a.o.name) + '"><span style="font-weight:600;">' + escapeHtml(a.o.name || a.o.id) + '</span><span>' + Math.round(a.pct * 100) + '%</span></div><div style="color:var(--text-muted);font-size:10px;padding-bottom:3px;">' + a.why.map(escapeHtml).join(', ') + '</div>').join('') : '<div style="color:var(--text-muted);font-size:11px;">' + t('No other accounts') + '</div>') +
-              '<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(33,44,61,0.5);"><button type="button" class="btn btn-primary" style="width:100%;justify-content:center;" id="cardOpenDossierBtn">Open Security Dossier</button></div>';
-
-            card.querySelector('#closeNodeCardBtn').onclick = () => select(null);
-            card.querySelectorAll('.alt[data-focus]').forEach(el => {
-              el.onclick = () => {
-                const fId = el.getAttribute('data-focus');
-                const targetNode = nodes.find(x => x.id === fId || x.name === fId);
-                if (targetNode) select(targetNode);
-              };
-            });
-            const dossierBtn = card.querySelector('#cardOpenDossierBtn');
-            if (dossierBtn) {
-              dossierBtn.onclick = () => {
-                loadPlayerDossier(n.name || n.id, true);
-              };
-            }
-          };
-
-          const fit = (ms, why) => {
-            if (!graph3d) return;
-            const vis = nodes;
-            if (!vis.length) return;
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
-            vis.forEach(n => {
-              minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
-              minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
-              minZ = Math.min(minZ, n.z || 0); maxZ = Math.max(maxZ, n.z || 0);
-            });
-            const span = Math.max(maxX - minX, maxY - minY, maxZ - minZ, 120);
-            const dist = span * 1.55 + 90;
-            const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, cz = (minZ + maxZ) / 2;
-            moveCamera({x: cx, y: cy, z: cz + dist}, {x: cx, y: cy, z: cz}, ms, why);
-          };
-
-          const place = () => {
-            if (!graph3d) return;
-            const now = performance.now();
-            const dt = (now - (lastLog || now)) / 1000;
-            lastLog = now;
-
-            links.forEach(l => {
-              if (l._label) {
-                const sId = l.source.id || l.source;
-                const tId = l.target.id || l.target;
-                const active = hover && (sId === hover || tId === hover);
-                const near = selected && (sId === selected.id || tId === selected.id);
-                l._label.visible = active || near;
-              }
-            });
-
-            nodes.forEach(n => {
-              const hit = hl && matches(n);
-              if (n._label) {
-                n._label.material.color.set(hit ? 0xd29922 : 0xc9d1d9);
-                n._label.material.opacity = hl && !hit ? 0.3 : 1;
-              }
-              const obj = n.__threeObj;
-              const want = Math.max(selected === n ? 1.8 : 1, hit ? searchScale : 1);
-              if (obj) { const k = obj.scale.x + (want - obj.scale.x) * 0.15; obj.scale.setScalar(k); }
-              if (n._hit) n._hit.quaternion.set(0, 0, 0, 1);
-              if (n._cube) {
-                const r = n._cube.rotation;
-                if (selected === n) r.y += dt * 0.7;
-                else if (r.x || r.z || r.y % (2 * Math.PI)) {
-                  const home = Math.round(r.y / (2 * Math.PI)) * 2 * Math.PI, e = Math.min(1, dt * 6);
-                  r.x -= r.x * e; r.z -= r.z * e; r.y += (home - r.y) * e;
-                }
-              }
-              if (n._frame && n._cube) n._frame.quaternion.copy(n._cube.quaternion);
-              if (n._frame) n._frame.material.color.set(hit ? 0xd29922 : (n.detected ? 0xef4444 : 0x3b82f6));
-            });
-
-            const cp = graph3d.camera().position;
-            if (lastCam && Date.now() > ownMoveUntil && Date.now() - lastLog > 250 &&
-                Math.hypot(cp.x - lastCam.x, cp.y - lastCam.y, cp.z - lastCam.z) > 0.5) {
-              dbg('camera moved by controls: ' + v3(lastCam) + ' -> ' + v3(cp));
-            }
-            lastCam = {x: cp.x, y: cp.y, z: cp.z};
-            graphRaf = requestAnimationFrame(place);
-          };
-          place();
-          fit(0, 'initial');
-        };
-
-        const gIp = document.getElementById('g-ip');
-        const gRp = document.getElementById('g-rp');
-        const gCl = document.getElementById('g-cl');
-        const gDays = document.getElementById('g-days');
-        const g2d = document.getElementById('g-2d');
-        const gMin = document.getElementById('g-min');
-        const gSearch = document.getElementById('g-search');
-
-        [gIp, gRp, gCl, gDays, g2d].forEach(el => { if (el) el.onchange = build; });
-        if (gMin) {
-          gMin.oninput = () => { document.getElementById('g-min-v').textContent = gMin.value + '%'; };
-          gMin.onchange = build;
-        }
-        if (gSearch) {
-          gSearch.oninput = e => {
-            hl = e.target.value.trim().toLowerCase();
-            const all = graph3d ? graph3d.graphData().nodes : [];
-            const matching = hl ? all.filter(matches).length : 0;
-            searchScale = matching ? Math.min(2.2, 1 + 0.35 * Math.log2(all.length / matching)) : 1;
-            dbg('search "' + hl + '": ' + matching + ' of ' + all.length + ' match, heads x' + searchScale.toFixed(2));
-          };
-        }
-        build();
-      }
-
-// ============================================================================
-      // 7. CONTROLLERS & WORKFLOWS
-      // ============================================================================
-      function switchView(viewName, focusUuid = null) {
-        if (STATE.activeView === 'graph' && viewName !== 'graph') {
-          stopGraph();
-        }
-        STATE.activeView = viewName;
-        document.querySelectorAll('.nav-tab').forEach((btn) => {
-          btn.classList.toggle('active', btn.dataset.view === viewName);
-        });
-        document.getElementById('viewOverview').classList.toggle('active', viewName === 'overview');
-        document.getElementById('viewHistory').classList.toggle('active', viewName === 'history');
-        document.getElementById('viewGraph').classList.toggle('active', viewName === 'graph');
-
-        if (viewName === 'history') {
-          refreshHistoryScans();
-        } else if (viewName === 'graph') {
-          setTimeout(() => {
-            showLinks(focusUuid);
-          }, 30);
-        }
-      }
-
-      async function loadPlayerDossier(playerName, switchToOverview = true) {
-        const data = await apiRequest('/api/player/' + encodeURIComponent(playerName));
-        if (data && data.name) {
-          renderPlayerDossier(data);
-          STATE.selectedGraphNodeId = data.name;
-          renderGraphInspector();
-          if (switchToOverview && STATE.activeView !== 'overview') {
-            switchView('overview');
-          }
-        }
-      }
-
-      async function refreshStatsAndOnline() {
-        const [stats, online] = await Promise.all([
-          apiRequest('/api/stats'),
-          apiRequest('/api/players/online'),
-        ]);
-        if (stats) renderStats(stats);
-        if (Array.isArray(online)) {
-          STATE.onlinePlayers = online;
-          renderOnlineSidebar();
-        }
-      }
-
-      async function refreshHistoryScans() {
-        const scans = await apiRequest('/api/scans?limit=50&offset=0');
-        if (Array.isArray(scans)) {
-          STATE.historyScans = scans;
-          renderHistoryView();
-        }
-      }
-
-      async function triggerPlayerScan(scanType) {
-        const player = STATE.selectedPlayerName;
-        if (!player) return;
-        const btnId = scanType === 'lang' ? 'runLangCheckBtn' : 'runHackCheckBtn';
-        const btn = document.getElementById(btnId);
-        if (btn) btn.disabled = true;
-
-        const previousLatestScanId = STATE.currentPlayer?.scans?.[0]?.id || 0;
-
-        try {
-          await apiRequest('/api/scan/run', {
-            method: 'POST',
-            body: JSON.stringify({ player, type: scanType }),
-          });
-          showStatusBanner(
-            'Started ' + scanType.toUpperCase() + ' check on ' + player + '. Probing sign packets in background...',
-            'warning'
-          );
-          let attempts = 0;
-          const pollInterval = setInterval(async () => {
-            attempts++;
-            await loadPlayerDossier(player, false);
-            const currentLatestScanId = STATE.currentPlayer?.scans?.[0]?.id || 0;
-            if (currentLatestScanId > previousLatestScanId || attempts >= 15) {
-              clearInterval(pollInterval);
-              if (btn) btn.disabled = false;
-              if (currentLatestScanId > previousLatestScanId) {
-                await Promise.all([refreshStatsAndOnline(), refreshHistoryScans()]);
-                showStatusBanner(
-                  'Completed ' + scanType.toUpperCase() + ' probe on ' + player + ' (Report #' + currentLatestScanId + ')',
-                  'success'
-                );
-              }
-            }
-          }, 2000);
-        } catch (_err) {
-          showStatusBanner('Failed to trigger scan on ' + player + ': ' + (_err.message || 'Error'), 'danger');
-          if (btn) btn.disabled = false;
-        }
-      }
-
-      async function deleteScanById(scanId) {
-        await apiRequest('/api/scan/' + encodeURIComponent(scanId), { method: 'DELETE' });
-        await Promise.all([
-          refreshHistoryScans(),
-          loadPlayerDossier(STATE.selectedPlayerName, false),
-          refreshStatsAndOnline(),
-        ]);
-        showStatusBanner('Deleted Scan #' + scanId + ' from audit log.');
-      }
-
-      // ============================================================================
-      // 8. INITIALIZATION & EVENT LISTENERS
-      // ============================================================================
-      async function initDashboard() {
-        document.querySelectorAll('[data-i18n]').forEach((el) => {
-          const key = el.getAttribute('data-i18n');
-          if (key) el.textContent = t(key);
-        });
-
-        document.querySelectorAll('.nav-tab').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            switchView(btn.dataset.view);
-          });
-        });
-
-        document.getElementById('brandHomeLink').addEventListener('click', (e) => {
-          e.preventDefault();
-          switchView('overview');
-        });
-
-        document.getElementById('closeFeedbackBtn').addEventListener('click', () => {
-          document.getElementById('statusFeedbackBanner').classList.remove('visible');
-        });
-
-        document.getElementById('copyUuidBtn').addEventListener('click', () => {
-          const uuid = document.getElementById('dossierUuidText').textContent;
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(uuid).catch(() => {});
-          }
-          showStatusBanner('Copied UUID ' + uuid + ' to clipboard.');
-        });
-
-        document.getElementById('runHackCheckBtn').addEventListener('click', () => triggerPlayerScan('hack'));
-        document.getElementById('runLangCheckBtn').addEventListener('click', () => triggerPlayerScan('lang'));
-        document.getElementById('openPlayerGraphBtn').addEventListener('click', () => {
-          const uuid = STATE.currentPlayer?.uuid || STATE.selectedPlayerName;
-          switchView('graph', uuid);
-        });
-
-        document.getElementById('sidebarFilterInput').addEventListener('input', (e) => {
-          STATE.sidebarFilter = e.target.value || '';
-          renderOnlineSidebar();
-        });
-
-        document.querySelectorAll('[data-mod-filter]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            STATE.modFilter = btn.getAttribute('data-mod-filter') || 'ALL';
-            document.querySelectorAll('[data-mod-filter]').forEach((b) => b.classList.remove('active'));
-            btn.classList.add('active');
-            if (STATE.currentPlayer) renderModMatrixTable(STATE.currentPlayer);
-          });
-        });
-
-        document.querySelectorAll('[data-history-filter]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            STATE.historyFilter = btn.getAttribute('data-history-filter') || 'ALL';
-            document.querySelectorAll('[data-history-filter]').forEach((b) => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderHistoryView();
-          });
-        });
-
-        document.querySelectorAll('[data-graph-minpct]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            STATE.graphMinPct = Number(btn.getAttribute('data-graph-minpct') || 0);
-            document.querySelectorAll('[data-graph-minpct]').forEach((b) => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderGraphInspector();
-            runGraphPhysicsBurst(45);
-          });
-        });
-
-        document.getElementById('graphResetViewBtn').addEventListener('click', () => {
-          GRAPH_ENGINE.panX = 0;
-          GRAPH_ENGINE.panY = 0;
-          GRAPH_ENGINE.zoom = 1;
-          runGraphPhysicsBurst(60);
-        });
-
-        document.body.addEventListener('click', (e) => {
-          const selectPlayerBtn = e.target.closest('[data-select-player]');
-          if (selectPlayerBtn) {
-            const targetName = selectPlayerBtn.getAttribute('data-select-player');
-            if (targetName) {
-              document.getElementById('globalSearchDropdown').classList.remove('open');
-              loadPlayerDossier(targetName, true);
-            }
-            return;
-          }
-
-          const deleteScanBtn = e.target.closest('[data-delete-scan]');
-          if (deleteScanBtn) {
-            const scanId = Number(deleteScanBtn.getAttribute('data-delete-scan'));
-            if (scanId) deleteScanById(scanId);
-            return;
-          }
-
-          const graphNodeBtn = e.target.closest('[data-graph-node]');
-          if (graphNodeBtn) {
-            const nodeId = graphNodeBtn.getAttribute('data-graph-node');
-            if (nodeId) {
-              STATE.selectedGraphNodeId = nodeId;
-              renderGraphInspector();
-              drawGraphCanvas();
-            }
-          }
-        });
-
-        const searchInput = document.getElementById('globalSearchInput');
-        const searchDropdown = document.getElementById('globalSearchDropdown');
-
-        searchInput.addEventListener('input', async () => {
-          const q = searchInput.value.trim();
-          if (!q) {
-            searchDropdown.classList.remove('open');
-            return;
-          }
-          const matches = await apiRequest('/api/players/search?q=' + encodeURIComponent(q));
-          if (!Array.isArray(matches) || matches.length === 0) {
-            searchDropdown.innerHTML = '<div class="empty-box" style="padding: 10px;">No matching players found</div>';
-          } else {
-            searchDropdown.innerHTML = matches
-              .map(
-                (m) =>
-                  '<button type="button" class="search-result-btn" data-select-player="' +
-                  escapeHtml(m.name) +
-                  '">' +
-                  '<div><div style="font-weight:600;">' +
-                  escapeHtml(m.name) +
-                  '</div><div class="mono" style="font-size:10.5px;color:var(--text-muted);">' +
-                  escapeHtml(m.uuid) +
-                  '</div></div>' +
-                  '<span class="sec-pill ' +
-                  (m.online ? 'success' : 'neutral') +
-                  '">' +
-                  (m.online ? m.ping + 'ms' : 'OFFLINE') +
-                  '</span>' +
-                  '</button>'
-              )
-              .join('');
-          }
-          searchDropdown.classList.add('open');
-        });
-
-        searchInput.addEventListener('keydown', async (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            const q = searchInput.value.trim();
-            if (!q) return;
-            const matches = await apiRequest('/api/players/search?q=' + encodeURIComponent(q));
-            if (Array.isArray(matches) && matches.length > 0) {
-              searchDropdown.classList.remove('open');
-              loadPlayerDossier(matches[0].name, true);
-            }
-          } else if (e.key === 'Escape') {
-            searchDropdown.classList.remove('open');
-          }
-        });
-
-        window.addEventListener('keydown', (e) => {
-          if (e.key === '/' && document.activeElement !== searchInput && document.activeElement?.tagName !== 'INPUT') {
-            e.preventDefault();
-            searchInput.focus();
-          }
-        });
-
-                window.addEventListener('resize', () => {
-          if (STATE.activeView === 'graph' && graph3d) {
-            const box = document.getElementById('graph-box');
-            if (box) graph3d.width(box.clientWidth).height(box.clientHeight);
-          }
-        });
-
-        let targetInitialPlayer = 'Steve';
-        const rawHash = window.location.hash ? window.location.hash.slice(1) : '';
-        if (rawHash.startsWith('player/')) {
-          targetInitialPlayer = decodeURIComponent(rawHash.slice('player/'.length));
-        }
-
-        const [authInfo, stats, online, linksData, allScans] = await Promise.all([
-          apiRequest('/api/validate').catch(() => null),
-          apiRequest('/api/stats').catch(() => null),
-          apiRequest('/api/players/online').catch(() => []),
-          apiRequest('/api/links').catch(() => ({ nodes: [], edges: [] })),
-          apiRequest('/api/scans?limit=50&offset=0').catch(() => []),
-        ]);
-
-        if (authInfo) {
-          if (authInfo.player_name) {
-            document.getElementById('operatorNameLabel').textContent = authInfo.player_name;
-          }
-          const perms = Array.isArray(authInfo.permissions)
-            ? authInfo.permissions
-            : String(authInfo.perms || '').split(',').map((s) => s.trim());
-          const hasLinks = perms.includes('links') || perms.includes('veneer.links.view') || perms.includes('veneer.admin');
-          const hasScan = perms.includes('scan') || perms.includes('veneer.scan.run') || perms.includes('veneer.admin');
-          const hasDelete = perms.includes('delete') || perms.includes('veneer.scan.delete') || perms.includes('veneer.admin');
-          document.body.classList.toggle('no-links', !hasLinks);
-          document.body.classList.toggle('no-scan', !hasScan);
-          document.body.classList.toggle('no-delete', !hasDelete);
-          if (authInfo.expires_at) {
-            startSessionClock(Number(authInfo.expires_at));
-          }
-        }
-
-        if (stats) renderStats(stats);
-        if (Array.isArray(online)) {
-          STATE.onlinePlayers = online;
-          renderOnlineSidebar();
-          if (!rawHash.startsWith('player/') && online.length > 0) {
-            targetInitialPlayer = online[0].name;
-          }
-        }
-        if (Array.isArray(allScans)) {
-          STATE.historyScans = allScans;
-          renderHistoryView();
-          if (!rawHash.startsWith('player/') && (!online || online.length === 0) && allScans.length > 0 && allScans[0].player) {
-            targetInitialPlayer = allScans[0].player;
-          }
-        }
-        
-
-        await loadPlayerDossier(targetInitialPlayer, false).catch(() => {});
-
-        // Background live refresh intervals
-        setInterval(() => { refreshStatsAndOnline().catch(() => {}); }, 10000);
-        setInterval(() => { refreshHistoryScans().catch(() => {}); }, 15000);
-      }
-
-      document.addEventListener('DOMContentLoaded', initDashboard);
-    </script>
+    <script src="i18n.js"></script>
+    <script src="panel.js"></script>
   </body>
 </html>

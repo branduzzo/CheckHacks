@@ -27,11 +27,16 @@ final class GrimViolationTracker {
         boolean isDefault() { return Math.abs(horizontal - 0.5) < 0.005 && Math.abs(vertical - 0.5) < 0.005; }
     }
 
+    static final String UNSUPPORTED_MESSAGE = "Installed GrimAC version is not supported! Disabling hooks for mouse...";
+
     private static final int MAX = 500;
+    private final VeneerPlugin plugin;
+    private volatile boolean sensitivitySupported = true;
     private final ConcurrentLinkedDeque<Violation> recent = new ConcurrentLinkedDeque<>();
     private final ConcurrentHashMap<UUID, SensitivitySnapshot> sensitivities = new ConcurrentHashMap<>();
 
     GrimViolationTracker(VeneerPlugin plugin) {
+        this.plugin = plugin;
         GrimAbstractAPI api = GrimAPIProvider.get();
 
         api.getEventBus().get(GrimJoinEvent.class).onJoin(api.getGrimPlugin(plugin), user -> {
@@ -48,8 +53,14 @@ final class GrimViolationTracker {
     }
 
     private void updateSensitivity(GrimUser user) {
-        sensitivities.put(user.getUniqueId(),
-                new SensitivitySnapshot(user.getHorizontalSensitivity(), user.getVerticalSensitivity(), user.isVanillaMath()));
+        if (!sensitivitySupported) return;
+        try {
+            sensitivities.put(user.getUniqueId(),
+                    new SensitivitySnapshot(user.getHorizontalSensitivity(), user.getVerticalSensitivity(), user.isVanillaMath()));
+        } catch (LinkageError e) {
+            sensitivitySupported = false;
+            plugin.getLogger().warning(UNSUPPORTED_MESSAGE);
+        }
     }
 
     private void add(Violation v) {

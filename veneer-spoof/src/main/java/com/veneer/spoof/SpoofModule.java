@@ -65,7 +65,10 @@ public class SpoofModule extends VeneerModule {
         }
 
         plugin.getServer().getMessenger().registerIncomingPluginChannel(plugin, BRAND_CHANNEL,
-                (channel, player, message) -> onBrand(player, new String(message).substring(1)));
+                (channel, player, message) -> {
+                    String brand = Text.decodeBrand(message);
+                    if (brand != null) onBrand(player, brand);
+                });
 
         events = new PlayerEventListener(plugin);
         PacketEvents.getAPI().getEventManager().registerListener(events);

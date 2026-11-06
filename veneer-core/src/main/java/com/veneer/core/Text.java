@@ -16,6 +16,26 @@ public final class Text {
     private Text() {}
 
     private static final MiniMessage MM = MiniMessage.miniMessage();
+    private static final int MAX_BRAND_LENGTH = 256;
+
+    /**
+     * The text of a {@code minecraft:brand} payload (a VarInt byte length, then UTF-8), without control characters
+     * and cut to a sane length; null when the payload is malformed or the brand is empty. The client sends it as it likes.
+     */
+    public static String decodeBrand(byte[] payload) {
+        int length = 0, at = 0;
+        while (true) {
+            if (at >= payload.length || at >= 5) return null;
+            byte b = payload[at++];
+            length |= (b & 0x7F) << (7 * (at - 1));
+            if ((b & 0x80) == 0) break;
+        }
+        if (length <= 0 || length > payload.length - at) return null;
+        String brand = new String(payload, at, length, java.nio.charset.StandardCharsets.UTF_8)
+                .replaceAll("\\p{Cntrl}", "");
+        if (brand.length() > MAX_BRAND_LENGTH) brand = brand.substring(0, MAX_BRAND_LENGTH);
+        return brand.isEmpty() ? null : brand;
+    }
 
     /**
      * Client-supplied text (brand, channel, reason built from them) made inert before it goes into a config

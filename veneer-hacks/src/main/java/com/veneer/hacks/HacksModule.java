@@ -50,6 +50,7 @@ public class HacksModule extends VeneerModule {
     /** A scan of a player who left is dropped: no results, no punishment, the probe blocks are put back. */
     @Override
     public void playerQuit(UUID uuid) {
+        if (joinChecks != null) joinChecks.forget(uuid);
         if (checks != null) checks.abort(uuid);
         if (langChecks != null) langChecks.abort(uuid);
     }
@@ -67,7 +68,7 @@ public class HacksModule extends VeneerModule {
         command("hackeditor", new HackEditorCommand(plugin));
 
         listen(new SignListener(plugin));
-        joinChecks = new JoinListener(plugin);
+        joinChecks = listen(new JoinListener(plugin));
         AntiCheatListener anticheat = listen(new AntiCheatListener(plugin));
         anticheat.registerHooks();
         // PacketEvents runs when the spoof module (started before this one) or the PacketEvents plugin started it
@@ -96,7 +97,13 @@ public class HacksModule extends VeneerModule {
             plugin.getLogger().info("hacks.web-editor.enabled changed: restart the server to apply it.");
     }
 
+    /** Tells open web panels about a scan right away. Safe from any thread. */
+    public void scanEvent(String player, String type, String state, int count) {
+        if (web != null) web.publishScan(player, type, state, count);
+    }
+
     public ConfigManager config() { return config; }
+    public WebServerManager webServer() { return web; }
     public CheckManager checks() { return checks; }
     public LangCheckManager langChecks() { return langChecks; }
     /** Whether sign answers can be read from the packet, uncut (see {@link SignPacketListener}). */

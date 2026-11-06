@@ -26,7 +26,7 @@ anticheat-trigger: "{prefix}<gray>Da anticheat noticed <yellow><click:run_comman
 join-check: "{prefix}<gray>Doing an automatic checky on <yellow><click:run_command:'/veneer player {player}'><hover:show_text:'<gray>Open profile'>{player}</hover></click> <gray>when dey join~"
 already-checking: "{prefix}<yellow>{player} <white>is awweady being checkied, hehe~."
 invalid-hack: "{prefix}<red>Unknown hacky-wacky: <white>{hack}"
-hackcheck-usage: "{prefix}<red>Usage: /hackcheck \\<player> [hack1,hack2,...]</red>"
+hackcheck-usage: "{prefix}<red>Usage: /hackcheck \\<player> [all|version|lang|hack] [list]</red>"
 hackcheck-no-valid: "{prefix}<red>No vawid hacks to check, sowwy.</red>"
 
 # ======================================================================
@@ -64,7 +64,6 @@ lang-join-check: "{prefix}<gray>Automatic wanguage checky fow <yellow>{player}<g
 # WEB EDITOR  (/hackeditor)
 # Placeholders: {url}.
 # ======================================================================
-editor-url: "{prefix}<white>Editow: <aqua><click:open_url:'{url}'>{url}</click>"
 editor-disabled: "{prefix}<red>Da web editow is disabled in config.yml, sowwy."
 editor-players-only: "{prefix}<red>Onwy pwayews can open da editow.</red>"
 
@@ -272,7 +271,6 @@ gui-module-rptrack: "RPTrack"
 gui-module-on: "<green>✔ Enyabwed"
 gui-module-off: "<red>✘ Disabwed"
 gui-btn-editor: "Web Editow"
-gui-btn-editor-lore: "<gray>Sends you a wink to da web panyew"
 gui-btn-reload: "Wewoad Config"
 gui-btn-version: "Vewsion Info"
 gui-btn-reload-lore: "<gray>Wewoads config.yml and messages"
@@ -307,7 +305,6 @@ gui-brand-undecided: "<yellow>⚠ Undecided"
 gui-brand-allowed: "<green>✔ Awwowed"
 gui-brand-blocked: "<red>✘ Bwocked"
 gui-brand-last: "<gray>Wast: <white>{player}"
-gui-brand-hint: "<dark_gray>Weft: Awwow  Wight: Bwock  Mid: Weset"
 gui-grim-check: "<gray>Check: <yellow>{check}"
 gui-grim-verbose: "<dark_gray>{verbose}"
 gui-grim-empty: "<gray>Nyo viowations wecowded yet"

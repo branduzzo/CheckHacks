@@ -6,7 +6,7 @@
 
     <groupId>com.veneer</groupId>
     <artifactId>veneer-parent</artifactId>
-    <version>0.9.8</version>
+    <version>0.9.9</version>
     <packaging>pom</packaging>
 
     <name>Veneer (parent)</name>

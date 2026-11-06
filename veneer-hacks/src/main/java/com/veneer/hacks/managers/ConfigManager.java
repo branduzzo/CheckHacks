@@ -151,8 +151,25 @@ public class ConfigManager {
     public boolean isWebEditorEnabled() { return masterConfig.getBoolean("web-editor.enabled", true); }
     public int     getWebPort()         { return masterConfig.getInt("web-editor.port", 8080); }
     public String  getWebHost()         { return masterConfig.getString("web-editor.host", "localhost"); }
+    public boolean isWebHttps()         { return masterConfig.getBoolean("web-editor.https", false); }
     public String  getWebBind()         { return masterConfig.getString("web-editor.bind", "127.0.0.1"); }
-    public int     getTokenExpireMinutes() { return masterConfig.getInt("web-editor.token-expire-minutes", 10); }
+    public int     getLinkExpireMinutes() { return Math.max(1, masterConfig.getInt("web-editor.link-expire-minutes", 5)); }
+    /** Days a connected browser stays logged in without being used. */
+    public int     getSessionExpireDays() { return Math.max(1, masterConfig.getInt("web-editor.session-expire-days", 30)); }
+    /** The address players open: {@code host} when it is a full URL (behind an HTTPS proxy), else http://host:port. */
+    public String  getPanelUrl() {
+        String host = getWebHost().strip();
+        if (isWebHttps() && host.startsWith("http://")) host = "https://" + host.substring("http://".length());
+        if (host.startsWith("http://") || host.startsWith("https://")) return host.replaceAll("/+$", "");
+        return (isWebHttps() ? "https://" : "http://") + host + ":" + getWebPort();
+    }
+    public boolean isPanelHttps() { return getPanelUrl().startsWith("https://"); }
+    /** Whether the panel's traffic leaves this machine unencrypted. */
+    public boolean isPanelExposed() {
+        if (isPanelHttps()) return false;
+        String host = java.net.URI.create(getPanelUrl()).getHost();
+        return host == null || !(host.equals("localhost") || host.equals("127.0.0.1") || host.equals("[::1]"));
+    }
 
     public boolean isCommandIfPositiveEnabled() { return commandIfPositiveEnabled; }
     public String  getPositiveCommand()         { return positiveCommand; }
@@ -177,6 +194,8 @@ public class ConfigManager {
     public long    getFlagCooldownHours(){ return hacksConfig.getLong("detect-flag.cooldown-hours", 24); }
 
     public boolean isJoinCheckEnabled()  { return hacksConfig.getBoolean("auto-check-on-join.enabled", false); }
+    /** BETA: run the join scan while the client loads the resource pack. */
+    public boolean isScanDuringResourcePack() { return hacksConfig.getBoolean("auto-check-on-join.during-resource-pack", false); }
     public boolean isOnlyFirstJoin()     { return hacksConfig.getBoolean("auto-check-on-join.only-first-join", false); }
 
     public long getTimeoutTicks()     { return timeoutTicks; }

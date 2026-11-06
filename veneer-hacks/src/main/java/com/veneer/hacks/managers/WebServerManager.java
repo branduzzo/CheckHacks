@@ -1,13 +1,18 @@
 package com.veneer.hacks.managers;
 
+import com.google.gson.JsonParser;
 import com.veneer.hacks.HacksModule;
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpsConfigurator;
+import com.sun.net.httpserver.HttpsServer;
 import com.veneer.VeneerPlugin;
 import com.veneer.hacks.HackDefinition;
+import com.veneer.hacks.commands.HackEditorCommand;
 import com.veneer.core.FoliaScheduler;
 import com.veneer.core.IpDatabase;
+import com.veneer.core.SelfSignedTls;
 import com.veneer.core.PlayerProfile;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -22,6 +27,8 @@ import java.util.concurrent.Executors;
 
 public class WebServerManager {
 
+    private volatile String tlsFingerprint;
+
     private final VeneerPlugin plugin;
     private HttpServer server;
     private ExecutorService executor;
@@ -29,6 +36,14 @@ public class WebServerManager {
     private final Gson gson = new Gson();
     private volatile List<Map<String, Object>> cachedPlayers = new ArrayList<>();
     private final IpDatabase ipdb;
+    /** Open /api/events streams; each has its own thread, so they cannot starve the request pool. */
+    private static final int MAX_STREAMS = 16;
+    private final Set<java.util.concurrent.BlockingQueue<String>> streams = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final ExecutorService streamThreads = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "Veneer-panel-events");
+        t.setDaemon(true);
+        return t;
+    });
 
     public WebServerManager(VeneerPlugin plugin) {
         this.plugin = plugin;
@@ -42,13 +57,29 @@ public class WebServerManager {
         }
         start();
         FoliaScheduler.runGlobalTimer(plugin, this::updatePlayerCache, 1L, 100L);
+        FoliaScheduler.runGlobalTimer(plugin, this::checkAccess, 1200L, 6000L);
+        if (plugin.module(HacksModule.class).config().isPanelExposed())
+            plugin.getLogger().warning("The web panel is on a public address without HTTPS: its login cookie can be read on the network. "
+                    + "Put an HTTPS proxy in front and set hacks.web-editor.host to the https:// address.");
     }
 
     private void start() {
         int port = plugin.module(HacksModule.class).config().getWebPort();
         try {
             String bind = plugin.module(HacksModule.class).config().getWebBind();
-            server = HttpServer.create(new InetSocketAddress(java.net.InetAddress.getByName(bind), port), 0);
+            InetSocketAddress address = new InetSocketAddress(java.net.InetAddress.getByName(bind), port);
+            // A failure here leaves the panel off: it must not quietly fall back to plain HTTP
+            if (plugin.module(HacksModule.class).config().isWebHttps()) {
+                SelfSignedTls tls = SelfSignedTls.load(plugin.getDataFolder().toPath().resolve("web-https.p12"), tlsNames(bind));
+                HttpsServer secure = HttpsServer.create(address, 0);
+                secure.setHttpsConfigurator(new HttpsConfigurator(tls.context()));
+                server = secure;
+                tlsFingerprint = tls.fingerprint();
+                plugin.getLogger().info("Web panel HTTPS certificate SHA-256: " + tlsFingerprint);
+            } else {
+                server = HttpServer.create(address, 0);
+                tlsFingerprint = null;
+            }
             server.createContext("/", this::handle);
             executor = Executors.newFixedThreadPool(4);
             server.setExecutor(executor);
@@ -58,6 +89,18 @@ public class WebServerManager {
             plugin.getLogger().severe("Failed to start the web panel: " + e.getMessage());
         }
     }
+
+    /** The addresses the panel can be opened at: the certificate lists them. */
+    private List<String> tlsNames(String bind) {
+        Set<String> names = new LinkedHashSet<>(List.of("localhost", "127.0.0.1"));
+        String host = java.net.URI.create(settings().getPanelUrl()).getHost();
+        if (host != null) names.add(host.replaceAll("[\\[\\]]", ""));
+        if (!bind.equals("0.0.0.0") && !bind.equals("::")) names.add(bind);
+        return new ArrayList<>(names);
+    }
+
+    /** SHA-256 of the panel's own certificate, or null when it does not serve HTTPS itself. */
+    public String tlsFingerprint() { return tlsFingerprint; }
 
     private org.bukkit.configuration.ConfigurationSection links() {
         return plugin.config().section("hacks.web-editor.links");
@@ -80,12 +123,184 @@ public class WebServerManager {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("name", p.getName());
             m.put("uuid", p.getUniqueId().toString());
+            m.put("ping", p.getPing());
+            m.put("locale", p.getLocale());
             list.add(m);
         }
         cachedPlayers = list;
     }
 
+    private ConfigManager settings() { return plugin.module(HacksModule.class).config(); }
+
+    /** The cookie is per port too: browsers share cookies between ports of one host. */
+    private String cookieName() { return "veneer_session_" + settings().getWebPort(); }
+
+    private String sessionOf(HttpExchange ex) {
+        String name = cookieName() + "=";
+        for (String header : ex.getRequestHeaders().getOrDefault("Cookie", List.of()))
+            for (String part : header.split(";")) {
+                String cookie = part.strip();
+                if (cookie.startsWith(name)) return cookie.substring(name.length());
+            }
+        return null;
+    }
+
+    private static String ipOf(HttpExchange ex) {
+        return ex.getRemoteAddress().getAddress().getHostAddress();
+    }
+
+    private Map<String, String> authenticate(HttpExchange ex) {
+        return plugin.database().tokens().validateSession(sessionOf(ex), ipOf(ex), settings().getSessionExpireDays());
+    }
+
+    /** JavaScript cannot read the cookie, other sites do not send it on requests that change something. */
+    private void setCookie(HttpExchange ex, String session) {
+        ex.getResponseHeaders().add("Set-Cookie", cookieName() + "=" + session + "; Path=/; HttpOnly; SameSite=Lax; Max-Age="
+                + settings().getSessionExpireDays() * 86_400L + (settings().isPanelHttps() ? "; Secure" : ""));
+    }
+
+    /** A cookie is sent whoever made the page, so a change must come from the panel itself. */
+    private boolean sameOrigin(HttpExchange ex) {
+        String origin = ex.getRequestHeaders().getFirst("Origin");
+        if (origin == null) return false;
+        if (origin.equalsIgnoreCase(settings().getPanelUrl())) return true;
+        try {
+            return String.valueOf(java.net.URI.create(origin).getAuthority()).equalsIgnoreCase(ex.getRequestHeaders().getFirst("Host"));
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /** One-time link: starts this browser's session and leaves the secret out of the address and history. */
+    private void connect(HttpExchange ex, Map<String, String> params) throws IOException {
+        var redeemed = plugin.database().tokens().redeemLink(params.get("code"), ipOf(ex), settings().getSessionExpireDays());
+        if (redeemed == null) {
+            sendHtml(ex, 403, messagePage("This link is invalid, expired or already used.", "Run <b>/hackeditor new</b> in Minecraft for a new one. If you did not open it yourself, someone else may have: check <b>/hackeditor links</b>."));
+            return;
+        }
+        String ip = ipOf(ex), name = redeemed.playerName();
+        plugin.getLogger().info("[Hacks] Web panel: a new browser was connected to " + name + " from " + ip);
+        UUID owner = UUID.fromString(redeemed.playerUuid());
+        FoliaScheduler.runGlobal(plugin, () -> plugin.alerts().notifyOwner(owner,
+                m -> m.get("editor-browser-connected", Map.of("player", name, "ip", ip, "id", redeemed.id()))));
+        setCookie(ex, redeemed.session());
+        ex.getResponseHeaders().set("Location", "/connected");
+        ex.getResponseHeaders().set("Cache-Control", "no-store");
+        ex.sendResponseHeaders(303, -1);
+    }
+
+    /** Page texts are keyed by their English wording in web/lang/<language>.json, like the panel itself. */
+    private String messagePage(String title, String detail) {
+        var lang = JsonParser.parseString(translations()).getAsJsonObject();
+        if (lang.has(title)) title = lang.get(title).getAsString();
+        if (lang.has(detail)) detail = lang.get(detail).getAsString();
+        return "<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Veneer</title></head>"
+                + "<body style='font-family:system-ui,sans-serif;background:#090d16;color:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:16px;box-sizing:border-box'>"
+                + "<div style='max-width:460px'><h1 style='font-size:20px'>" + title + "</h1><p style='color:#94a3b8;line-height:1.5'>" + detail + "</p></div></body></html>";
+    }
+
+    /** Rights can change while a browser stays connected: every few minutes they are read again, and lost access ends the sessions. */
+    private void checkAccess() {
+        Map<String, String> online = new HashMap<>();
+        Set<String> allowed = new HashSet<>();
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            String id = p.getUniqueId().toString();
+            online.put(id, HackEditorCommand.webPerms(p));
+            if (p.hasPermission("veneer.hacks.editor")) allowed.add(id);
+        }
+        FoliaScheduler.runAsync(plugin, () -> {
+            var tokens = plugin.database().tokens();
+            for (String owner : tokens.owners()) {
+                if (online.containsKey(owner)) {
+                    applyAccess(owner, allowed.contains(owner), online.get(owner));
+                    continue;
+                }
+                List<String> nodes = new ArrayList<>(List.of("veneer.hacks.editor"));
+                for (String perm : HackEditorCommand.WEB_PERMS) nodes.add("veneer.web." + perm);
+                var lookup = plugin.permissions().offlinePermissions(UUID.fromString(owner), nodes);
+                if (lookup == null) continue;
+                lookup.thenAccept(granted -> applyAccess(owner, granted.contains("veneer.hacks.editor"),
+                        String.join(",", HackEditorCommand.WEB_PERMS.stream().filter(p -> granted.contains("veneer.web." + p)).toList())));
+            }
+        });
+    }
+
+    private void applyAccess(String owner, boolean allowed, String perms) {
+        var tokens = plugin.database().tokens();
+        if (allowed) {
+            tokens.updatePerms(owner, perms);
+        } else if (tokens.revokeByUuid(owner) > 0) {
+            plugin.getLogger().info("[Hacks] Web panel: " + owner + " lost veneer.hacks.editor, browsers disconnected.");
+        }
+    }
+
+    /** Sends a scan event to every open panel. */
+    public void publishScan(String player, String type, String state, int count) {
+        Map<String, Object> event = new LinkedHashMap<>();
+        event.put("player", player);
+        event.put("type", type);
+        event.put("state", state);
+        event.put("count", count);
+        String json = gson.toJson(event);
+        for (var queue : streams) queue.offer(json);
+    }
+
+    /** Server-sent events: one way is all the panel needs, and the JDK server has no WebSocket support. */
+    private void openStream(HttpExchange ex) throws IOException {
+        if (authenticate(ex) == null) {
+            sendJson(ex, 401, Map.of("error", "unauthorized"));
+            ex.close();
+            return;
+        }
+        if (streams.size() >= MAX_STREAMS) {
+            sendJson(ex, 429, Map.of("error", "too many open panels"));
+            ex.close();
+            return;
+        }
+        var queue = new java.util.concurrent.LinkedBlockingQueue<String>(256);
+        streams.add(queue);
+        ex.getResponseHeaders().set("Content-Type", "text/event-stream; charset=utf-8");
+        ex.getResponseHeaders().set("Cache-Control", "no-store");
+        ex.sendResponseHeaders(200, 0);
+        streamThreads.execute(() -> {
+            try (OutputStream os = ex.getResponseBody()) {
+                os.write(": connected\n\n".getBytes(StandardCharsets.UTF_8));
+                os.flush();
+                while (!Thread.currentThread().isInterrupted()) {
+                    String event = queue.poll(15, java.util.concurrent.TimeUnit.SECONDS);
+                    if (event == null && authenticate(ex) == null) break;
+                    os.write((event != null ? "event: scan\ndata: " + event + "\n\n" : ": alive\n\n").getBytes(StandardCharsets.UTF_8));
+                    os.flush();
+                }
+            } catch (IOException | InterruptedException ignored) {
+                // The panel was closed, or the server is stopping
+            } finally {
+                streams.remove(queue);
+                ex.close();
+            }
+        });
+    }
+
     private void handle(HttpExchange ex) {
+        if (plugin.database().tokens().isBlocked(ipOf(ex))) {
+            try {
+                sendHtml(ex, 403, messagePage("Access denied", "This address is blocked from the panel."));
+            } catch (IOException ignored) {
+                // The client went away
+            } finally {
+                ex.close();
+            }
+            return;
+        }
+        if (ex.getRequestURI().getPath().equals("/api/events")) {
+            try {
+                addSecurityHeaders(ex);
+                openStream(ex);
+            } catch (Exception e) {
+                ex.close();
+            }
+            return;
+        }
         try {
             String path   = ex.getRequestURI().getPath();
             String query  = ex.getRequestURI().getRawQuery(); // raw: parseQuery decodes each value once
@@ -93,13 +308,42 @@ public class WebServerManager {
 
             addSecurityHeaders(ex);
 
+            if (path.equals("/connect") && "GET".equals(ex.getRequestMethod())) {
+                connect(ex, params);
+                return;
+            }
+
+            if (path.equals("/connected")) {
+                boolean linked = authenticate(ex) != null;
+                ex.getResponseHeaders().set("Cache-Control", "no-store");
+                sendHtml(ex, linked ? 200 : 401, linked
+                        ? messagePage("Browser linked successfully", "You can close this window. To open the panel, run <b>/hackeditor</b> in Minecraft.")
+                        : messagePage("You are not authenticated", "Run <b>/hackeditor new</b> in Minecraft and open the link in this browser."));
+                return;
+            }
+
             if (path.equals("/") || path.equals("/editor")) {
                 serveEditor(ex, params);
                 return;
             }
 
-            if (path.equals("/web/3d-force-graph.min.js") || path.equals("/web/three.min.js")) {
-                serveLibrary(ex, path.substring(1));
+            if (path.equals("/3d-force-graph.min.js") || path.equals("/three.min.js")) {
+                serveLibrary(ex, "web" + path, "public, max-age=86400");
+                return;
+            }
+
+            // Not cached: the page must not run an old script after the plugin is updated
+            if (path.equals("/panel.js")) {
+                serveLibrary(ex, "web/panel.js", "no-store");
+                return;
+            }
+
+            if (path.equals("/i18n.js")) {
+                byte[] bytes = ("window.VENEER_I18N = " + translations() + ";").getBytes(StandardCharsets.UTF_8);
+                ex.getResponseHeaders().set("Content-Type", "text/javascript; charset=utf-8");
+                ex.getResponseHeaders().set("Cache-Control", "no-store");
+                ex.sendResponseHeaders(200, bytes.length);
+                try (OutputStream os = ex.getResponseBody()) { os.write(bytes); }
                 return;
             }
 
@@ -123,14 +367,16 @@ public class WebServerManager {
     }
 
     private void serveEditor(HttpExchange ex, Map<String, String> params) throws IOException {
-        String token = params.get("token");
-        if (token == null || plugin.database().tokens().validateToken(token) == null) {
-            sendHtml(ex, 403, "<html><body style='font-family:monospace;background:#0d1117;color:#e6edf3;display:flex;align-items:center;justify-content:center;height:100vh;margin:0'><div>Invalid or expired token.<br>Run <b>/hackeditor</b> in Minecraft.</div></body></html>");
+        if (authenticate(ex) == null) {
+            sendHtml(ex, 401, messagePage("You are not authenticated", "Run <b>/hackeditor new</b> in Minecraft and open the link in this browser."));
             return;
         }
+        // Each visit extends the cookie as the server extends the session
+        setCookie(ex, sessionOf(ex));
+        ex.getResponseHeaders().set("Cache-Control", "no-store");
         try (InputStream is = plugin.getResource("web/editor.html")) {
             if (is == null) { sendHtml(ex, 500, "<h1>editor.html missing</h1>"); return; }
-            sendHtml(ex, 200, new String(is.readAllBytes(), StandardCharsets.UTF_8).replace("/*I18N*/{}", translations()));
+            sendHtml(ex, 200, new String(is.readAllBytes(), StandardCharsets.UTF_8));
         }
     }
 
@@ -143,21 +389,20 @@ public class WebServerManager {
         }
     }
 
-    /** Bundled scripts; they are public library code, so no token is needed. */
-    private void serveLibrary(HttpExchange ex, String resource) throws IOException {
+    /** Bundled scripts; they hold no data, so no session is needed. */
+    private void serveLibrary(HttpExchange ex, String resource, String cache) throws IOException {
         try (InputStream is = plugin.getResource(resource)) {
             if (is == null) { sendJson(ex, 404, Map.of("error", "not found")); return; }
             byte[] bytes = is.readAllBytes();
             ex.getResponseHeaders().set("Content-Type", "text/javascript; charset=utf-8");
-            ex.getResponseHeaders().set("Cache-Control", "public, max-age=86400");
+            ex.getResponseHeaders().set("Cache-Control", cache);
             ex.sendResponseHeaders(200, bytes.length);
             try (OutputStream os = ex.getResponseBody()) { os.write(bytes); }
         }
     }
 
     private void handleApi(HttpExchange ex, String path, Map<String, String> params) throws IOException {
-        String token = params.get("token");
-        Map<String, String> playerInfo = token != null ? plugin.database().tokens().validateToken(token) : null;
+        Map<String, String> playerInfo = authenticate(ex);
 
         if (playerInfo == null) {
             sendJson(ex, 401, Map.of("error", "unauthorized"));
@@ -165,9 +410,15 @@ public class WebServerManager {
         }
 
         String method = ex.getRequestMethod();
+        if (!"GET".equals(method) && !"HEAD".equals(method) && !sameOrigin(ex)) {
+            sendJson(ex, 403, Map.of("error", "cross-origin request refused"));
+            return;
+        }
 
         if (path.equals("/api/validate")) {
-            sendJson(ex, 200, playerInfo);
+            Map<String, Object> info = new LinkedHashMap<>(playerInfo);
+            info.put("exposed", settings().isPanelExposed());
+            sendJson(ex, 200, info);
             return;
         }
 
@@ -241,6 +492,10 @@ public class WebServerManager {
             Map<?, ?> req = gson.fromJson(body, Map.class);
             String targetName = req != null ? (String) req.get("player") : null;
             String type       = req != null && req.get("type") != null ? (String) req.get("type") : "hack";
+            if (!List.of("hack", "lang", "version", "all").contains(type)) {
+                sendJson(ex, 400, Map.of("error", "type must be hack, lang, version or all"));
+                return;
+            }
 
             if (targetName == null || targetName.isBlank()) {
                 sendJson(ex, 400, Map.of("error", "player is required"));
@@ -256,7 +511,7 @@ public class WebServerManager {
                 return;
             }
             boolean nothing = "lang".equals(type) ? plugin.module(HacksModule.class).config().getLanguages().isEmpty()
-                    : plugin.module(HacksModule.class).config().getDefaultCheckHacks().isEmpty();
+                    : "version".equals(type) ? false : plugin.module(HacksModule.class).config().getDefaultCheckHacks().isEmpty();
             if (nothing) {
                 sendJson(ex, 409, Map.of("error", "lang".equals(type) ? "no languages configured" : "no hacks configured"));
                 return;
@@ -267,15 +522,17 @@ public class WebServerManager {
                 Player target = Bukkit.getPlayerExact(finalTarget);
                 if (target == null) return;
                 FoliaScheduler.runAtEntity(plugin, target, () -> {
-                    if ("lang".equals(finalType)) {
-                        Map<String, String> langs = plugin.module(HacksModule.class).config().getLanguages();
-                        if (!langs.isEmpty())
-                            plugin.module(HacksModule.class).langChecks().startCheck(target, null, langs);
-                    } else {
-                        List<HackDefinition> hacks = plugin.module(HacksModule.class).config().getDefaultCheckHacks();
-                        if (!hacks.isEmpty())
-                            plugin.module(HacksModule.class).checks().startCheck(target, null, hacks, false,
-                                    "Web editor check by " + checkerName);
+                    Map<String, String> langs = plugin.module(HacksModule.class).config().getLanguages();
+                    List<HackDefinition> hacks = plugin.module(HacksModule.class).config().getDefaultCheckHacks();
+                    String reason = "Web editor check by " + checkerName;
+                    switch (finalType) {
+                        case "lang" -> { if (!langs.isEmpty()) plugin.module(HacksModule.class).langChecks().startCheck(target, null, langs, true, false); }
+                        case "version" -> plugin.module(HacksModule.class).langChecks().startCheck(target, null, langs, false, true);
+                        case "all" -> {
+                            plugin.module(HacksModule.class).langChecks().startCheck(target, null, langs, !langs.isEmpty(), true);
+                            if (!hacks.isEmpty()) plugin.module(HacksModule.class).checks().startCheckAfterLang(target, null, hacks, reason);
+                        }
+                        default -> { if (!hacks.isEmpty()) plugin.module(HacksModule.class).checks().startCheck(target, null, hacks, false, reason); }
                     }
                 });
             });
@@ -309,6 +566,22 @@ public class WebServerManager {
 
         if (path.startsWith("/api/player/")) {
             String name = path.substring("/api/player/".length()); // getPath() is already decoded
+            if ("DELETE".equals(method)) {
+                if (!can(playerInfo, "delete")) {
+                    sendJson(ex, 403, Map.of("error", "no permission: veneer.web.delete"));
+                    return;
+                }
+                String stored = (String) plugin.database().players().getPlayerRecord(name).get("uuid");
+                if (stored == null) {
+                    sendJson(ex, 404, Map.of("error", "player not found"));
+                    return;
+                }
+                plugin.database().players().deletePlayers(List.of(stored));
+                graphCache.clear();
+                plugin.getLogger().info("[Hacks] Web panel: " + playerInfo.get("player_name") + " deleted player " + name + " (" + stored + ")");
+                sendJson(ex, 200, Map.of("success", true));
+                return;
+            }
             // From the cache, not Bukkit: this runs on an HTTP thread
             boolean online = false;
             String uuid = "";
@@ -360,6 +633,7 @@ public class WebServerManager {
         return graph;
     }
 
+    private static final int MAX_UNLINKED_NODES = 300;
     private record CachedGraph(Map<String, Object> graph, long built) {}
     private static final long GRAPH_TTL_MS = 15_000;
     private final Map<Boolean, CachedGraph> graphCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -369,7 +643,7 @@ public class WebServerManager {
         var rp = plugin.config().section("rptrack");
         int match = rp != null ? rp.getInt("match", 5) : 5;
         Map<String, Object> graph = plugin.database().links().getLinkGraph(links.getInt("max-accounts-per-ip", 8), match,
-                links.getInt("max-accounts-per-client", 5), links.getInt("client-min-channels", 3));
+                links.getInt("max-accounts-per-client", 5), links.getInt("client-min-channels", 3), MAX_UNLINKED_NODES, linkRules(links));
         double weakFactor = Math.max(0, Math.min(1, links.getDouble("weak-provider-factor", 0.3)));
         for (Object e : (List<?>) graph.get("edges")) {
             @SuppressWarnings("unchecked") Map<String, Object> edge = (Map<String, Object>) e;
@@ -380,12 +654,66 @@ public class WebServerManager {
                 edge.put("p", ((Number) edge.get("p")).doubleValue() * weakFactor);
             if (!ips) edge.put("label", "(hidden)");
         }
+        // An address weakened above may no longer support a channel link
+        @SuppressWarnings("unchecked") List<Map<String, Object>> edges = (List<Map<String, Object>>) graph.get("edges");
+        com.veneer.core.db.LinkGraph.dropUnsupportedClientEdges(edges, linkRules(links).clientSupport());
         if (!ips)
             for (Object n : (List<?>) graph.get("nodes")) {
                 @SuppressWarnings("unchecked") Map<String, Object> node = (Map<String, Object>) n;
                 node.put("ips", List.of());
             }
         return graph;
+    }
+
+    private String linkRulesKey;
+    private com.veneer.core.db.LinkGraph.Rules linkRulesCache;
+
+    /** Read again when the settings change; until then the same mistake in them is reported only once. */
+    private synchronized com.veneer.core.db.LinkGraph.Rules linkRules(org.bukkit.configuration.ConfigurationSection links) {
+        String key = String.valueOf(links.getValues(true));
+        if (key.equals(linkRulesKey)) return linkRulesCache;
+        var d = com.veneer.core.db.LinkGraph.Rules.DEFAULT;
+        List<com.veneer.core.db.LinkGraph.BotPattern> patterns = new ArrayList<>();
+        for (Map<?, ?> entry : links.getMapList("batches.patterns")) {
+            String name = String.valueOf(entry.get("name")), regex = String.valueOf(entry.get("regex"));
+            var compiled = compile(regex, "batches.patterns " + name);
+            Object chance = entry.get("chance");
+            if (compiled != null) patterns.add(new com.veneer.core.db.LinkGraph.BotPattern(name, compiled,
+                    chance instanceof Number n ? percent("batches.patterns " + name, n.doubleValue()) : d.batchTogether()));
+        }
+        List<java.util.regex.Pattern> ignore = new ArrayList<>();
+        for (String regex : links.getStringList("batches.ignore-names")) {
+            var compiled = compile(regex, "batches.ignore-names");
+            if (compiled != null) ignore.add(compiled);
+        }
+        linkRulesCache = new com.veneer.core.db.LinkGraph.Rules(links.getBoolean("same-name", d.sameName()),
+                chance(links, "name-chance.symbols", d.symbols()), chance(links, "name-chance.digits", d.digits()),
+                chance(links, "name-chance.similar", d.similar()), links.getBoolean("batches.enabled", d.batches()),
+                Math.max(2, links.getInt("batches.min-accounts", d.minBatch())),
+                Math.max(1, links.getLong("batches.window-minutes", d.batchWindowMs() / 60_000L)) * 60_000L,
+                chance(links, "batches.chance", d.batchTogether()), chance(links, "batches.spread-chance", d.batchSpread()),
+                chance(links, "batches.named-account-chance", d.batchNamed()), chance(links, "email-chance", d.email()),
+                chance(links, "client-min-support", d.clientSupport()), List.copyOf(patterns), List.copyOf(ignore));
+        linkRulesKey = key;
+        return linkRulesCache;
+    }
+
+    private double chance(org.bukkit.configuration.ConfigurationSection links, String path, double fallback) {
+        return percent(path, links.getDouble(path, fallback * 100));
+    }
+
+    private double percent(String path, double value) {
+        if (value < 0 || value > 100) plugin.getLogger().warning("[Hacks] hacks.web-editor.links." + path + " must be from 0 to 100, got " + value);
+        return Math.max(0, Math.min(100, value)) / 100;
+    }
+
+    private java.util.regex.Pattern compile(String regex, String where) {
+        try {
+            return java.util.regex.Pattern.compile(regex, java.util.regex.Pattern.CASE_INSENSITIVE);
+        } catch (java.util.regex.PatternSyntaxException e) {
+            plugin.getLogger().warning("[Hacks] Bad regex in hacks.web-editor.links." + where + ", skipped: " + regex);
+            return null;
+        }
     }
 
     /**
@@ -435,6 +763,16 @@ public class WebServerManager {
         client.put("fake_player", profile.isFakePlayer());
         client.put("exploit_preventer", profile.isExploitPreventer());
         client.put("live", true);
+        client.put("locale", cachedPlayers.stream().filter(p -> uuid.equals(p.get("uuid")))
+                .map(p -> p.get("locale")).findFirst().orElse(null));
+        client.put("language", profile.getLanguage());
+        Map<String, String> verdicts = new LinkedHashMap<>();
+        verdicts.put("exploit_preventer", profile.exploitPreventerVerdict().name());
+        verdicts.put("fake_player", profile.fakePlayerVerdict().name());
+        verdicts.put("brand", profile.brandVerdict().name());
+        verdicts.put("language", profile.languageVerdict().name());
+        verdicts.put("protocol", profile.protocolVerdict().name());
+        client.put("verdicts", verdicts);
         return client;
     }
 
@@ -443,10 +781,18 @@ public class WebServerManager {
         return Arrays.asList(playerInfo.getOrDefault("perms", "").split(",")).contains(perm);
     }
 
-    /** The panel is same-origin, so no CORS; the token is in the URL, so no referrer to the head images either. */
+    /**
+     * A second line behind the page's escaping: only the panel's own script files run, so text that slips into the
+     * page as markup stays inert. Inline styles stay allowed, the page uses them throughout.
+     */
+    private static final String CONTENT_SECURITY_POLICY = "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; "
+            + "img-src 'self' data: blob: https://mc-heads.net; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
+    /** The panel is same-origin, so no CORS; no referrer to the head images either. */
     private void addSecurityHeaders(HttpExchange ex) {
         ex.getResponseHeaders().set("X-Content-Type-Options", "nosniff");
         ex.getResponseHeaders().set("X-Frame-Options", "DENY");
+        ex.getResponseHeaders().set("Content-Security-Policy", CONTENT_SECURITY_POLICY);
         ex.getResponseHeaders().set("Referrer-Policy", "no-referrer");
     }
 
@@ -482,5 +828,6 @@ public class WebServerManager {
     public void stop() {
         if (server != null) server.stop(0);
         if (executor != null) executor.shutdownNow();
+        streamThreads.shutdownNow();
     }
 }

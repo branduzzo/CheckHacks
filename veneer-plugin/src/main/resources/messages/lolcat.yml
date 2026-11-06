@@ -26,7 +26,7 @@ anticheat-trigger: "{prefix}<gray>Anticheat sez <yellow><click:run_command:'/ven
 join-check: "{prefix}<gray>Auto-checkin <yellow><click:run_command:'/veneer player {player}'><hover:show_text:'<gray>Open profile'>{player}</hover></click> <gray>on join..."
 already-checking: "{prefix}<yellow>{player} <white>iz already gettin checked."
 invalid-hack: "{prefix}<red>Unknown hackz: <white>{hack}"
-hackcheck-usage: "{prefix}<red>Usage: /hackcheck \\<player> [hack1,hack2,...]</red>"
+hackcheck-usage: "{prefix}<red>Usage: /hackcheck \\<player> [all|version|lang|hack] [list]</red>"
 hackcheck-no-valid: "{prefix}<red>No valid hackz 2 check.</red>"
 
 # ======================================================================
@@ -64,7 +64,6 @@ lang-join-check: "{prefix}<gray>Auto language checkin for <yellow>{player}<gray>
 # WEB EDITOR  (/hackeditor)
 # Placeholders: {url}.
 # ======================================================================
-editor-url: "{prefix}<white>Editur: <aqua><click:open_url:'{url}'>{url}</click>"
 editor-disabled: "{prefix}<red>Web editur iz disabled in config.yml."
 editor-players-only: "{prefix}<red>Only playrz can open teh editur.</red>"
 
@@ -272,7 +271,6 @@ gui-module-rptrack: "RPTrack"
 gui-module-on: "<green>✔ Enabled"
 gui-module-off: "<red>✘ Disabled"
 gui-btn-editor: "Web Editor"
-gui-btn-editor-lore: "<gray>Sendz u a link 2 teh web panel"
 gui-btn-reload: "Reload Config"
 gui-btn-version: "Version Info"
 gui-btn-reload-lore: "<gray>Reloadz config.yml an messagez"
@@ -307,7 +305,6 @@ gui-brand-undecided: "<yellow>⚠ Undecided"
 gui-brand-allowed: "<green>✔ Allowed"
 gui-brand-blocked: "<red>✘ Blocked"
 gui-brand-last: "<gray>Last: <white>{player}"
-gui-brand-hint: "<dark_gray>Left: Allow  Right: Block  Mid: Reset"
 gui-grim-check: "<gray>Check: <yellow>{check}"
 gui-grim-verbose: "<dark_gray>{verbose}"
 gui-grim-empty: "<gray>Noes violationz recorded yet"

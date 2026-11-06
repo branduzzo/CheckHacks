@@ -27,6 +27,16 @@ public class LangCheckData {
      */
     public int waitWhileBusy() { return ++deadWaits; }
 
+    private boolean reportLanguage = true;
+    private boolean reportVersion = true;
+
+    public boolean reportsLanguage() { return reportLanguage; }
+    public boolean reportsVersion()  { return reportVersion; }
+    public void setReports(boolean language, boolean version) {
+        reportLanguage = language;
+        reportVersion = version;
+    }
+
     public LangCheckData(UUID targetUUID, UUID initiatorUUID, Map<String, String> languages) {
         this.targetUUID    = targetUUID;
         this.initiatorUUID = initiatorUUID;
