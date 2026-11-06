@@ -48,17 +48,19 @@ A brand that matches no rule is reported to staff with **[Allow]** and **[Block]
 Veneer places a sign next to the player with a translation or keybind key from each mod on its lines, opens the sign editor and at once replaces the sign with air on the client. The editor closes and the client sends the sign text back, filled in from its own language files and key bindings. A key no mod defines comes back as is; a key a mod defines comes back as the mod's text or bound key. The player sees, at most, a flicker. Hacks are defined in `hacks.detection.hacks` (`TRANSLATE`, `KEYBIND` or `METEOR` mode); a client with ExploitPreventer, which blocks the trick, shows up as `PROTECTED`.
 
 ## Install
-
-1. Drop `veneer-<version>.jar` into `plugins/` and start the server (or `veneer-<version>-lite.jar` together with the PacketEvents plugin, see [Build](#build)).
-2. Edit `plugins/Veneer/config.yml`, then apply it with `/veneer reload`. Requires Paper, Spigot or Folia 1.21+ on Java 21.
-3. Optional: install LuckPerms, PlaceholderAPI, Floodgate/Geyser, ViaVersion or an anticheat. Veneer picks them up automatically.
+| Full | Lite |
+|---|---|
+| Download Java 21+ | Download Java 21+
+| Put plugin in /plugins folder | Put plugin in /plugins folder |
+| Install other plugins if needed | Download PacketEvents, add other plugins in needed |
+| Run server | Run server |
 
 ## Commands
 
 | Command | Permission | Description |
 |---|---|---|
-| `/veneer help` | - | The commands you may use, grouped by module; click one to put it in the chat box |
-| `/veneer lang [<code>\|auto\|reset]` | `veneer.lang` (everyone) | The language Veneer's messages and alerts reach you in: a file from `messages/`, `auto` (your game language), or `reset` (the server's `general.language`). Stored per player; the console keeps the server language |
+| `/veneer help` | `veneer.help` | The commands you may use, grouped by module; click one to put it in the chat box |
+| `/veneer lang [<code>\|auto\|reset]` | `veneer.lang` | The language Veneer's messages and alerts reach you in: a file from `messages/`, `auto` (your game language), or `reset` (the server's `general.language`). Stored per player; the console keeps the server language |
 | `/veneer info <player>` | `veneer.admin` | One report per player: client brand and channels, spoof status, latest mod scan, RPTrack link |
 | `/veneer alerts` | `veneer.alerts` | Toggle your own staff alerts (spoof, mod scan and RPTrack share one switch) |
 | `/veneer reload` | `veneer.admin` | Reload `config.yml` and the language files for every module |
