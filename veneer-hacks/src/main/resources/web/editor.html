@@ -1648,28 +1648,6 @@
         return str;
       }
 
-      function getAuthToken() {
-        const searchParams = new URLSearchParams(window.location.search);
-        const qToken = searchParams.get('token');
-        if (qToken && qToken.trim()) return qToken.trim();
-
-        const rawHash = window.location.hash ? window.location.hash.slice(1) : '';
-        if (rawHash.startsWith('token=')) {
-          const hToken = new URLSearchParams(rawHash).get('token');
-          if (hToken && hToken.trim()) return hToken.trim();
-        } else if (rawHash && !['overview', 'history', 'graph'].includes(rawHash.toLowerCase())) {
-          return rawHash.trim();
-        }
-        return '';
-      }
-
-      const AUTH_TOKEN = getAuthToken();
-
-      function withToken(url) {
-        const sep = url.indexOf('?') === -1 ? '?' : '&';
-        return url + sep + 'token=' + encodeURIComponent(AUTH_TOKEN);
-      }
-
       // ============================================================================
       // 2. DETERMINISTIC INLINE SVG AVATAR FALLBACK (ZERO BROKEN IMAGES OFFLINE)
       // ============================================================================
@@ -2288,12 +2266,11 @@
       }
 
       async function apiRequest(path, options = {}) {
-        const tokenizedUrl = withToken(path);
         if (IS_MOCK) {
-          return mockFallbackHandler(tokenizedUrl, options);
+          return mockFallbackHandler(path, options);
         }
         try {
-          const res = await fetch(tokenizedUrl, {
+          const res = await fetch(path, {
             ...options,
             headers: {
               'Content-Type': 'application/json',
@@ -2323,34 +2300,8 @@
       }
 
       function handleSessionExpired() {
-        showStatusBanner('Session expired. Run /hackeditor in Minecraft.', 'danger');
-        const badge = document.getElementById('sessionTimerBadge');
-        if (badge) {
-          badge.textContent = 'EXPIRED';
-          badge.style.color = 'var(--danger-fg)';
-        }
-      }
-
-      function startSessionClock(expiresAt) {
-        const badge = document.getElementById('sessionTimerBadge');
-        if (!badge || !expiresAt) return;
-        let timer = 0;
-        const tick = () => {
-          const left = expiresAt - Date.now();
-          if (left <= 0) {
-            badge.textContent = 'EXPIRED';
-            badge.style.color = 'var(--danger-fg)';
-            handleSessionExpired();
-            clearInterval(timer);
-            return;
-          }
-          const min = Math.ceil(left / 60000);
-          badge.textContent = t('Session') + ': ' + min + 'm';
-          badge.title = t('Time until this panel link expires. Run /hackeditor for a new one.');
-          badge.style.color = min <= 2 ? 'var(--warning-fg)' : 'var(--text-muted)';
-        };
-        timer = setInterval(tick, 15000);
-        tick();
+        // Disconnected or expired: the server now shows the sign-in instructions instead of the panel
+        window.location.reload();
       }
 
       // ============================================================================
@@ -3473,7 +3424,7 @@
       /** Scan progress pushed by the server; the slower polling stays as a fallback. */
       function connectScanEvents() {
         if (IS_MOCK || typeof EventSource === 'undefined') return;
-        const source = new EventSource(withToken('/api/events'));
+        const source = new EventSource('/api/events');
         source.addEventListener('scan', (message) => {
           const e = JSON.parse(message.data);
           const type = String(e.type).toUpperCase();
@@ -3683,8 +3634,9 @@
           document.body.classList.toggle('no-links', !hasLinks);
           document.body.classList.toggle('no-scan', !hasScan);
           document.body.classList.toggle('no-delete', !hasDelete);
-          if (authInfo.expires_at) {
-            startSessionClock(Number(authInfo.expires_at));
+          if (authInfo.exposed) {
+            showStatusBanner(t('This panel runs without HTTPS on a public address: your login can be read on the network.'), 'warning');
+            clearTimeout(bannerTimer);
           }
         }
 

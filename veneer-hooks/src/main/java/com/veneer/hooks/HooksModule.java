@@ -55,6 +55,11 @@ public class HooksModule extends VeneerModule implements PermissionSource {
         return luckPerms != null ? luckPerms.nodes(player, prefix) : BUKKIT.setNodes(player, prefix);
     }
 
+    @Override
+    public java.util.concurrent.CompletableFuture<java.util.Set<String>> offlinePermissions(java.util.UUID uuid, java.util.Collection<String> nodes) {
+        return luckPerms == null ? null : luckPerms.offlinePermissions(uuid, nodes);
+    }
+
     /** Primary LuckPerms group of the player, or "" when LuckPerms is absent. */
     @Override
     public String primaryGroup(Player player) {

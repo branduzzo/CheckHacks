@@ -34,7 +34,7 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
     /** {@code /veneer <name> ...} runs the plugin.yml command it maps to, with its own permission check. */
     private static final Map<String, String> PASSTHROUGH = Map.of(
             "spoof", "spoof", "hackcheck", "hackcheck", "scan", "hackcheck", "hacklang", "hacklang",
-            "hackeditor", "hackeditor", "editor", "hackeditor", "rptrack", "rptrack");
+            "hackeditor", "hackeditor", "editor", "hackeditor", "web", "hackeditor", "rptrack", "rptrack");
 
     /**
      * One line of {@code /veneer help}: shown when the module runs (null: always) and the sender has the

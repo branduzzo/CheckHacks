@@ -172,11 +172,32 @@ class StorageTest {
 
     @Test
     void tokensAndSettings() {
-        String t1 = storage.tokens().saveToken("u-a", "Alice", 5, "ips");
-        String t2 = storage.tokens().saveToken("u-a", "Alice", 5, "ips");
-        assertNull(storage.tokens().validateToken(t1), "a new token replaces the old one");
-        assertEquals("Alice", storage.tokens().validateToken(t2).get("player_name"));
-        assertNull(storage.tokens().validateToken(null));
+        var tokens = storage.tokens();
+        String first = tokens.createLink("u-a", "Alice", 5, "ips");
+        String link = tokens.createLink("u-a", "Alice", 5, "ips");
+        assertNull(tokens.redeemLink(first, "1.1.1.1", 30), "a new link replaces the unused one");
+        assertNull(tokens.validateSession(link, "1.1.1.1", 30), "a link is not a session");
+        var redeemed = tokens.redeemLink(link, "1.1.1.1", 30);
+        assertEquals("Alice", redeemed.playerName());
+        assertNull(tokens.redeemLink(link, "2.2.2.2", 30), "a link works once");
+        assertEquals("ips", tokens.validateSession(redeemed.session(), "1.1.1.1", 30).get("perms"));
+        assertNull(tokens.validateSession(null, "1.1.1.1", 30));
+        assertNull(tokens.validateSession("wrong", "1.1.1.1", 30));
+
+        var second = tokens.redeemLink(tokens.createLink("u-a", "Alice", 5, "ips"), "2.2.2.2", 30);
+        assertEquals(2, tokens.countSessions("u-a"), "one session per browser");
+        tokens.updatePerms("u-a", "scan");
+        assertEquals("scan", tokens.validateSession(second.session(), "2.2.2.2", 30).get("perms"));
+        assertEquals("2.2.2.2", tokens.sessionIp("Alice", second.id()));
+        tokens.blockIp("2.2.2.2");
+        assertTrue(tokens.isBlocked("2.2.2.2"));
+        assertTrue(tokens.unblockIp("2.2.2.2"));
+        assertFalse(tokens.isBlocked("2.2.2.2"));
+        String one = (String) tokens.listSessions(null, "alice").get(0).get("id");
+        assertEquals(1, tokens.revokeByName("Alice", one));
+        assertEquals(1, tokens.revokeByName("alice", null));
+        assertNull(tokens.validateSession(redeemed.session(), "1.1.1.1", 30));
+        assertNull(tokens.validateSession(second.session(), "2.2.2.2", 30));
 
         storage.settings().saveLanguageChoice("u-a", "ru");
         assertEquals(Map.of("u-a", "ru"), storage.settings().getLanguageChoices());

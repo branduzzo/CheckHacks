@@ -65,6 +65,12 @@ public final class Alerts {
     }
 
     /** Sends {@code message} to the player who started a scan, unless the broadcast already reached them. */
+    /** Tells only this player, whether or not they receive alerts. */
+    public void notifyOwner(UUID owner, Function<Messages, Component> message) {
+        Player p = Bukkit.getPlayer(owner);
+        if (p != null && p.isOnline()) p.sendMessage(message.apply(plugin.messages().in(p)));
+    }
+
     public void notifyInitiator(UUID initiator, Function<Messages, Component> message) {
         if (initiator == null) return;
         Player p = Bukkit.getPlayer(initiator);

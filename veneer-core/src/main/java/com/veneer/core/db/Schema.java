@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 final class Schema {
 
     /** Bump with every step added to {@link #upgrade}. */
-    static final int VERSION = 3;
+    static final int VERSION = 4;
 
     private Schema() {}
 
@@ -85,6 +85,20 @@ final class Schema {
                     created_at INTEGER NOT NULL,
                     expires_at INTEGER NOT NULL
                 )""");
+            // Web panel access: one-time links and browser sessions, by the SHA-256 of their secret
+            s.execute("""
+                CREATE TABLE IF NOT EXISTS web_sessions (
+                    hash TEXT PRIMARY KEY,
+                    kind TEXT NOT NULL,
+                    player_uuid TEXT NOT NULL,
+                    player_name TEXT NOT NULL,
+                    perms TEXT NOT NULL DEFAULT '',
+                    created_at INTEGER NOT NULL,
+                    expires_at INTEGER NOT NULL,
+                    last_used INTEGER NOT NULL,
+                    last_ip TEXT
+                )""");
+            s.execute("CREATE TABLE IF NOT EXISTS web_blocked_ips (ip TEXT PRIMARY KEY, created_at INTEGER NOT NULL)");
             // Client brands staff were asked about: verdict "allow", "block" or null (not decided yet)
             s.execute("""
                 CREATE TABLE IF NOT EXISTS brand_verdicts (
@@ -176,6 +190,10 @@ final class Schema {
             if (version < 3 && !hasColumn(c, "joins", "count")) {
                 // Databases from before join counting: without it no join could be recorded or read
                 s.execute("ALTER TABLE joins ADD COLUMN count INTEGER NOT NULL DEFAULT 1");
+            }
+            if (version < 4) {
+                // Tokens of the old URL log-in were stored in plain text and no longer open anything
+                s.execute("DELETE FROM editor_tokens");
             }
             s.execute("PRAGMA user_version = " + VERSION);
             c.commit();

@@ -152,7 +152,22 @@ public class ConfigManager {
     public int     getWebPort()         { return masterConfig.getInt("web-editor.port", 8080); }
     public String  getWebHost()         { return masterConfig.getString("web-editor.host", "localhost"); }
     public String  getWebBind()         { return masterConfig.getString("web-editor.bind", "127.0.0.1"); }
-    public int     getTokenExpireMinutes() { return masterConfig.getInt("web-editor.token-expire-minutes", 10); }
+    public int     getLinkExpireMinutes() { return Math.max(1, masterConfig.getInt("web-editor.link-expire-minutes", 5)); }
+    /** Days a connected browser stays logged in without being used. */
+    public int     getSessionExpireDays() { return Math.max(1, masterConfig.getInt("web-editor.session-expire-days", 30)); }
+    /** The address players open: {@code host} when it is a full URL (behind an HTTPS proxy), else http://host:port. */
+    public String  getPanelUrl() {
+        String host = getWebHost().strip();
+        if (host.startsWith("http://") || host.startsWith("https://")) return host.replaceAll("/+$", "");
+        return "http://" + host + ":" + getWebPort();
+    }
+    public boolean isPanelHttps() { return getPanelUrl().startsWith("https://"); }
+    /** Whether the panel's traffic leaves this machine unencrypted. */
+    public boolean isPanelExposed() {
+        if (isPanelHttps()) return false;
+        String host = java.net.URI.create(getPanelUrl()).getHost();
+        return host == null || !(host.equals("localhost") || host.equals("127.0.0.1") || host.equals("[::1]"));
+    }
 
     public boolean isCommandIfPositiveEnabled() { return commandIfPositiveEnabled; }
     public String  getPositiveCommand()         { return positiveCommand; }

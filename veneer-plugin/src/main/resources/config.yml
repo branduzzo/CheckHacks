@@ -451,13 +451,19 @@ hacks:
   # Web panel (/hackeditor): scan history and manual scans, served by the plugin itself.
   web-editor:
     enabled: true
-    # Host in the link that /hackeditor gives to the player
+    # Address in the links /hackeditor gives. Either a host name (the port below is added and the panel runs on plain
+    # HTTP), or a full address such as "https://panel.example.com" when an HTTPS proxy (Caddy, nginx) is in front.
+    # Open the panel at exactly this address: browsers keep the login per address.
+    # Without HTTPS on a public address the login cookie can be read on the network.
     host: "localhost"
     # Address the panel listens on. 127.0.0.1 only accepts connections from this machine
     # (use a reverse proxy or tunnel); 0.0.0.0 listens on every interface.
     bind: "127.0.0.1"
     port: 8080
-    token-expire-minutes: 10
+    # How long the one-time link of /hackeditor new can be opened
+    link-expire-minutes: 5
+    # A connected browser is logged out after this many days without use
+    session-expire-days: 30
     # Account graph: addresses accounts join from are stored to link accounts that share one
     links:
       # Days to keep an address after the account last used it (0 = forever)

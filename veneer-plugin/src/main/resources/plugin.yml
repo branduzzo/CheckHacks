@@ -26,8 +26,8 @@ commands:
     usage: /hacklang <player> [lang1,lang2,...]
     permission: veneer.hacks.lang
   hackeditor:
-    description: Open the web panel (scan history and manual scans)
-    usage: /hackeditor
+    description: Open the web panel, connect a browser or disconnect browsers
+    usage: /hackeditor [new|links [player]|unauth <player> [id]|block <player> <id>|unblock <ip>]
     permission: veneer.hacks.editor
   rptrack:
     description: Show a player's resource-pack cache fingerprint and linked accounts
@@ -82,6 +82,9 @@ permissions:
   veneer.hacks.editor:
     description: Use /hackeditor
     default: op
+  veneer.hacks.editor.admin:
+    description: List and disconnect the web panel browsers of other players
+    default: op
   veneer.web.scan:
     description: Run scans from the web panel
     default: op
@@ -118,6 +121,7 @@ permissions:
       veneer.hacks.check: true
       veneer.hacks.lang: true
       veneer.hacks.editor: true
+      veneer.hacks.editor.admin: true
   veneer.*:
     description: Everything
     default: false

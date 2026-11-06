@@ -79,7 +79,6 @@
   "Search": "Найти",
   "Search a player above": "Найдите игрока выше",
   "Search player...": "Найти игрока...",
-  "Session expired. Run /hackeditor in Minecraft.": "Сессия истекла. Введите /hackeditor в Minecraft.",
   "Show in graph": "Показать на графе",
   "Thicker line = higher match. Hover a head or a line for details.": "Чем толще линия, тем сильнее связь. Наведите на голову или линию, чтобы увидеть подробности.",
   "Type": "Тип",
@@ -186,8 +185,16 @@
   "scan stopped": "проверка прервана",
   "scan finished": "проверка завершена",
   "Session": "Сессия",
-  "Time until this panel link expires. Run /hackeditor for a new one.": "Сколько осталось до истечения ссылки на панель. Новую выдаёт /hackeditor.",
   "The client did not send a brand.": "Клиент не передал бренд.",
   "Mismatch": "Не совпадает",
-  "Match": "Совпадает"
+  "Match": "Совпадает",
+  "This panel runs without HTTPS on a public address: your login can be read on the network.": "Панель работает без HTTPS на публичном адресе: ваш вход можно перехватить в сети.",
+  "This link is invalid, expired or already used.": "Ссылка недействительна, истекла или уже использована.",
+  "Run <b>/hackeditor new</b> in Minecraft for a new one. If you did not open it yourself, someone else may have: check <b>/hackeditor links</b>.": "Новую выдаст <b>/hackeditor new</b> в Minecraft. Если вы её не открывали, это мог сделать кто-то другой: проверьте <b>/hackeditor links</b>.",
+  "Access denied": "Доступ запрещён",
+  "This address is blocked from the panel.": "Этот адрес заблокирован на панели.",
+  "Browser linked successfully": "Браузер успешно связан",
+  "You can close this window. To open the panel, run <b>/hackeditor</b> in Minecraft.": "Это окно можно закрыть. Чтобы открыть панель, введите <b>/hackeditor</b> в Minecraft.",
+  "You are not authenticated": "Вы не авторизованы",
+  "Run <b>/hackeditor new</b> in Minecraft and open the link in this browser.": "Введите <b>/hackeditor new</b> в Minecraft и откройте ссылку в этом браузере."
 }
