@@ -1429,6 +1429,8 @@
         if (e.type === 'rptrack' || e.type === 'fingerprint') return t('fingerprint {0}', t('{0} packs', parseInt(e.label) || 5));
         if (e.type === 'client') return t('client {0}', e.label);
         if (e.type === 'email') return t('same e-mail (AuthMe)');
+        if (e.type === 'name') return t('similar name {0}', e.label);
+        if (e.type === 'batch') return t('bot batch {0}', e.label);
         let s = t('address {0}', e.label === '(hidden)' ? t('(hidden)') : (e.label || 'shared IP'));
         if (e.org !== undefined || e.provider !== undefined) s += ' (' + provider(e) + ')';
         if (e.weak) s += ' — ' + t('VPN / hosting, counts less');
@@ -1487,6 +1489,7 @@
           const gRp = document.getElementById('g-rp');
           const gCl = document.getElementById('g-cl');
           const gEm = document.getElementById('g-em');
+          const gNm = document.getElementById('g-nm');
           const gMin = document.getElementById('g-min');
           const gDays = document.getElementById('g-days');
           const g2d = document.getElementById('g-2d');
@@ -1496,7 +1499,9 @@
             rptrack: gRp ? gRp.checked : true,
             fingerprint: gRp ? gRp.checked : true,
             client: gCl ? gCl.checked : true,
-            email: gEm ? gEm.checked : true
+            email: gEm ? gEm.checked : true,
+            name: gNm ? gNm.checked : true,
+            batch: gNm ? gNm.checked : true
           };
           const minPct = gMin ? +gMin.value / 100 : 0;
           const days = gDays ? +gDays.value : 0;
@@ -1536,7 +1541,7 @@
             .numDimensions(g2d && g2d.checked ? 2 : 3)
             .nodeThreeObject(n => skinCube(n, 9 + Math.min(n.links, 8) * 1.5))
             .nodeLabel(n => escapeHtml(n.name) + ' (' + (n.links === 1 ? '1 link' : n.links + ' links') + ')')
-            .linkColor(l => l.types.has('rptrack') || l.types.has('fingerprint') ? '#3fb950' : l.types.has('email') ? '#f59e0b' : l.types.has('ip') ? '#8b949e' : '#2dd4bf')
+            .linkColor(l => l.types.has('rptrack') || l.types.has('fingerprint') ? '#3fb950' : l.types.has('email') ? '#f59e0b' : l.types.has('ip') ? '#8b949e' : l.types.has('batch') ? '#f472b6' : l.types.has('name') ? '#c084fc' : '#2dd4bf')
             .linkOpacity(0.7)
             .linkWidth(l => 0.4 + l.pct * 2.2)
             .linkLabel(l => Math.round(l.pct * 100) + '% — ' + l.why.map(escapeHtml).join(', '))
@@ -1595,7 +1600,7 @@
             controls.update();
           }, {passive: false});
           info.innerHTML = '<span>' + escapeHtml(t('{0} accounts, {1} links', nodes.length, links.length)) + '</span><span class="legend">' +
-            [['#3fb950', 'same fingerprint'], ['#f59e0b', 'same e-mail'], ['#8b949e', 'same address'], ['#2dd4bf', 'same client']]
+            [['#3fb950', 'same fingerprint'], ['#f59e0b', 'same e-mail'], ['#8b949e', 'same address'], ['#2dd4bf', 'same client'], ['#c084fc', 'similar name'], ['#f472b6', 'bot batch']]
               .map(([c, s]) => '<span style="color:' + c + '">&#9632;</span> ' + escapeHtml(t(s))).join(' &nbsp;') + '</span>';
           // The graph takes over the box's content, so the overlays go back on top of it
           box.appendChild(card);
@@ -1740,12 +1745,13 @@
         const gRp = document.getElementById('g-rp');
         const gCl = document.getElementById('g-cl');
         const gEm = document.getElementById('g-em');
+        const gNm = document.getElementById('g-nm');
         const gDays = document.getElementById('g-days');
         const g2d = document.getElementById('g-2d');
         const gMin = document.getElementById('g-min');
         const gSearch = document.getElementById('g-search');
 
-        [gIp, gRp, gCl, gEm, gDays, g2d].forEach(el => { if (el) el.onchange = build; });
+        [gIp, gRp, gCl, gEm, gNm, gDays, g2d].forEach(el => { if (el) el.onchange = build; });
         if (gMin) {
           gMin.oninput = () => { document.getElementById('g-min-v').textContent = gMin.value + '%'; };
           gMin.onchange = build;

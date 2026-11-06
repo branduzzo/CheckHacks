@@ -48,6 +48,72 @@ class StorageTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    void similarNamesLinkButUnrelatedAndShortOnesDoNot() {
+        for (String[] a : new String[][]{{"u1", "Steve_Pro"}, {"u2", "stevepro"}, {"u3", "Kirill2009"}, {"u4", "Kirill2011"},
+                {"u5", "Bob"}, {"u6", "Bob1"}, {"u7", "Maximus"}, {"u8", "MaximusAlt"}, {"u9", "Unrelated"}})
+            storage.players().recordJoin(a[0], a[1], "10.9.0." + a[0].substring(1));
+        Map<String, Double> chance = new java.util.HashMap<>();
+        for (var e : (List<Map<String, Object>>) storage.links().getLinkGraph(8, 5, 5, 3).get("edges")) {
+            if (!"name".equals(e.get("type"))) continue;
+            String a = (String) e.get("source"), b = (String) e.get("target");
+            chance.put(a.compareTo(b) < 0 ? a + b : b + a, (Double) e.get("p"));
+        }
+        assertEquals(Map.of("u1u2", 0.8, "u3u4", 0.5, "u7u8", 0.35), chance);
+        assertFalse(((List<?>) storage.links().getLinkGraph(8, 5, 5, 3, 0, new com.veneer.core.db.LinkGraph.Rules(false, 0.8, 0.5, 0.35, true, 4, 1_800_000L, 0.9, 0.6, 0.35, 0.9, 0.5, List.of(), List.of())).get("edges")).stream()
+                .anyMatch(e -> "name".equals(((Map<?, ?>) e).get("type"))));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void aBotBatchLinksToOneMemberAndTheNameInsideItOnlyWeakly() {
+        String[] bots = {"u726_once_oh_v0l", "xgep_once_oh_g9u", "m3es_once_oh_bck", "k562_once_oh_5co", "otbu_once_oh_q81"};
+        for (int i = 0; i < bots.length; i++) storage.players().recordJoin("b" + i, bots[i], "10.7.0." + i);
+        storage.players().recordJoin("real", "once_oh", "10.7.1.1");
+        storage.players().recordJoin("x1", "Killer228", "10.7.2.1");
+        storage.players().recordJoin("x2", "KillerPro", "10.7.2.2");
+        storage.players().recordJoin("x3", "Killer007", "10.7.2.3");
+        storage.players().recordJoin("x4", "KillerBob", "10.7.2.4");
+        var edges = (List<Map<String, Object>>) storage.links().getLinkGraph(8, 5, 5, 3).get("edges");
+        var batch = edges.stream().filter(e -> "batch".equals(e.get("type"))).toList();
+        assertEquals(5, batch.size(), "four members and the named account, none of the Killers");
+        assertEquals(1, batch.stream().filter(e -> (Double) e.get("p") == 0.35).count());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void configuredPatternsAndIgnoredNamesOverrideTheAutomaticRules() {
+        storage.players().recordJoin("p1", "wave_aaaa", "10.6.0.1");
+        storage.players().recordJoin("p2", "wave_bbbb", "10.6.0.2");
+        storage.players().recordJoin("i1", "Stevie_Pro", "10.6.0.3");
+        storage.players().recordJoin("i2", "steviepro", "10.6.0.4");
+        var d = com.veneer.core.db.LinkGraph.Rules.DEFAULT;
+        var rules = new com.veneer.core.db.LinkGraph.Rules(d.sameName(), d.symbols(), d.digits(), d.similar(), d.batches(), d.minBatch(),
+                d.batchWindowMs(), d.batchTogether(), d.batchSpread(), d.batchNamed(), d.email(), d.clientSupport(),
+                List.of(new com.veneer.core.db.LinkGraph.BotPattern("wave", java.util.regex.Pattern.compile("^wave_"), 0.7)),
+                List.of(java.util.regex.Pattern.compile("stevie", java.util.regex.Pattern.CASE_INSENSITIVE)));
+        var edges = (List<Map<String, Object>>) storage.links().getLinkGraph(8, 5, 5, 3, 0, rules).get("edges");
+        assertEquals(1, edges.size());
+        assertEquals("batch", edges.get(0).get("type"));
+        assertEquals(0.7, edges.get(0).get("p"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void channelSetsCountOnlyForPairsOtherLinksMakeLikelyWhateverTheBrand() {
+        List<String> channels = List.of("a:1", "a:2", "a:3", "a:4");
+        storage.players().recordClient("c1", "Aaaa", "fabric", channels);
+        storage.players().recordClient("c2", "Bbbb", "forge", channels);
+        var graph = storage.links().getLinkGraph(8, 5, 5, 3);
+        assertTrue(((List<?>) graph.get("edges")).isEmpty(), "channels alone link nobody");
+
+        storage.players().recordJoin("c1", "Aaaa", "10.8.0.1");
+        storage.players().recordJoin("c2", "Bbbb", "10.8.0.1");
+        var edges = (List<Map<String, Object>>) storage.links().getLinkGraph(8, 5, 5, 3).get("edges");
+        assertEquals(1, edges.stream().filter(e -> "client".equals(e.get("type"))).count());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void authMeAccountsLinkByAddressAndEmailEvenWithoutAJoin() {
         storage.players().replaceAuthMeAccounts(List.of(
                 new PlayerStore.AuthMeAccount("u-a", "Alice", "203.0.113.5", null, 1000, null),

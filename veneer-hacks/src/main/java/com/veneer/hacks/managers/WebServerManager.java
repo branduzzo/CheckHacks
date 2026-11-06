@@ -643,7 +643,7 @@ public class WebServerManager {
         var rp = plugin.config().section("rptrack");
         int match = rp != null ? rp.getInt("match", 5) : 5;
         Map<String, Object> graph = plugin.database().links().getLinkGraph(links.getInt("max-accounts-per-ip", 8), match,
-                links.getInt("max-accounts-per-client", 5), links.getInt("client-min-channels", 3), MAX_UNLINKED_NODES);
+                links.getInt("max-accounts-per-client", 5), links.getInt("client-min-channels", 3), MAX_UNLINKED_NODES, linkRules(links));
         double weakFactor = Math.max(0, Math.min(1, links.getDouble("weak-provider-factor", 0.3)));
         for (Object e : (List<?>) graph.get("edges")) {
             @SuppressWarnings("unchecked") Map<String, Object> edge = (Map<String, Object>) e;
@@ -654,12 +654,66 @@ public class WebServerManager {
                 edge.put("p", ((Number) edge.get("p")).doubleValue() * weakFactor);
             if (!ips) edge.put("label", "(hidden)");
         }
+        // An address weakened above may no longer support a channel link
+        @SuppressWarnings("unchecked") List<Map<String, Object>> edges = (List<Map<String, Object>>) graph.get("edges");
+        com.veneer.core.db.LinkGraph.dropUnsupportedClientEdges(edges, linkRules(links).clientSupport());
         if (!ips)
             for (Object n : (List<?>) graph.get("nodes")) {
                 @SuppressWarnings("unchecked") Map<String, Object> node = (Map<String, Object>) n;
                 node.put("ips", List.of());
             }
         return graph;
+    }
+
+    private String linkRulesKey;
+    private com.veneer.core.db.LinkGraph.Rules linkRulesCache;
+
+    /** Read again when the settings change; until then the same mistake in them is reported only once. */
+    private synchronized com.veneer.core.db.LinkGraph.Rules linkRules(org.bukkit.configuration.ConfigurationSection links) {
+        String key = String.valueOf(links.getValues(true));
+        if (key.equals(linkRulesKey)) return linkRulesCache;
+        var d = com.veneer.core.db.LinkGraph.Rules.DEFAULT;
+        List<com.veneer.core.db.LinkGraph.BotPattern> patterns = new ArrayList<>();
+        for (Map<?, ?> entry : links.getMapList("batches.patterns")) {
+            String name = String.valueOf(entry.get("name")), regex = String.valueOf(entry.get("regex"));
+            var compiled = compile(regex, "batches.patterns " + name);
+            Object chance = entry.get("chance");
+            if (compiled != null) patterns.add(new com.veneer.core.db.LinkGraph.BotPattern(name, compiled,
+                    chance instanceof Number n ? percent("batches.patterns " + name, n.doubleValue()) : d.batchTogether()));
+        }
+        List<java.util.regex.Pattern> ignore = new ArrayList<>();
+        for (String regex : links.getStringList("batches.ignore-names")) {
+            var compiled = compile(regex, "batches.ignore-names");
+            if (compiled != null) ignore.add(compiled);
+        }
+        linkRulesCache = new com.veneer.core.db.LinkGraph.Rules(links.getBoolean("same-name", d.sameName()),
+                chance(links, "name-chance.symbols", d.symbols()), chance(links, "name-chance.digits", d.digits()),
+                chance(links, "name-chance.similar", d.similar()), links.getBoolean("batches.enabled", d.batches()),
+                Math.max(2, links.getInt("batches.min-accounts", d.minBatch())),
+                Math.max(1, links.getLong("batches.window-minutes", d.batchWindowMs() / 60_000L)) * 60_000L,
+                chance(links, "batches.chance", d.batchTogether()), chance(links, "batches.spread-chance", d.batchSpread()),
+                chance(links, "batches.named-account-chance", d.batchNamed()), chance(links, "email-chance", d.email()),
+                chance(links, "client-min-support", d.clientSupport()), List.copyOf(patterns), List.copyOf(ignore));
+        linkRulesKey = key;
+        return linkRulesCache;
+    }
+
+    private double chance(org.bukkit.configuration.ConfigurationSection links, String path, double fallback) {
+        return percent(path, links.getDouble(path, fallback * 100));
+    }
+
+    private double percent(String path, double value) {
+        if (value < 0 || value > 100) plugin.getLogger().warning("[Hacks] hacks.web-editor.links." + path + " must be from 0 to 100, got " + value);
+        return Math.max(0, Math.min(100, value)) / 100;
+    }
+
+    private java.util.regex.Pattern compile(String regex, String where) {
+        try {
+            return java.util.regex.Pattern.compile(regex, java.util.regex.Pattern.CASE_INSENSITIVE);
+        } catch (java.util.regex.PatternSyntaxException e) {
+            plugin.getLogger().warning("[Hacks] Bad regex in hacks.web-editor.links." + where + ", skipped: " + regex);
+            return null;
+        }
     }
 
     /**
