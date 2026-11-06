@@ -65,13 +65,21 @@ public class LangCheckManager {
         if (data == null) return;
         if (data.getTimeoutTask() != null) data.getTimeoutTask().cancel();
         restoreSign(data, false);
+        Player gone = Bukkit.getPlayer(uuid);
+        plugin.module(HacksModule.class).scanEvent(gone != null ? gone.getName() : uuid.toString(), "lang", "aborted", 0);
     }
 
     public void startCheck(Player target, Player initiator, Map<String, String> languages) {
-        startCheck(target, initiator, languages, 0);
+        startCheck(target, initiator, languages, 0, true, true);
     }
 
-    private void startCheck(Player target, Player initiator, Map<String, String> languages, int waits) {
+    /** The one sign answers both questions; {@code language} and {@code version} choose what is reported. */
+    public void startCheck(Player target, Player initiator, Map<String, String> languages, boolean language, boolean version) {
+        startCheck(target, initiator, languages, 0, language, version);
+    }
+
+    private void startCheck(Player target, Player initiator, Map<String, String> languages, int waits,
+                            boolean language, boolean version) {
         UUID uuid = target.getUniqueId();
 
         if (plugin.bedrock().isBedrock(target)) {
@@ -96,7 +104,7 @@ public class LangCheckManager {
                 initiator.sendMessage(plugin.messages().in(initiator).get("already-checking", Map.of("player", target.getName())));
             } else if (waits < 30) {
                 FoliaScheduler.runAtEntityLater(plugin, target,
-                        () -> { if (target.isOnline()) startCheck(target, null, languages, waits + 1); }, 40L);
+                        () -> { if (target.isOnline()) startCheck(target, null, languages, waits + 1, language, version); }, 40L);
             }
             return;
         }
@@ -110,7 +118,9 @@ public class LangCheckManager {
 
         LangCheckData data = new LangCheckData(uuid,
                 initiator != null ? initiator.getUniqueId() : null, languages);
+        data.setReports(language, version);
         activeChecks.put(uuid, data);
+        plugin.module(HacksModule.class).scanEvent(target.getName(), "lang", "started", 1);
 
         if (initiator != null)
             initiator.sendMessage(plugin.messages().in(initiator).get("lang-check-started",
@@ -150,7 +160,7 @@ public class LangCheckManager {
         front.line(0, Component.translatable(LANG_KEY, LANG_FALLBACK));
         // The probe answers outgrow what Paper keeps of a sign line: only asked when the raw packet can be read
         var protocol = ClientVersions.of(target);
-        if (plugin.module(HacksModule.class).config().isVersionCheckEnabled() && plugin.module(HacksModule.class).readsRawSigns() && protocol != null) {
+        if (data.reportsVersion() && plugin.module(HacksModule.class).config().isVersionCheckEnabled() && plugin.module(HacksModule.class).readsRawSigns() && protocol != null) {
             Component[] probe = VersionProbe.lines(protocol);
             for (int i = 0; i < probe.length; i++) front.line(i + 1, probe[i]);
             data.setProbedFor(protocol);
@@ -182,6 +192,7 @@ public class LangCheckManager {
                 return;
             }
             activeChecks.remove(uuid);
+            plugin.module(HacksModule.class).scanEvent(target.getName(), "lang", "aborted", 0);
             Function<Messages, Component> msg = m -> m.get("lang-check-timeout",
                     Map.of("player", target.getName()));
             plugin.alerts().send(msg);
@@ -202,7 +213,28 @@ public class LangCheckManager {
         String response = lines.length > 0 ? lines[0].strip() : "";
         plugin.getLogger().info("[Hacks] LangCheck response from " + target.getName() + ": '" + response + "'");
 
-        if (response.isEmpty() || response.equals(LANG_FALLBACK)) {
+        var langProfile = plugin.profileOf(uuid);
+        boolean blocked = response.isEmpty() || response.equals(LANG_FALLBACK);
+        if (!data.reportsLanguage()) {
+            String note = blocked ? null : checkVersion(target, data);
+            String shown = note != null ? note : "unknown";
+            Function<Messages, Component> msg = m -> m.get("version-check-result",
+                    Map.of("player", target.getName(), "result", shown));
+            plugin.alerts().send(msg);
+            plugin.alerts().notifyInitiator(data.getInitiatorUUID(), msg);
+            String versionName = target.getName(), versionId = uuid.toString();
+            String versionChecker = data.getInitiatorUUID() != null
+                    ? Optional.ofNullable(Bukkit.getPlayer(data.getInitiatorUUID())).map(Player::getName).orElse("Console")
+                    : "AutoCheck";
+            FoliaScheduler.runAsync(plugin, () -> {
+                plugin.database().scans().saveLangScan(versionName, versionId, versionChecker, "Version check", "Version", shown);
+                plugin.module(HacksModule.class).scanEvent(versionName, "lang", "done", 0);
+            });
+            return;
+        }
+
+        if (blocked) {
+            if (langProfile != null) langProfile.setLanguageProbe(null);
             Function<Messages, Component> msg = m -> m.get("lang-check-protected",
                     Map.of("player", target.getName()));
             plugin.alerts().send(msg);
@@ -212,7 +244,10 @@ public class LangCheckManager {
                     ? Optional.ofNullable(Bukkit.getPlayer(data.getInitiatorUUID()))
                     .map(Player::getName).orElse("AutoCheck")
                     : "AutoCheck";
-            FoliaScheduler.runAsync(plugin, () -> plugin.database().scans().saveScan("lang", name, id, checker, "Lang check", false));
+            FoliaScheduler.runAsync(plugin, () -> {
+                plugin.database().scans().saveScan("lang", name, id, checker, "Lang check", false);
+                plugin.module(HacksModule.class).scanEvent(name, "lang", "done", 0);
+            });
             return;
         }
 
@@ -227,7 +262,8 @@ public class LangCheckManager {
         String detected = matches.isEmpty() ? null : String.join(", ", matches);
 
         String display = detected != null ? detected : "Unknown";
-        String versionNote = checkVersion(target, data);
+        if (langProfile != null) langProfile.setLanguageProbe(detected);
+        String versionNote = data.reportsVersion() ? checkVersion(target, data) : null;
         String msgKey  = detected != null ? "lang-check-complete" : "lang-check-unknown";
         Function<Messages, Component> msg = m -> m.get(msgKey,
                 Map.of("player", target.getName(), "lang", display, "response", response));
@@ -242,8 +278,10 @@ public class LangCheckManager {
         // Off the main thread (database I/O); scan and result in one transaction, so no scan is left without its result
         String name = target.getName(), id = target.getUniqueId().toString();
         String stored = versionNote == null ? response : response + " | " + versionNote;
-        FoliaScheduler.runAsync(plugin, () ->
-                plugin.database().scans().saveLangScan(name, id, checkerName, "Lang check", display, stored));
+        FoliaScheduler.runAsync(plugin, () -> {
+            plugin.database().scans().saveLangScan(name, id, checkerName, "Lang check", display, stored);
+            plugin.module(HacksModule.class).scanEvent(name, "lang", "done", 0);
+        });
 
         ConfigManager cfg = plugin.module(HacksModule.class).config();
         if (cfg.isLangDiscordEnabled()) {

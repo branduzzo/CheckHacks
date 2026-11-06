@@ -39,6 +39,11 @@ public final class LinkGraph {
      * writes nor other readers.
      */
     public Map<String, Object> getLinkGraph(int maxPerIp, int minMatch, int maxPerClient, int minChannels) {
+        return getLinkGraph(maxPerIp, minMatch, maxPerClient, minChannels, 0);
+    }
+
+    /** As above, plus up to {@code maxUnlinked} accounts without a link, so a lone account still shows in the graph. */
+    public Map<String, Object> getLinkGraph(int maxPerIp, int minMatch, int maxPerClient, int minChannels, int maxUnlinked) {
         Rows3 rows = db.read("getLinkGraph", new Rows3(List.of(), List.of(), Set.of()), c -> {
             List<String[]> joinRows = new ArrayList<>(), clientRows = new ArrayList<>();
             try (Statement st = c.createStatement()) {
@@ -105,6 +110,11 @@ public final class LinkGraph {
         for (Map<String, Object> e : edges) {
             degree.merge((String) e.get("source"), 1, Integer::sum);
             degree.merge((String) e.get("target"), 1, Integer::sum);
+        }
+        int unlinked = 0;
+        for (String id : names.keySet()) {
+            if (unlinked >= maxUnlinked) break;
+            if (degree.putIfAbsent(id, 0) == null) unlinked++;
         }
         Map<String, String> skins = players.getSkins(degree.keySet());
         List<Map<String, Object>> nodes = new ArrayList<>();

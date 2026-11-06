@@ -34,12 +34,13 @@ public final class ScanStore {
             long scanId = insertScan(c, type, targetName, targetUUID, checkerName, reason, hasDetected);
             if (scanId == -1) throw new SQLException("no scan id");
             try (PreparedStatement ps = c.prepareStatement(
-                    "INSERT INTO hack_results (scan_id,hack_id,hack_name,result) VALUES (?,?,?,?)")) {
+                    "INSERT INTO hack_results (scan_id,hack_id,hack_name,result,probe_key,probe_answer,probe_channels) VALUES (?,?,?,?,?,?,?)")) {
                 for (Object[] r : hackResults) {
                     ps.setLong(1, scanId);
                     ps.setString(2, (String) r[0]);
                     ps.setString(3, (String) r[1]);
                     ps.setString(4, (String) r[2]);
+                    for (int i = 3; i < 6; i++) ps.setString(i + 2, r.length > i ? (String) r[i] : null);
                     ps.addBatch();
                 }
                 ps.executeBatch();
@@ -202,10 +203,14 @@ public final class ScanStore {
             row.put("results", results);
             ("hack".equals(row.get("type")) ? hackIds : langIds).add(id);
         }
-        Rows.eachIn(c, "SELECT scan_id, hack_name, result FROM hack_results WHERE scan_id IN (%s) ORDER BY id", hackIds, rs -> {
+        Rows.eachIn(c, "SELECT scan_id, hack_name, result, probe_key, probe_answer, probe_channels FROM hack_results WHERE scan_id IN (%s) ORDER BY id", hackIds, rs -> {
             Map<String, Object> r = new LinkedHashMap<>();
             r.put("hack_name", rs.getString(2));
             r.put("result", rs.getString(3));
+            // Absent on scans saved before probes were stored
+            if (rs.getString(4) != null) r.put("probe_key", rs.getString(4));
+            if (rs.getString(5) != null) r.put("probe_answer", rs.getString(5));
+            if (rs.getString(6) != null) r.put("probe_channels", rs.getString(6));
             byScan.get(rs.getLong(1)).add(r);
         });
         Rows.eachIn(c, "SELECT scan_id, language, response FROM lang_results WHERE scan_id IN (%s) ORDER BY id", langIds, rs -> {

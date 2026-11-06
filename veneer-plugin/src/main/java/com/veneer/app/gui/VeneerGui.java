@@ -79,7 +79,13 @@ public final class VeneerGui implements Listener {
         this.plugin = plugin;
         GrimViolationTracker tracker = null;
         if (GRIM_API) {
-            try { tracker = new GrimViolationTracker(plugin); } catch (Throwable ignored) {}
+            try {
+                tracker = new GrimViolationTracker(plugin);
+            } catch (LinkageError e) {
+                plugin.getLogger().warning(GrimViolationTracker.UNSUPPORTED_MESSAGE);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Could not hook GrimAC: " + e);
+            }
         }
         grimTracker = tracker;
         channelsKey = new NamespacedKey(plugin, "channels");
@@ -251,8 +257,9 @@ public final class VeneerGui implements Listener {
         Player target = plugin.getServer().getPlayerExact(targetName);
         Messages m = plugin.messages().in(admin);
         if (target == null) { m.send(admin, "player-not-found", "player", targetName); return; }
-        if (plugin.hacks().running()   && admin.hasPermission("veneer.hacks.check")) admin.performCommand("hackcheck " + targetName);
-        if (plugin.hacks().running()   && admin.hasPermission("veneer.hacks.lang"))  admin.performCommand("hacklang " + targetName);
+        boolean mods = admin.hasPermission("veneer.hacks.check"), lang = admin.hasPermission("veneer.hacks.lang");
+        if (plugin.hacks().running() && (mods || lang))
+            admin.performCommand("hackcheck " + targetName + (mods && lang ? " all" : mods ? " hack" : " lang"));
         if (plugin.rptrack().running() && admin.hasPermission("veneer.rptrack"))      admin.performCommand("rptrack " + targetName);
     }
 

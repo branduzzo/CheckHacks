@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public final class VeneerCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS = List.of(
-            "help", "info", "player", "find", "check", "brands", "channels", "alerts", "lang", "reload", "version");
+            "help", "info", "player", "find", "check", "brands", "channels", "alerts", "lang", "reload", "version", "db");
     /** {@code /veneer <name> ...} runs the plugin.yml command it maps to, with its own permission check. */
     private static final Map<String, String> PASSTHROUGH = Map.of(
             "spoof", "spoof", "hackcheck", "hackcheck", "scan", "hackcheck", "hacklang", "hacklang",
@@ -53,6 +53,7 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
             new HelpEntry(null,      "/veneer alerts [{player}|toggle]",         "alerts",                Alerts.PERMISSION),
             new HelpEntry(null,      "/veneer info <{player}>",                  "info",                  "veneer.admin"),
             new HelpEntry(null,      "/veneer reload",                           "reload",                "veneer.admin"),
+            new HelpEntry(null,      "/veneer db <delete|purge|clear> ...",      "db",                    "veneer.admin"),
             new HelpEntry(null,      "/veneer version",                          "version",               "veneer.admin"),
             new HelpEntry("spoof",   "/spoof brand <{player}>",                  "spoof-brand",           "veneer.spoof.use"),
             new HelpEntry("spoof",   "/spoof channels <{player}>",               "spoof-channels",        "veneer.spoof.use"),
@@ -61,7 +62,7 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
             new HelpEntry("spoof",   "/spoof brands [allow|block|forget <id>]",  "spoof-brands",          "veneer.spoof.admin"),
             new HelpEntry("spoof",   "/spoof blockedbrands",                     "spoof-blockedbrands",   "veneer.spoof.admin"),
             new HelpEntry("spoof",   "/spoof blockedchannels",                   "spoof-blockedchannels", "veneer.spoof.admin"),
-            new HelpEntry("hacks",   "/hackcheck <{player}> [{mods}]",           "hackcheck",             "veneer.hacks.check"),
+            new HelpEntry("hacks",   "/hackcheck <{player}> [all|version|lang|hack]", "hackcheck",             "veneer.hacks.check"),
             new HelpEntry("hacks",   "/hacklang <{player}> [{languages}]",       "hacklang",              "veneer.hacks.lang"),
             new HelpEntry("hacks",   "/hackeditor",                              "hackeditor",            "veneer.hacks.editor"),
             new HelpEntry("rptrack", "/rptrack <{player}>",                      "rptrack",               "veneer.rptrack"));
@@ -84,6 +85,7 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
         }
         switch (sub) {
             case "reload" -> reload(sender);
+            case "db" -> database(sender, args);
             case "alerts" -> alertsPage(sender, args);
             case "lang", "language" -> lang(sender, args);
             case "info" -> info(sender, label, args);
@@ -108,6 +110,59 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
             }
         }
         return true;
+    }
+
+    /**
+     * {@code /veneer db delete <player>} forgets one account, {@code purge <days>} removes scans and addresses
+     * older than that, {@code clear confirm} forgets every account. Database work runs off the main thread.
+     */
+    private void database(CommandSender sender, String[] args) {
+        if (denied(sender, "veneer.admin")) return;
+        String action = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "";
+        var db = plugin.database();
+        switch (action) {
+            case "delete" -> {
+                if (args.length < 3) { plugin.messages().send(sender, "veneer-db-usage"); return; }
+                String name = args[2];
+                com.veneer.core.FoliaScheduler.runAsync(plugin, () -> {
+                    String uuid = (String) db.players().getPlayerRecord(name).get("uuid");
+                    if (uuid == null) { plugin.messages().send(sender, "player-not-found", "player", name); return; }
+                    db.players().deletePlayers(List.of(uuid));
+                    plugin.getLogger().info(sender.getName() + " deleted the stored data of " + name + " (" + uuid + ")");
+                    plugin.messages().send(sender, "veneer-db-deleted", "player", name);
+                });
+            }
+            case "purge" -> {
+                int days;
+                try { days = args.length > 2 ? Integer.parseInt(args[2]) : 0; } catch (NumberFormatException e) { days = 0; }
+                if (days <= 0) { plugin.messages().send(sender, "veneer-db-usage"); return; }
+                int keep = days;
+                com.veneer.core.FoliaScheduler.runAsync(plugin, () -> {
+                    db.purge(keep, keep);
+                    plugin.getLogger().info(sender.getName() + " purged stored data older than " + keep + " days");
+                    plugin.messages().send(sender, "veneer-db-purged", "days", String.valueOf(keep));
+                });
+            }
+            case "clear" -> {
+                if (args.length < 3 || !args[2].equalsIgnoreCase("confirm")) {
+                    plugin.messages().send(sender, "veneer-db-clear-confirm");
+                    return;
+                }
+                com.veneer.core.FoliaScheduler.runAsync(plugin, () -> {
+                    int removed = 0;
+                    for (int page = 0; page < 10_000; page++) {
+                        var rows = db.players().listPlayers(500, 0);
+                        if (rows.isEmpty()) break;
+                        List<String> ids = rows.stream().map(r -> (String) r.get("uuid")).toList();
+                        db.players().deletePlayers(ids);
+                        removed += ids.size();
+                    }
+                    plugin.getLogger().info(sender.getName() + " cleared the player database (" + removed + " accounts)");
+                    plugin.messages().send(sender, "veneer-db-cleared", "count", String.valueOf(removed));
+                });
+            }
+            default -> plugin.messages().send(sender, "veneer-db-usage");
+        }
     }
 
     private boolean denied(CommandSender sender, String permission) {

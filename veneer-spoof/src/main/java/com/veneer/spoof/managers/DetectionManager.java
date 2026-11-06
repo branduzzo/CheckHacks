@@ -75,11 +75,8 @@ public class DetectionManager {
         UUID playerUUID = player.getUniqueId();
         PlayerProfile data = plugin.profile(player);
 
-        boolean channelAdded = false;
-        if (!data.getChannels().contains(channel)) {
-            data.addChannel(channel);
-            channelAdded = true;
-
+        boolean channelAdded = data.addChannel(channel);
+        if (channelAdded) {
             if (plugin.module(SpoofModule.class).config().isDebugMode()) {
                 plugin.getLogger().info("[Debug] Channel added for " + player.getName() + ": " + channel);
             }

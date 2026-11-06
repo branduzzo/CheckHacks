@@ -19,7 +19,7 @@ commands:
     permission: veneer.spoof.use
   hackcheck:
     description: Scan a player for installed mods
-    usage: /hackcheck <player> [hack1,hack2,...]
+    usage: /hackcheck <player> [all|version|lang|hack] [list]
     permission: veneer.hacks.check
   hacklang:
     description: Check the client language of a player

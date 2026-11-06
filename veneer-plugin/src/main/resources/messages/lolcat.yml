@@ -26,7 +26,7 @@ anticheat-trigger: "{prefix}<gray>Anticheat sez <yellow><click:run_command:'/ven
 join-check: "{prefix}<gray>Auto-checkin <yellow><click:run_command:'/veneer player {player}'><hover:show_text:'<gray>Open profile'>{player}</hover></click> <gray>on join..."
 already-checking: "{prefix}<yellow>{player} <white>iz already gettin checked."
 invalid-hack: "{prefix}<red>Unknown hackz: <white>{hack}"
-hackcheck-usage: "{prefix}<red>Usage: /hackcheck \\<player> [hack1,hack2,...]</red>"
+hackcheck-usage: "{prefix}<red>Usage: /hackcheck \\<player> [all|version|lang|hack] [list]</red>"
 hackcheck-no-valid: "{prefix}<red>No valid hackz 2 check.</red>"
 
 # ======================================================================

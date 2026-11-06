@@ -29,6 +29,18 @@ public class CheckPlayerData {
      */
     public int waitWhileBusy() { return ++deadWaits; }
 
+    /** Per hack id: {key, answer, matching channels}. */
+    private final Map<String, String[]> probes = new LinkedHashMap<>();
+    private String exploitPreventerReason;
+    private boolean unsupportedClient;
+
+    public Map<String, String[]> getProbes() { return probes; }
+    /** Why the scan stopped early because of an exploit preventer; null when it did not. */
+    public String getExploitPreventerReason() { return exploitPreventerReason; }
+    public void setExploitPreventerReason(String reason) { exploitPreventerReason = reason; }
+    public boolean isUnsupportedClient() { return unsupportedClient; }
+    public void setUnsupportedClient(boolean unsupported) { unsupportedClient = unsupported; }
+
     private Location signLocation;
     private BlockState originalState;
     private WrappedTask signTimeoutTask;

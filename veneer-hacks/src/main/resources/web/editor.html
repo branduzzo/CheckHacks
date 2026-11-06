@@ -25,7 +25,7 @@
         --border-subtle: #212c3d;
         --border-strong: #2d3748;
         --accent-primary: #3b82f6;
-        --accent-indigo: #6366f1;
+        --accent-teal: #0ea5a4;
         --danger-fg: #ef4444;
         --danger-bg: rgba(239, 68, 68, 0.12);
         --danger-border: rgba(239, 68, 68, 0.3);
@@ -35,9 +35,9 @@
         --success-fg: #10b981;
         --success-bg: rgba(16, 185, 129, 0.12);
         --success-border: rgba(16, 185, 129, 0.3);
-        --suspected-fg: #818cf8;
-        --suspected-bg: rgba(99, 102, 241, 0.14);
-        --suspected-border: rgba(99, 102, 241, 0.32);
+        --suspected-fg: #2dd4bf;
+        --suspected-bg: rgba(14, 165, 164, 0.14);
+        --suspected-border: rgba(14, 165, 164, 0.32);
         --text-main: #f1f5f9;
         --text-secondary: #94a3b8;
         --text-muted: #64748b;
@@ -143,7 +143,7 @@
         width: 24px;
         height: 24px;
         border-radius: 5px;
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(99, 102, 241, 0.12));
+        background: rgba(59, 130, 246, 0.18);
         border: 1px solid rgba(59, 130, 246, 0.45);
         display: flex;
         align-items: center;
@@ -677,14 +677,14 @@
         background: #2563eb;
       }
 
-      .btn-indigo {
-        background: var(--accent-indigo);
+      .btn-teal {
+        background: var(--accent-teal);
         color: #ffffff;
         border: 1px solid rgba(255, 255, 255, 0.12);
       }
 
-      .btn-indigo:hover:not(:disabled) {
-        background: #4f46e5;
+      .btn-teal:hover:not(:disabled) {
+        background: #0f766e;
       }
 
       .btn-secondary {
@@ -837,6 +837,12 @@
         max-width: 210px;
       }
 
+      .channel-group { display: block; width: 100%; text-align: left; border: 1px solid var(--border-subtle); border-radius: 6px; margin-bottom: 4px; }
+      .channel-group summary { cursor: pointer; padding: 5px 8px; font-size: 12px; display: flex; justify-content: space-between; gap: 8px; }
+      .channel-group[open] summary { border-bottom: 1px solid var(--border-subtle); }
+      .channel-group-items { padding: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+      .channel-group-count { color: var(--text-muted); }
+      [data-hint] { cursor: help; }
       .channel-list-box {
         display: flex;
         flex-wrap: wrap;
@@ -1015,7 +1021,7 @@
       .graph-canvas-wrap {
         flex: 1;
         position: relative;
-        background: radial-gradient(circle at 50% 50%, #111827 0%, #090d16 100%);
+        background: #090d16;
         overflow: hidden;
       }
 
@@ -1090,6 +1096,21 @@
       }
 
       @media (max-width: 720px) {
+        .top-header {
+          height: auto;
+          flex-wrap: wrap;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+        .header-center {
+          order: 3;
+          flex: 1 0 100%;
+          max-width: none;
+        }
+        .header-right {
+          flex-wrap: wrap;
+          max-width: 100%;
+        }
         .workspace-body {
           flex-direction: column;
           overflow-y: auto;
@@ -1168,7 +1189,7 @@
               type="search"
               id="globalSearchInput"
               class="search-input"
-              placeholder="Search player name, UUID, or IP..."
+              placeholder="Search player name..."
               aria-label="Search player name, UUID, or IP"
               autocomplete="off"
             />
@@ -1261,32 +1282,32 @@
                     <img
                       id="dossierAvatarImg"
                       class="dossier-avatar"
-                      src="https://mc-heads.net/avatar/Steve/64"
-                      alt="Steve Avatar"
+                      src="data:,"
+                      alt=""
                       referrerpolicy="no-referrer"
                     />
                   </div>
                   <div>
                     <div class="dossier-name-line">
-                      <h1 class="dossier-player-name" id="dossierPlayerName">Steve</h1>
-                      <span class="sec-pill success" id="dossierOnlineBadge">ONLINE</span>
-                      <span class="sec-pill danger" id="dossierRiskBadge">RISK: CRITICAL (100/100)</span>
+                      <h1 class="dossier-player-name" id="dossierPlayerName">—</h1>
+                      <span class="sec-pill neutral" id="dossierOnlineBadge">—</span>
+                      <span class="sec-pill neutral" id="dossierRiskBadge" title="Heuristic from the signals below, not proof">—</span>
                     </div>
                     <div class="dossier-meta-line">
                       <span>UUID:</span>
                       <button type="button" class="uuid-copy-btn" id="copyUuidBtn" title="Copy Player UUID">
-                        <span id="dossierUuidText">069a79f4-44e9-4726-a5be-fca90e38aaf5</span>
+                        <span id="dossierUuidText">—</span>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                           <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                         </svg>
                       </button>
                       <span aria-hidden="true">·</span>
-                      <span>First Seen: <strong class="mono" id="dossierFirstSeen">2024-10-27 03:33</strong></span>
+                      <span>First Seen: <strong class="mono" id="dossierFirstSeen">—</strong></span>
                       <span aria-hidden="true">·</span>
-                      <span>Last Seen: <strong class="mono" id="dossierLastSeen">2024-11-05 09:46</strong></span>
+                      <span>Last Seen: <strong class="mono" id="dossierLastSeen">—</strong></span>
                       <span aria-hidden="true">·</span>
-                      <span>Sessions: <strong class="mono" id="dossierJoins">35</strong></span>
+                      <span>Sessions: <strong class="mono" id="dossierJoins">—</strong></span>
                     </div>
                   </div>
                 </div>
@@ -1299,13 +1320,16 @@
                     </svg>
                     <span data-i18n="action.run_hack">Run Hack Check</span>
                   </button>
-                  <button type="button" class="btn btn-indigo" id="runLangCheckBtn">
+                  <button type="button" class="btn btn-teal" id="runLangCheckBtn">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
                       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                     </svg>
                     <span data-i18n="action.run_lang">Run Lang Check</span>
                   </button>
+                  <button type="button" class="btn btn-secondary" id="runVersionCheckBtn"><span>Run Version Check</span></button>
+                  <button type="button" class="btn btn-secondary" id="runAllCheckBtn"><span>Run All</span></button>
+                  <button type="button" class="btn btn-danger-ghost" id="deletePlayerBtn"><span>Delete Player</span></button>
                   <button type="button" class="btn btn-secondary" id="openPlayerGraphBtn">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                       <circle cx="18" cy="5" r="3"></circle>
@@ -1340,15 +1364,19 @@
                 <div class="kv-list">
                   <div class="kv-row">
                     <span class="kv-key">Client Brand</span>
-                    <span class="kv-val mono" id="clientBrandVal">fabric</span>
+                    <span class="kv-val mono" id="clientBrandVal"></span>
                   </div>
                   <div class="kv-row">
                     <span class="kv-key">Protocol Version</span>
-                    <span class="kv-val mono" id="clientVersionVal">Real: 1.21.4 / Claimed: 1.20.1</span>
+                    <span class="kv-val" id="clientVersionVal"></span>
                   </div>
                   <div class="kv-row">
                     <span class="kv-key">Client Locale</span>
-                    <span class="kv-val mono" id="clientLocaleVal">ru_ru</span>
+                    <span class="kv-val mono" id="clientLocaleVal">—</span>
+                  </div>
+                  <div class="kv-row">
+                    <span class="kv-key">Language</span>
+                    <span class="kv-val" id="clientLanguageVal"></span>
                   </div>
                   <div class="kv-row">
                     <span class="kv-key">FakePlayer Heuristic</span>
@@ -1484,23 +1512,23 @@
             <div class="stats-kpi-bar" aria-label="Global Server Telemetry">
               <div class="stat-kpi-card">
                 <span class="stat-kpi-label" data-i18n="stats.scans">Total Scans</span>
-                <span class="stat-kpi-value" id="statScans">1,240</span>
+                <span class="stat-kpi-value" id="statScans">—</span>
               </div>
               <div class="stat-kpi-card">
                 <span class="stat-kpi-label" data-i18n="stats.detections">Detections</span>
-                <span class="stat-kpi-value" style="color: var(--danger-fg);" id="statDetections">87</span>
+                <span class="stat-kpi-value" style="color: var(--danger-fg);" id="statDetections">—</span>
               </div>
               <div class="stat-kpi-card">
                 <span class="stat-kpi-label" data-i18n="stats.players">Known Players</span>
-                <span class="stat-kpi-value" id="statPlayers">450</span>
+                <span class="stat-kpi-value" id="statPlayers">—</span>
               </div>
               <div class="stat-kpi-card">
                 <span class="stat-kpi-label" data-i18n="stats.online">Online Now</span>
-                <span class="stat-kpi-value" style="color: var(--success-fg);" id="statOnline">18</span>
+                <span class="stat-kpi-value" style="color: var(--success-fg);" id="statOnline">—</span>
               </div>
               <div class="stat-kpi-card">
                 <span class="stat-kpi-label" data-i18n="stats.links">Alt Links</span>
-                <span class="stat-kpi-value" id="statLinks">34</span>
+                <span class="stat-kpi-value" id="statLinks">—</span>
               </div>
             </div>
 
@@ -1617,7 +1645,7 @@
         } else if (rawHash && !['overview', 'history', 'graph'].includes(rawHash.toLowerCase())) {
           return rawHash.trim();
         }
-        return 'vnr_live_audit_token_9f8a7b';
+        return '';
       }
 
       const AUTH_TOKEN = getAuthToken();
@@ -1640,7 +1668,7 @@
           ['#1e293b', '#3b82f6', '#93c5fd', '#0f172a'],
           ['#1f2937', '#10b981', '#6ee7b7', '#064e3b'],
           ['#31102f', '#ef4444', '#fca5a5', '#450a0a'],
-          ['#1e1b4b', '#6366f1', '#a5b4fc', '#0f172a'],
+          ['#134e4a', '#0ea5a4', '#99f6e4', '#0f172a'],
           ['#27272a', '#f59e0b', '#fcd34d', '#451a03'],
         ];
         const pal = palettes[Math.abs(hash) % palettes.length];
@@ -2187,9 +2215,66 @@
         return {};
       }
 
+      const IS_MOCK = window.location.protocol === 'file:';
+
+      // The server's field names, translated once here into the ones the renderers (and the mock store) use.
+      function formatProbe(r) {
+        const parts = [];
+        if (r.probe_key) parts.push(r.probe_key + (r.probe_answer != null ? ' → ' + (r.probe_answer || '(empty)') : ''));
+        if (r.probe_channels) parts.push('channels: ' + r.probe_channels);
+        return parts.join(' | ');
+      }
+
+      function adaptScan(scan) {
+        const isLang = scan.type === 'lang';
+        return {
+          ...scan,
+          player: scan.target_name,
+          scan_type: scan.type,
+          created_at: scan.timestamp,
+          results: (scan.results || []).map((r) =>
+            isLang
+              ? { name: r.language, status: 'LANG', line: r.response }
+              : {
+                  name: r.hack_name,
+                  status: r.result,
+                  line: formatProbe(r),
+                  answer: r.probe_answer,
+                  channels: r.probe_channels,
+                }
+          ),
+        };
+      }
+
+      function adaptPlayer(player) {
+        const fp = player.fingerprint;
+        return {
+          ...player,
+          scans: (player.scans || []).map(adaptScan),
+          alts: (player.alts || []).map((a) => ({ ...a, pct: Math.round(Number(a.pct) * 100) })),
+          fingerprint: fp ? { ...fp, pack_hash: fp.bits } : fp,
+        };
+      }
+
+      function adaptStats(stats) {
+        return {
+          scans: Number(stats.hack_scans || 0) + Number(stats.lang_scans || 0),
+          detections: stats.detected_players,
+          players: stats.accounts,
+          online: stats.online,
+        };
+      }
+
+      function adaptResponse(path, data) {
+        if (path.startsWith('/api/player/')) return adaptPlayer(data);
+        if (path === '/api/stats') return adaptStats(data);
+        if (path.startsWith('/api/scans') && Array.isArray(data)) return data.map(adaptScan);
+        return data;
+      }
+
       async function apiRequest(path, options = {}) {
         const tokenizedUrl = withToken(path);
-        if (window.location.protocol === 'file:') {
+        if (IS_MOCK) {
           return mockFallbackHandler(tokenizedUrl, options);
         }
         try {
@@ -2215,11 +2300,9 @@
             }
             throw new Error(errMsg);
           }
-          return contentType.includes('application/json') ? await res.json() : {};
+          return adaptResponse(path, contentType.includes('application/json') ? await res.json() : {});
         } catch (_err) {
-          if (window.location.protocol === 'file:' || _err.message === 'Failed to fetch') {
-            return mockFallbackHandler(tokenizedUrl, options);
-          }
+          if (_err instanceof TypeError) showStatusBanner('Cannot reach the server. The data shown may be out of date.', 'danger');
           throw _err;
         }
       }
@@ -2236,19 +2319,22 @@
       function startSessionClock(expiresAt) {
         const badge = document.getElementById('sessionTimerBadge');
         if (!badge || !expiresAt) return;
+        let timer = 0;
         const tick = () => {
           const left = expiresAt - Date.now();
           if (left <= 0) {
             badge.textContent = 'EXPIRED';
             badge.style.color = 'var(--danger-fg)';
             handleSessionExpired();
+            clearInterval(timer);
             return;
           }
           const min = Math.ceil(left / 60000);
-          badge.textContent = min + 'm left';
+          badge.textContent = t('Session') + ': ' + min + 'm';
+          badge.title = t('Time until this panel link expires. Run /hackeditor for a new one.');
           badge.style.color = min <= 2 ? 'var(--warning-fg)' : 'var(--text-muted)';
         };
-        setInterval(tick, 15000);
+        timer = setInterval(tick, 15000);
         tick();
       }
 
@@ -2257,7 +2343,7 @@
       // ============================================================================
       const STATE = {
         activeView: 'overview',
-        selectedPlayerName: 'Steve',
+        selectedPlayerName: '',
         currentPlayer: null,
         onlinePlayers: [],
         sidebarFilter: '',
@@ -2266,7 +2352,6 @@
         historyFilter: 'ALL',
         graphData: { nodes: [], edges: [] },
         graphMinPct: 0,
-        selectedGraphNodeId: 'Steve',
       };
 
       function formatTimestamp(ms) {
@@ -2319,10 +2404,12 @@
         scans.sort((a, b) => a.created_at - b.created_at);
         scans.forEach((scan) => {
           (scan.results || []).forEach((r) => {
+            if (r.status === 'LANG') return;
             map.set(r.name.toLowerCase(), {
               name: r.name,
               status: r.status,
               line: r.line,
+              channels: r.channels,
               via: scan.scan_type,
               timestamp: scan.created_at,
             });
@@ -2334,8 +2421,8 @@
             map.set(k, {
               name: m.name,
               status: 'DETECTED',
-              line: 'channel:' + m.via,
-              via: 'channel',
+              line: m.via ? 'channel:' + m.via : '',
+              via: m.via ? 'channel' : 'hack',
               timestamp: m.last_seen || player.last_seen,
             });
           }
@@ -2371,6 +2458,75 @@
         return { score, level };
       }
 
+      const MOD_HINTS = {
+        DETECTED: 'The client resolved the key of this mod, so the mod is installed.',
+        NOT_DETECTED: 'The client returned the fallback text, so it does not know this key.',
+        PROTECTED: 'The client returned the raw key instead of a value: something hides it.',
+        SUSPECTED: 'The channel of this mod is registered, but its key does not resolve: likely an Exploit Preventer.',
+        SKIPPED: 'Not asked: the scan stopped early (Exploit Preventer or a client that does not resolve signs).',
+        TIMEOUT: 'The client did not answer the sign in time, for example because of lag.',
+      };
+      const VERDICT_HINTS = {
+        exploit_preventer: {
+          DETECTED: 'The client returned raw keys, or a mod channel is registered while its key does not resolve.',
+          NOT_DETECTED: 'The client resolved the control key and no mod channel contradicted a key.',
+          UNKNOWN: 'No mod scan with a usable answer since this player joined.',
+        },
+        fake_player: {
+          DETECTED: 'The control line came back empty and the client registered no plugin channels.',
+          NOT_DETECTED: 'The client resolved the control key on the probe sign.',
+          UNKNOWN: 'No mod scan with a usable answer since this player joined, or the client has channels but did not resolve signs.',
+        },
+        brand: {
+          DETECTED: 'The client sent this brand.',
+          NOT_DETECTED: 'The player has been online for over 10 seconds and sent no brand.',
+          UNKNOWN: 'The player is offline with no stored brand, or just joined.',
+        },
+        language: {
+          DETECTED: 'The language sign matched a configured language.',
+          NOT_DETECTED: 'The client answered, but the text is blocked or matches no configured language.',
+          UNKNOWN: 'No language check since this player joined.',
+        },
+        protocol: {
+          DETECTED: 'The real client version does not fit the protocol it connects with.',
+          NOT_DETECTED: 'The real client version fits the protocol it connects with.',
+          UNKNOWN: 'No version check gave a usable answer since this player joined.',
+        },
+      };
+
+      function verdictMarkup(check, verdict, detail) {
+        const v = verdict || 'UNKNOWN';
+        const cls = v === 'DETECTED' ? 'danger' : v === 'NOT_DETECTED' ? 'success' : 'neutral';
+        const label = v === 'DETECTED' ? 'Detected' : v === 'NOT_DETECTED' ? 'Not detected' : 'Unknown';
+        const hint = t(VERDICT_HINTS[check][v]);
+        return '<span class="sec-pill ' + cls + '" data-hint="1" title="' + escapeHtml(hint) + '">' + escapeHtml(t(label)) + '</span>' +
+          (detail ? ' <span class="mono">' + escapeHtml(detail) + '</span>' : '');
+      }
+
+      function renderChannelGroups(channels) {
+        if (!channels.length) return '<span class="mono" style="color: var(--text-muted);">None</span>';
+        const groups = new Map();
+        channels.forEach((c) => {
+          const at = c.indexOf(':');
+          const group = at > 0 ? c.slice(0, at) : t('other');
+          if (!groups.has(group)) groups.set(group, []);
+          groups.get(group).push(c);
+        });
+        return [...groups.entries()]
+          .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
+          .map(([name, items]) =>
+            '<details class="channel-group"><summary><span class="mono">' + escapeHtml(name) + '</span>' +
+            '<span class="channel-group-count">' + items.length + '</span></summary><div class="channel-group-items">' +
+            items.map((c) => '<span class="channel-token">' + escapeHtml(c) + '</span>').join('') +
+            '</div></details>')
+          .join('');
+      }
+
+      function lastLanguage(player) {
+        const scan = (player.scans || []).find((x) => x.scan_type === 'lang' && x.results && x.results[0] && x.results[0].name !== 'Version' && x.results[0].name !== 'Unknown');
+        return scan ? scan.results[0].name : null;
+      }
+
       function statusPillMarkup(status) {
         const map = {
           DETECTED: { cls: 'danger', label: 'DETECTED' },
@@ -2378,25 +2534,31 @@
           SUSPECTED: { cls: 'suspected', label: 'SUSPECTED' },
           NOT_DETECTED: { cls: 'success', label: 'NOT_DETECTED' },
           SKIPPED: { cls: 'neutral', label: 'SKIPPED' },
+          TIMEOUT: { cls: 'neutral', label: 'TIMEOUT' },
         };
         const cfg = map[status] || { cls: 'neutral', label: status };
-        return '<span class="sec-pill ' + cfg.cls + '">' + escapeHtml(cfg.label) + '</span>';
+        const hint = MOD_HINTS[status];
+        return '<span class="sec-pill ' + cfg.cls + '"' + (hint ? ' data-hint="1" title="' + escapeHtml(t(hint)) + '"' : '') + '>' + escapeHtml(cfg.label) + '</span>';
       }
 
       // ============================================================================
       // 5. RENDER FUNCTIONS
       // ============================================================================
+      function fmtCount(n) {
+        return n == null ? '—' : Number(n).toLocaleString();
+      }
+
       function renderStats(stats) {
         const elScans = document.getElementById('statScans');
         const elDet = document.getElementById('statDetections');
         const elPlayers = document.getElementById('statPlayers');
         const elOnline = document.getElementById('statOnline');
         const elLinks = document.getElementById('statLinks');
-        if (elScans) elScans.textContent = Number(stats.scans || 0).toLocaleString();
-        if (elDet) elDet.textContent = Number(stats.detections || 0).toLocaleString();
-        if (elPlayers) elPlayers.textContent = Number(stats.players || 0).toLocaleString();
-        if (elOnline) elOnline.textContent = Number(stats.online || 0).toLocaleString();
-        if (elLinks) elLinks.textContent = Number(stats.links || 0).toLocaleString();
+        if (elScans) elScans.textContent = fmtCount(stats.scans);
+        if (elDet) elDet.textContent = fmtCount(stats.detections);
+        if (elPlayers) elPlayers.textContent = fmtCount(stats.players);
+        if (elOnline) elOnline.textContent = fmtCount(stats.online);
+        if (elLinks) elLinks.textContent = fmtCount(stats.links);
       }
 
       function renderOnlineSidebar() {
@@ -2419,10 +2581,15 @@
           .map((p) => {
             const isSelected = p.name.toLowerCase() === STATE.selectedPlayerName.toLowerCase();
             const pingCls = p.ping < 60 ? 'good' : p.ping < 110 ? 'warn' : '';
-            const fullRecord = MOCK_STORE.players[p.name];
-            const riskObj = fullRecord ? calculateRisk(fullRecord) : { level: 'NOMINAL' };
-            const riskCls =
-              riskObj.level === 'CRITICAL' ? 'crit' : riskObj.level === 'ELEVATED' ? 'warn' : 'clean';
+            const fullRecord = IS_MOCK
+              ? MOCK_STORE.players[p.name]
+              : STATE.currentPlayer && STATE.currentPlayer.name.toLowerCase() === p.name.toLowerCase()
+                ? STATE.currentPlayer
+                : null;
+            const riskObj = fullRecord ? calculateRisk(fullRecord) : null;
+            const riskCls = !riskObj
+              ? ''
+              : riskObj.level === 'CRITICAL' ? 'crit' : riskObj.level === 'ELEVATED' ? 'warn' : 'clean';
             const fallbackUri = createFallbackAvatarDataUri(p.name);
             const latestScanTime =
               p.last_check ||
@@ -2449,9 +2616,11 @@
               '<span class="player-row-name">' +
               escapeHtml(p.name) +
               '</span>' +
-              '<span class="player-row-sub mono" title="Last check timestamp">Check: ' +
-              escapeHtml(formatShortCheckTime(latestScanTime)) +
-              '</span>' +
+              (latestScanTime
+                ? '<span class="player-row-sub mono" title="Last check timestamp">Check: ' +
+                  escapeHtml(formatShortCheckTime(latestScanTime)) +
+                  '</span>'
+                : '') +
               '</div>' +
               '</div>' +
               '<div class="player-row-right">' +
@@ -2460,11 +2629,7 @@
               '">' +
               Number(p.ping || 0) +
               'ms</span>' +
-              '<span class="risk-micro-label ' +
-              riskCls +
-              '">' +
-              riskObj.level +
-              '</span>' +
+              (riskObj ? '<span class="risk-micro-label ' + riskCls + '">' + riskObj.level + '</span>' : '') +
               '</div>' +
               '</button>'
             );
@@ -2494,7 +2659,7 @@
 
         const risk = calculateRisk(player);
         const riskBadge = document.getElementById('dossierRiskBadge');
-        riskBadge.textContent = 'RISK: ' + risk.level + ' (' + risk.score + '/100)';
+        riskBadge.textContent = 'RISK: ' + risk.level;
         riskBadge.className =
           'sec-pill ' +
           (risk.level === 'CRITICAL' ? 'danger' : risk.level === 'ELEVATED' ? 'warning' : 'success');
@@ -2515,8 +2680,6 @@
               escapeHtml(t('flag.fake_player')) +
               '</span>'
           );
-        } else {
-          pills.push('<span class="sec-pill neutral">FakePlayer: Clean</span>');
         }
 
         if (player.client?.exploit_preventer) {
@@ -2526,8 +2689,6 @@
               escapeHtml(t('flag.exploit_preventer')) +
               '</span>'
           );
-        } else {
-          pills.push('<span class="sec-pill neutral">ExploitPreventer: Inactive</span>');
         }
 
         if (player.client?.version_mismatch) {
@@ -2539,56 +2700,37 @@
               ) +
               '</span>'
           );
-        } else {
-          pills.push(
-            '<span class="sec-pill neutral">Version Handshake Verified (' +
-              escapeHtml(player.client?.version_real || '1.21.4') +
-              ')</span>'
-          );
         }
 
         if (player.fingerprint?.liquidbounce) {
           pills.push('<span class="sec-pill danger">' + escapeHtml(t('flag.liquidbounce')) + '</span>');
         }
 
+        if (pills.length === 1) pills.push('<span class="sec-pill neutral">None</span>');
         flagsStrip.innerHTML = pills.join('');
 
         // Client Details Card
-        document.getElementById('clientBrandVal').textContent = player.client?.brand || 'unknown';
-        document.getElementById('clientVersionVal').innerHTML = player.client?.version_mismatch
-          ? '<span style="color: var(--warning-fg); font-weight: 600;">Real: ' +
-            escapeHtml(player.client.version_real) +
-            ' / Claimed: ' +
-            escapeHtml(player.client.version_claimed) +
-            '</span>'
-          : escapeHtml(player.client?.version_real || '—');
-        document.getElementById('clientLocaleVal').textContent = player.client?.locale || 'en_us';
-        document.getElementById('clientFakePlayerVal').innerHTML = player.client?.fake_player
-          ? '<span class="sec-pill danger">HEADLESS BOT DETECTED</span>'
-          : '<span class="sec-pill success">HUMAN INPUT TIMING</span>';
-        document.getElementById('clientExploitPreventerVal').innerHTML = player.client?.exploit_preventer
-          ? '<span class="sec-pill warning">TRANSLATIONS BLOCKED</span>'
-          : '<span class="sec-pill success">UNRESTRICTED</span>';
+        const client = player.client || {};
+        const verdicts = client.verdicts || {};
+        const storedLanguage = client.language || lastLanguage(player);
+        document.getElementById('clientBrandVal').innerHTML = verdictMarkup('brand', verdicts.brand || (client.brand ? 'DETECTED' : 'UNKNOWN'), client.brand);
+        const versionText = client.version_mismatch
+          ? 'Real: ' + client.version_real + ' / Claimed: ' + client.version_claimed
+          : client.version_real;
+        document.getElementById('clientVersionVal').innerHTML = verdictMarkup('protocol', verdicts.protocol, versionText);
+        document.getElementById('clientLocaleVal').textContent = client.locale || '—';
+        document.getElementById('clientLanguageVal').innerHTML = verdictMarkup('language', verdicts.language || (storedLanguage ? 'DETECTED' : 'UNKNOWN'), storedLanguage);
+        document.getElementById('clientFakePlayerVal').innerHTML = verdictMarkup('fake_player', verdicts.fake_player);
+        document.getElementById('clientExploitPreventerVal').innerHTML = verdictMarkup('exploit_preventer', verdicts.exploit_preventer);
 
-        const channels = player.client?.channels || [];
-        document.getElementById('clientChannelCount').textContent = String(
-          player.client?.channel_count ?? channels.length
-        );
-        document.getElementById('clientChannelsBox').innerHTML =
-          channels.length > 0
-            ? channels.map((c) => '<span class="channel-token">' + escapeHtml(c) + '</span>').join('')
-            : '<span class="mono" style="color: var(--text-muted);">None</span>';
+        const channels = client.channels || [];
+        document.getElementById('clientChannelCount').textContent = String(client.channel_count ?? channels.length);
+        document.getElementById('clientChannelsBox').innerHTML = renderChannelGroups(channels);
         document.getElementById('clientPackHashVal').textContent = player.fingerprint?.pack_hash || '—';
 
         // RPTrack Keys
-        const rpKeys =
-          player.fingerprint?.keys ||
-          player.fingerprint?.rptrack_keys ||
-          player.rptrack_keys ||
-          (player.scans && player.scans[0]
-            ? player.scans[0].results.map((r) => r.line).slice(0, 3)
-            : []);
-        document.getElementById('clientRpTrackCount').textContent = String(rpKeys.length);
+        const rpKeys = player.fingerprint?.keys || player.fingerprint?.rptrack_keys || player.rptrack_keys || [];
+        document.getElementById('clientRpTrackCount').textContent = String(player.fingerprint?.packs ?? rpKeys.length);
         document.getElementById('clientRpTrackKeysBox').innerHTML =
           rpKeys.length > 0
             ? rpKeys.map((k) => '<span class="channel-token">' + escapeHtml(k) + '</span>').join('')
@@ -2721,7 +2863,7 @@
               escapeHtml(row.country) +
               '</td>' +
               '<td>' +
-              escapeHtml(row.provider) +
+              escapeHtml(row.provider || row.org) +
               '</td>' +
               '<td class="mono" style="color: var(--text-secondary); font-size: 11px; white-space: nowrap;">' +
               formatTimestamp(row.last_seen) +
@@ -2753,9 +2895,9 @@
             const protCount = results.filter((r) => r.status === 'PROTECTED').length;
             const cleanCount = results.filter((r) => r.status === 'NOT_DETECTED').length;
             const primaryFindings = results
-              .filter((r) => r.status === 'DETECTED' || r.status === 'PROTECTED' || r.status === 'SUSPECTED')
+              .filter((r) => r.status === 'DETECTED' || r.status === 'PROTECTED' || r.status === 'SUSPECTED' || (r.status === 'LANG' && r.line))
               .slice(0, 3)
-              .map((r) => escapeHtml(r.name) + ' (' + escapeHtml(r.status) + ')')
+              .map((r) => escapeHtml(r.name) + ' (' + escapeHtml(r.status === 'LANG' ? r.line : r.status) + ')')
               .join(' · ');
 
             return (
@@ -2765,30 +2907,30 @@
               '</td>' +
               '<td>' +
               '<button type="button" class="table-link-btn" data-select-player="' +
-              escapeHtml(scan.player || 'Steve') +
+              escapeHtml(scan.player || '—') +
               '">' +
-              escapeHtml(scan.player || 'Steve') +
+              escapeHtml(scan.player || '—') +
               '</button>' +
               '</td>' +
               '<td><span class="channel-token" style="text-transform: uppercase;">' +
               escapeHtml(scan.scan_type) +
               '</span></td>' +
               '<td class="mono" style="color: var(--text-secondary); font-size: 11px; white-space: nowrap;">' +
-              formatTimestamp(scan.created_at) +
+              formatTimestamp(scan.created_at).replace(' ', '<br>') +
               '</td>' +
               '<td class="mono" style="font-size: 11px; white-space: nowrap;">' +
               '<span style="color: var(--danger-fg); font-weight:600;">' +
               detCount +
-              ' Detected</span> · ' +
+              ' Detected</span><br>' +
               '<span style="color: var(--warning-fg);">' +
               protCount +
-              ' Protected</span> · ' +
+              ' Protected</span><br>' +
               '<span style="color: var(--success-fg);">' +
               cleanCount +
               ' Clean</span>' +
               '</td>' +
               '<td style="color: var(--text-secondary); font-size: 11.5px;">' +
-              (primaryFindings || 'All signatures clean') +
+              (primaryFindings || (scan.scan_type === 'lang' ? '—' : 'All signatures clean')) +
               '</td>' +
               '<td>' +
               '<button type="button" class="btn btn-danger-ghost" data-delete-scan="' +
@@ -2949,10 +3091,7 @@
           if (!dbgOn()) return;
           const tNow = new Date().toISOString().slice(11, 23);
           console.log('[links] ' + msg);
-          dbgBox.textContent = (dbgBox.textContent + tNow + ' ' + msg + '
-').split('
-').slice(-16).join('
-');
+          dbgBox.textContent = (dbgBox.textContent + tNow + ' ' + msg + '\n').split('\n').slice(-16).join('\n');
           dbgBox.scrollTop = dbgBox.scrollHeight;
         };
         const v3 = p => '(' + Math.round(p.x) + ', ' + Math.round(p.y) + ', ' + Math.round(p.z) + ')';
@@ -2998,7 +3137,7 @@
           const links = [...pairs.values()].map(l => ({...l, pct: 1 - l.miss})).filter(l => l.pct >= minPct);
           const deg = {};
           links.forEach(l => { deg[l.source] = (deg[l.source]||0) + 1; deg[l.target] = (deg[l.target]||0) + 1; });
-          const nodes = data.nodes.filter(n => deg[n.id]).map(n => ({...n, links: deg[n.id]}));
+          const nodes = data.nodes.filter(n => deg[n.id] || recent.has(n.id)).map(n => ({...n, links: deg[n.id] || 0}));
 
           stopGraph();
           box.innerHTML = '';
@@ -3016,7 +3155,7 @@
             .numDimensions(g2d && g2d.checked ? 2 : 3)
             .nodeThreeObject(n => skinCube(n, 9 + Math.min(n.links, 8) * 1.5))
             .nodeLabel(n => escapeHtml(n.name) + ' (' + (n.links === 1 ? '1 link' : n.links + ' links') + ')')
-            .linkColor(l => l.types.has('rptrack') || l.types.has('fingerprint') ? '#3fb950' : l.types.has('ip') ? '#8b949e' : '#a371f7')
+            .linkColor(l => l.types.has('rptrack') || l.types.has('fingerprint') ? '#3fb950' : l.types.has('ip') ? '#8b949e' : '#2dd4bf')
             .linkWidth(l => 0.4 + l.pct * 2.2)
             .linkLabel(l => Math.round(l.pct * 100) + '% — ' + l.why.map(escapeHtml).join(', '))
             .linkThreeObjectExtend(true)
@@ -3216,8 +3355,6 @@
         const data = await apiRequest('/api/player/' + encodeURIComponent(playerName));
         if (data && data.name) {
           renderPlayerDossier(data);
-          STATE.selectedGraphNodeId = data.name;
-          renderGraphInspector();
           if (switchToOverview && STATE.activeView !== 'overview') {
             switchView('overview');
           }
@@ -3247,7 +3384,7 @@
       async function triggerPlayerScan(scanType) {
         const player = STATE.selectedPlayerName;
         if (!player) return;
-        const btnId = scanType === 'lang' ? 'runLangCheckBtn' : 'runHackCheckBtn';
+        const btnId = { lang: 'runLangCheckBtn', version: 'runVersionCheckBtn', all: 'runAllCheckBtn' }[scanType] || 'runHackCheckBtn';
         const btn = document.getElementById(btnId);
         if (btn) btn.disabled = true;
 
@@ -3265,7 +3402,7 @@
           let attempts = 0;
           const pollInterval = setInterval(async () => {
             attempts++;
-            await loadPlayerDossier(player, false);
+            await loadPlayerDossier(player, false).catch(() => {});
             const currentLatestScanId = STATE.currentPlayer?.scans?.[0]?.id || 0;
             if (currentLatestScanId > previousLatestScanId || attempts >= 15) {
               clearInterval(pollInterval);
@@ -3276,6 +3413,8 @@
                   'Completed ' + scanType.toUpperCase() + ' probe on ' + player + ' (Report #' + currentLatestScanId + ')',
                   'success'
                 );
+              } else {
+                showStatusBanner('No result from ' + player + ' yet. The scan may still finish; check History.', 'warning');
               }
             }
           }, 2000);
@@ -3285,14 +3424,51 @@
         }
       }
 
+      async function deleteCurrentPlayer() {
+        const name = STATE.selectedPlayerName;
+        if (!name || !window.confirm(t('Delete all stored data of') + ' ' + name + '? ' + t('This cannot be undone.'))) return;
+        try {
+          await apiRequest('/api/player/' + encodeURIComponent(name), { method: 'DELETE' });
+          showStatusBanner(t('Deleted player') + ' ' + name, 'success');
+          STATE.selectedPlayerName = '';
+          await Promise.all([refreshStatsAndOnline(), refreshHistoryScans()]);
+        } catch (err) {
+          showStatusBanner(t('Failed to delete player') + ' ' + name + ': ' + (err.message || 'Error'), 'danger');
+        }
+      }
+
+      /** Scan progress pushed by the server; the slower polling stays as a fallback. */
+      function connectScanEvents() {
+        if (IS_MOCK || typeof EventSource === 'undefined') return;
+        const source = new EventSource(withToken('/api/events'));
+        source.addEventListener('scan', (message) => {
+          const e = JSON.parse(message.data);
+          const type = String(e.type).toUpperCase();
+          if (e.state === 'started') showStatusBanner(type + ': ' + e.player + ' — ' + t('scan started'), 'warning');
+          else if (e.state === 'progress') showStatusBanner(type + ': ' + e.player + ' — ' + t('signs answered') + ' ' + e.count, 'warning');
+          else if (e.state === 'aborted') showStatusBanner(type + ': ' + e.player + ' — ' + t('scan stopped'), 'warning');
+          else if (e.state === 'done') showStatusBanner(type + ': ' + e.player + ' — ' + t('scan finished'), 'success');
+          if (e.state === 'done' || e.state === 'progress') {
+            if (STATE.selectedPlayerName && STATE.selectedPlayerName.toLowerCase() === String(e.player).toLowerCase())
+              loadPlayerDossier(STATE.selectedPlayerName, false).catch(() => {});
+          }
+          if (e.state === 'done') Promise.all([refreshStatsAndOnline(), refreshHistoryScans()]).catch(() => {});
+        });
+      }
+
       async function deleteScanById(scanId) {
-        await apiRequest('/api/scan/' + encodeURIComponent(scanId), { method: 'DELETE' });
-        await Promise.all([
-          refreshHistoryScans(),
-          loadPlayerDossier(STATE.selectedPlayerName, false),
-          refreshStatsAndOnline(),
-        ]);
-        showStatusBanner('Deleted Scan #' + scanId + ' from audit log.');
+        if (!window.confirm('Delete scan #' + scanId + '? This cannot be undone.')) return;
+        try {
+          await apiRequest('/api/scan/' + encodeURIComponent(scanId), { method: 'DELETE' });
+          await Promise.all([
+            refreshHistoryScans(),
+            STATE.selectedPlayerName ? loadPlayerDossier(STATE.selectedPlayerName, false) : null,
+            refreshStatsAndOnline(),
+          ]);
+          showStatusBanner('Deleted Scan #' + scanId + ' from audit log.');
+        } catch (err) {
+          showStatusBanner('Failed to delete scan #' + scanId + ': ' + (err.message || 'Error'), 'danger');
+        }
       }
 
       // ============================================================================
@@ -3329,6 +3505,9 @@
 
         document.getElementById('runHackCheckBtn').addEventListener('click', () => triggerPlayerScan('hack'));
         document.getElementById('runLangCheckBtn').addEventListener('click', () => triggerPlayerScan('lang'));
+        document.getElementById('runVersionCheckBtn').addEventListener('click', () => triggerPlayerScan('version'));
+        document.getElementById('runAllCheckBtn').addEventListener('click', () => triggerPlayerScan('all'));
+        document.getElementById('deletePlayerBtn').addEventListener('click', deleteCurrentPlayer);
         document.getElementById('openPlayerGraphBtn').addEventListener('click', () => {
           const uuid = STATE.currentPlayer?.uuid || STATE.selectedPlayerName;
           switchView('graph', uuid);
@@ -3357,23 +3536,6 @@
           });
         });
 
-        document.querySelectorAll('[data-graph-minpct]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            STATE.graphMinPct = Number(btn.getAttribute('data-graph-minpct') || 0);
-            document.querySelectorAll('[data-graph-minpct]').forEach((b) => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderGraphInspector();
-            runGraphPhysicsBurst(45);
-          });
-        });
-
-        document.getElementById('graphResetViewBtn').addEventListener('click', () => {
-          GRAPH_ENGINE.panX = 0;
-          GRAPH_ENGINE.panY = 0;
-          GRAPH_ENGINE.zoom = 1;
-          runGraphPhysicsBurst(60);
-        });
-
         document.body.addEventListener('click', (e) => {
           const selectPlayerBtn = e.target.closest('[data-select-player]');
           if (selectPlayerBtn) {
@@ -3392,15 +3554,6 @@
             return;
           }
 
-          const graphNodeBtn = e.target.closest('[data-graph-node]');
-          if (graphNodeBtn) {
-            const nodeId = graphNodeBtn.getAttribute('data-graph-node');
-            if (nodeId) {
-              STATE.selectedGraphNodeId = nodeId;
-              renderGraphInspector();
-              drawGraphCanvas();
-            }
-          }
         });
 
         const searchInput = document.getElementById('globalSearchInput');
@@ -3418,8 +3571,9 @@
           } else {
             searchDropdown.innerHTML = matches
               .map(
-                (m) =>
-                  '<button type="button" class="search-result-btn" data-select-player="' +
+                (m) => {
+                  const live = STATE.onlinePlayers.find((o) => o.name.toLowerCase() === String(m.name).toLowerCase());
+                  return '<button type="button" class="search-result-btn" data-select-player="' +
                   escapeHtml(m.name) +
                   '">' +
                   '<div><div style="font-weight:600;">' +
@@ -3428,11 +3582,12 @@
                   escapeHtml(m.uuid) +
                   '</div></div>' +
                   '<span class="sec-pill ' +
-                  (m.online ? 'success' : 'neutral') +
+                  (live ? 'success' : 'neutral') +
                   '">' +
-                  (m.online ? m.ping + 'ms' : 'OFFLINE') +
+                  (live ? Number(live.ping || 0) + 'ms' : 'OFFLINE') +
                   '</span>' +
-                  '</button>'
+                  '</button>';
+                }
               )
               .join('');
           }
@@ -3468,7 +3623,7 @@
           }
         });
 
-        let targetInitialPlayer = 'Steve';
+        let targetInitialPlayer = null;
         const rawHash = window.location.hash ? window.location.hash.slice(1) : '';
         if (rawHash.startsWith('player/')) {
           targetInitialPlayer = decodeURIComponent(rawHash.slice('player/'.length));
@@ -3517,8 +3672,9 @@
         }
         
 
-        await loadPlayerDossier(targetInitialPlayer, false).catch(() => {});
+        if (targetInitialPlayer) await loadPlayerDossier(targetInitialPlayer, false).catch(() => {});
 
+        connectScanEvents();
         // Background live refresh intervals
         setInterval(() => { refreshStatsAndOnline().catch(() => {}); }, 10000);
         setInterval(() => { refreshHistoryScans().catch(() => {}); }, 15000);

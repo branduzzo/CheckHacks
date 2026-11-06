@@ -29,6 +29,14 @@ public class WebServerManager {
     private final Gson gson = new Gson();
     private volatile List<Map<String, Object>> cachedPlayers = new ArrayList<>();
     private final IpDatabase ipdb;
+    /** Open /api/events streams; each has its own thread, so they cannot starve the request pool. */
+    private static final int MAX_STREAMS = 16;
+    private final Set<java.util.concurrent.BlockingQueue<String>> streams = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final ExecutorService streamThreads = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "Veneer-panel-events");
+        t.setDaemon(true);
+        return t;
+    });
 
     public WebServerManager(VeneerPlugin plugin) {
         this.plugin = plugin;
@@ -80,12 +88,70 @@ public class WebServerManager {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("name", p.getName());
             m.put("uuid", p.getUniqueId().toString());
+            m.put("ping", p.getPing());
+            m.put("locale", p.getLocale());
             list.add(m);
         }
         cachedPlayers = list;
     }
 
+    /** Sends a scan event to every open panel. */
+    public void publishScan(String player, String type, String state, int count) {
+        Map<String, Object> event = new LinkedHashMap<>();
+        event.put("player", player);
+        event.put("type", type);
+        event.put("state", state);
+        event.put("count", count);
+        String json = gson.toJson(event);
+        for (var queue : streams) queue.offer(json);
+    }
+
+    /** Server-sent events: one way is all the panel needs, and the JDK server has no WebSocket support. */
+    private void openStream(HttpExchange ex, String token) throws IOException {
+        if (token == null || plugin.database().tokens().validateToken(token) == null) {
+            sendJson(ex, 401, Map.of("error", "unauthorized"));
+            ex.close();
+            return;
+        }
+        if (streams.size() >= MAX_STREAMS) {
+            sendJson(ex, 429, Map.of("error", "too many open panels"));
+            ex.close();
+            return;
+        }
+        var queue = new java.util.concurrent.LinkedBlockingQueue<String>(256);
+        streams.add(queue);
+        ex.getResponseHeaders().set("Content-Type", "text/event-stream; charset=utf-8");
+        ex.getResponseHeaders().set("Cache-Control", "no-store");
+        ex.sendResponseHeaders(200, 0);
+        streamThreads.execute(() -> {
+            try (OutputStream os = ex.getResponseBody()) {
+                os.write(": connected\n\n".getBytes(StandardCharsets.UTF_8));
+                os.flush();
+                while (!Thread.currentThread().isInterrupted()) {
+                    String event = queue.poll(15, java.util.concurrent.TimeUnit.SECONDS);
+                    if (event == null && plugin.database().tokens().validateToken(token) == null) break;
+                    os.write((event != null ? "event: scan\ndata: " + event + "\n\n" : ": alive\n\n").getBytes(StandardCharsets.UTF_8));
+                    os.flush();
+                }
+            } catch (IOException | InterruptedException ignored) {
+                // The panel was closed, or the server is stopping
+            } finally {
+                streams.remove(queue);
+                ex.close();
+            }
+        });
+    }
+
     private void handle(HttpExchange ex) {
+        if (ex.getRequestURI().getPath().equals("/api/events")) {
+            try {
+                addSecurityHeaders(ex);
+                openStream(ex, parseQuery(ex.getRequestURI().getRawQuery()).get("token"));
+            } catch (Exception e) {
+                ex.close();
+            }
+            return;
+        }
         try {
             String path   = ex.getRequestURI().getPath();
             String query  = ex.getRequestURI().getRawQuery(); // raw: parseQuery decodes each value once
@@ -241,6 +307,10 @@ public class WebServerManager {
             Map<?, ?> req = gson.fromJson(body, Map.class);
             String targetName = req != null ? (String) req.get("player") : null;
             String type       = req != null && req.get("type") != null ? (String) req.get("type") : "hack";
+            if (!List.of("hack", "lang", "version", "all").contains(type)) {
+                sendJson(ex, 400, Map.of("error", "type must be hack, lang, version or all"));
+                return;
+            }
 
             if (targetName == null || targetName.isBlank()) {
                 sendJson(ex, 400, Map.of("error", "player is required"));
@@ -256,7 +326,7 @@ public class WebServerManager {
                 return;
             }
             boolean nothing = "lang".equals(type) ? plugin.module(HacksModule.class).config().getLanguages().isEmpty()
-                    : plugin.module(HacksModule.class).config().getDefaultCheckHacks().isEmpty();
+                    : "version".equals(type) ? false : plugin.module(HacksModule.class).config().getDefaultCheckHacks().isEmpty();
             if (nothing) {
                 sendJson(ex, 409, Map.of("error", "lang".equals(type) ? "no languages configured" : "no hacks configured"));
                 return;
@@ -267,15 +337,17 @@ public class WebServerManager {
                 Player target = Bukkit.getPlayerExact(finalTarget);
                 if (target == null) return;
                 FoliaScheduler.runAtEntity(plugin, target, () -> {
-                    if ("lang".equals(finalType)) {
-                        Map<String, String> langs = plugin.module(HacksModule.class).config().getLanguages();
-                        if (!langs.isEmpty())
-                            plugin.module(HacksModule.class).langChecks().startCheck(target, null, langs);
-                    } else {
-                        List<HackDefinition> hacks = plugin.module(HacksModule.class).config().getDefaultCheckHacks();
-                        if (!hacks.isEmpty())
-                            plugin.module(HacksModule.class).checks().startCheck(target, null, hacks, false,
-                                    "Web editor check by " + checkerName);
+                    Map<String, String> langs = plugin.module(HacksModule.class).config().getLanguages();
+                    List<HackDefinition> hacks = plugin.module(HacksModule.class).config().getDefaultCheckHacks();
+                    String reason = "Web editor check by " + checkerName;
+                    switch (finalType) {
+                        case "lang" -> { if (!langs.isEmpty()) plugin.module(HacksModule.class).langChecks().startCheck(target, null, langs, true, false); }
+                        case "version" -> plugin.module(HacksModule.class).langChecks().startCheck(target, null, langs, false, true);
+                        case "all" -> {
+                            plugin.module(HacksModule.class).langChecks().startCheck(target, null, langs, !langs.isEmpty(), true);
+                            if (!hacks.isEmpty()) plugin.module(HacksModule.class).checks().startCheckAfterLang(target, null, hacks, reason);
+                        }
+                        default -> { if (!hacks.isEmpty()) plugin.module(HacksModule.class).checks().startCheck(target, null, hacks, false, reason); }
                     }
                 });
             });
@@ -309,6 +381,22 @@ public class WebServerManager {
 
         if (path.startsWith("/api/player/")) {
             String name = path.substring("/api/player/".length()); // getPath() is already decoded
+            if ("DELETE".equals(method)) {
+                if (!can(playerInfo, "delete")) {
+                    sendJson(ex, 403, Map.of("error", "no permission: veneer.web.delete"));
+                    return;
+                }
+                String stored = (String) plugin.database().players().getPlayerRecord(name).get("uuid");
+                if (stored == null) {
+                    sendJson(ex, 404, Map.of("error", "player not found"));
+                    return;
+                }
+                plugin.database().players().deletePlayers(List.of(stored));
+                graphCache.clear();
+                plugin.getLogger().info("[Hacks] Web panel: " + playerInfo.get("player_name") + " deleted player " + name + " (" + stored + ")");
+                sendJson(ex, 200, Map.of("success", true));
+                return;
+            }
             // From the cache, not Bukkit: this runs on an HTTP thread
             boolean online = false;
             String uuid = "";
@@ -360,6 +448,7 @@ public class WebServerManager {
         return graph;
     }
 
+    private static final int MAX_UNLINKED_NODES = 300;
     private record CachedGraph(Map<String, Object> graph, long built) {}
     private static final long GRAPH_TTL_MS = 15_000;
     private final Map<Boolean, CachedGraph> graphCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -369,7 +458,7 @@ public class WebServerManager {
         var rp = plugin.config().section("rptrack");
         int match = rp != null ? rp.getInt("match", 5) : 5;
         Map<String, Object> graph = plugin.database().links().getLinkGraph(links.getInt("max-accounts-per-ip", 8), match,
-                links.getInt("max-accounts-per-client", 5), links.getInt("client-min-channels", 3));
+                links.getInt("max-accounts-per-client", 5), links.getInt("client-min-channels", 3), MAX_UNLINKED_NODES);
         double weakFactor = Math.max(0, Math.min(1, links.getDouble("weak-provider-factor", 0.3)));
         for (Object e : (List<?>) graph.get("edges")) {
             @SuppressWarnings("unchecked") Map<String, Object> edge = (Map<String, Object>) e;
@@ -435,6 +524,16 @@ public class WebServerManager {
         client.put("fake_player", profile.isFakePlayer());
         client.put("exploit_preventer", profile.isExploitPreventer());
         client.put("live", true);
+        client.put("locale", cachedPlayers.stream().filter(p -> uuid.equals(p.get("uuid")))
+                .map(p -> p.get("locale")).findFirst().orElse(null));
+        client.put("language", profile.getLanguage());
+        Map<String, String> verdicts = new LinkedHashMap<>();
+        verdicts.put("exploit_preventer", profile.exploitPreventerVerdict().name());
+        verdicts.put("fake_player", profile.fakePlayerVerdict().name());
+        verdicts.put("brand", profile.brandVerdict().name());
+        verdicts.put("language", profile.languageVerdict().name());
+        verdicts.put("protocol", profile.protocolVerdict().name());
+        client.put("verdicts", verdicts);
         return client;
     }
 
@@ -482,5 +581,6 @@ public class WebServerManager {
     public void stop() {
         if (server != null) server.stop(0);
         if (executor != null) executor.shutdownNow();
+        streamThreads.shutdownNow();
     }
 }

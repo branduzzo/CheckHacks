@@ -96,6 +96,11 @@ public class HacksModule extends VeneerModule {
             plugin.getLogger().info("hacks.web-editor.enabled changed: restart the server to apply it.");
     }
 
+    /** Tells open web panels about a scan right away. Safe from any thread. */
+    public void scanEvent(String player, String type, String state, int count) {
+        if (web != null) web.publishScan(player, type, state, count);
+    }
+
     public ConfigManager config() { return config; }
     public CheckManager checks() { return checks; }
     public LangCheckManager langChecks() { return langChecks; }

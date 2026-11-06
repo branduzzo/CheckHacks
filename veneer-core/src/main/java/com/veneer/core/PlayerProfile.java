@@ -11,6 +11,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * mod scan, placeholders and {@code /veneer info} all see the same brand and channels.
  */
 public class PlayerProfile {
+    static final int MAX_CHANNELS = 1024;
+    static final int MAX_CHANNEL_LENGTH = 256;
+
     private final Set<String> channels = ConcurrentHashMap.newKeySet();
     private volatile String brand;
     private volatile boolean brandAlerted;
@@ -21,6 +24,31 @@ public class PlayerProfile {
     private volatile boolean versionMismatch;
     private volatile boolean fakePlayer;
     private volatile boolean exploitPreventer;
+
+    private volatile boolean signAnswered;
+    private volatile boolean languageAnswered;
+    private volatile String language;
+
+    /** The client answered a probe sign with a resolved control line, so the checks below that rely on it ran. */
+    public void markSignAnswered() { signAnswered = true; }
+
+    /** The language check got an answer; {@code language} is null when it named no known language. */
+    public void setLanguageProbe(String language) {
+        this.languageAnswered = true;
+        this.language = language;
+    }
+
+    public String getLanguage() { return language; }
+
+    public Verdict exploitPreventerVerdict() { return Verdict.of(exploitPreventer, signAnswered); }
+    public Verdict fakePlayerVerdict()       { return Verdict.of(fakePlayer, signAnswered); }
+    public Verdict languageVerdict()         { return Verdict.of(language != null, languageAnswered); }
+    /** DETECTED: the real client version does not fit the protocol it connects with. */
+    public Verdict protocolVerdict()         { return Verdict.of(versionMismatch, versionReal != null); }
+    /** NOT_DETECTED: the client has been online for a while and sent none. */
+    public Verdict brandVerdict() {
+        return Verdict.of(brand != null, System.currentTimeMillis() - joinTime > 10_000);
+    }
 
     public boolean isFakePlayer() { return fakePlayer; }
     public void setFakePlayer(boolean fakePlayer) { this.fakePlayer = fakePlayer; }
@@ -33,7 +61,14 @@ public class PlayerProfile {
         return Collections.unmodifiableSet(channels);
     }
 
-    public void addChannel(String channel) { channels.add(channel); }
+    /**
+     * Records a channel the client registered; false when it was known already or over a limit. The client chooses
+     * these, so their number and length are capped well above what real modpacks use.
+     */
+    public boolean addChannel(String channel) {
+        if (channel.length() > MAX_CHANNEL_LENGTH || channels.size() >= MAX_CHANNELS) return false;
+        return channels.add(channel);
+    }
 
     public void removeChannel(String channel) { channels.remove(channel); }
 

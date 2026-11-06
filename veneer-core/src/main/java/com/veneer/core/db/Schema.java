@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 final class Schema {
 
     /** Bump with every step added to {@link #upgrade}. */
-    static final int VERSION = 1;
+    static final int VERSION = 2;
 
     private Schema() {}
 
@@ -159,6 +159,12 @@ final class Schema {
                         UNION ALL SELECT uuid, name, updated FROM clients
                         UNION ALL SELECT uuid, name, last_seen FROM rptrack
                     ) WHERE uuid <> '' AND uuid NOT IN (SELECT uuid FROM accounts) GROUP BY uuid""");
+            }
+            if (version < 2) {
+                // What each mod's probe asked and how the client answered, for the panel
+                s.execute("ALTER TABLE hack_results ADD COLUMN probe_key TEXT");
+                s.execute("ALTER TABLE hack_results ADD COLUMN probe_answer TEXT");
+                s.execute("ALTER TABLE hack_results ADD COLUMN probe_channels TEXT");
             }
             s.execute("PRAGMA user_version = " + VERSION);
             c.commit();

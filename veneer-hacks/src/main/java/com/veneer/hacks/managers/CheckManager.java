@@ -72,26 +72,33 @@ public class CheckManager {
         if (data == null) return;
         if (data.getSignTimeoutTask() != null) data.getSignTimeoutTask().cancel();
         restoreCurrentSign(data, false);
+        Player gone = Bukkit.getPlayer(uuid);
+        plugin.module(HacksModule.class).scanEvent(gone != null ? gone.getName() : uuid.toString(), "hack", "aborted", 0);
         plugin.getLogger().info("[Hacks] Mod scan of " + uuid + " dropped: the player left or did not respawn.");
     }
 
     public void startCheck(Player target, Player initiator,
                            List<HackDefinition> hacks, boolean autoCheck, String reason) {
-        startCheck(target, initiator, hacks, autoCheck, reason, 0);
+        startCheck(target, initiator, hacks, autoCheck, reason, 0, false);
+    }
+
+    /** A manual scan that waits for a running language check instead of being refused (/hackcheck all). */
+    public void startCheckAfterLang(Player target, Player initiator, List<HackDefinition> hacks, String reason) {
+        startCheck(target, initiator, hacks, false, reason, 0, true);
     }
 
     private void startCheck(Player target, Player initiator,
-                            List<HackDefinition> hacks, boolean autoCheck, String reason, int waits) {
+                            List<HackDefinition> hacks, boolean autoCheck, String reason, int waits, boolean queue) {
         UUID uuid = target.getUniqueId();
 
         // Both scans use one sign spot and one sign editor: never run them on a player at the same time.
         // A manual scan is refused, an automatic one waits for the language check (a few seconds at most).
         if (plugin.module(HacksModule.class).langChecks().isChecking(uuid)) {
-            if (initiator != null) {
+            if (initiator != null && !queue) {
                 initiator.sendMessage(plugin.messages().in(initiator).get("already-checking", Map.of("player", target.getName())));
             } else if (waits < 15) {
                 FoliaScheduler.runAtEntityLater(plugin, target,
-                        () -> { if (target.isOnline()) startCheck(target, null, hacks, autoCheck, reason, waits + 1); }, 40L);
+                        () -> { if (target.isOnline()) startCheck(target, initiator, hacks, autoCheck, reason, waits + 1, queue); }, 40L);
             }
             return;
         }
@@ -146,6 +153,7 @@ public class CheckManager {
             initiator.sendMessage(plugin.messages().in(initiator).get("check-started",
                     Map.of("player", target.getName())));
 
+        plugin.module(HacksModule.class).scanEvent(target.getName(), "hack", "started", batches.size());
         FoliaScheduler.runAtEntity(plugin, target, () -> processBatch(target, data));
     }
 
@@ -288,19 +296,21 @@ public class CheckManager {
         if (classicEp && profile != null) {
             profile.setExploitPreventer(true);
         }
+        if (classicEp) data.setExploitPreventerReason("key");
+        if (!unsupported && profile != null) profile.markSignAnswered();
 
         StringBuilder log = new StringBuilder("[Hacks] Batch ").append(data.getCurrentBatch())
                 .append(" from ").append(target.getName());
         if (classicEp) log.append(" [ExploitPreventer DETECTED (raw control key)]");
         if (unsupported) {
-            if (profile != null) {
-                profile.setFakePlayer(true);
-            }
             // A built-in keybind failing to resolve on its own is not proof of a protection mod: a headless
-            // client (e.g. mineflayer) that never implements lang/keybind resolution looks the same.
+            // client (e.g. mineflayer) that never implements lang/keybind resolution looks the same. Registered
+            // plugin channels point to a real modded client, so only a client without any is marked as a bot.
             boolean likelyBot = channels.isEmpty();
-            log.append(": the control line came back empty, the client does not resolve signs; marked as FakePlayer (SKIPPED)")
-               .append(likelyBot ? " [no plugin channels]" : "");
+            if (likelyBot && profile != null) profile.setFakePlayer(true);
+            data.setUnsupportedClient(true);
+            log.append(": the control line came back empty, the client does not resolve signs (SKIPPED)")
+               .append(likelyBot ? "; no plugin channels, marked as FakePlayer" : "");
             plugin.getLogger().info(log.toString());
             finishCheck(uuid);
             return;
@@ -316,9 +326,11 @@ public class CheckManager {
             // CTRL_KEYBIND marker above never trips) still cannot hide the channel handshake at login.
             boolean channelMatches = hack.matchesAnyChannel(channels);
             if ((result == HackResult.NOT_DETECTED || result == HackResult.PROTECTED) && channelMatches) {
+                if (!channelSuppressionEp) data.setExploitPreventerReason(hack.getDisplayName());
                 channelSuppressionEp = true;
-                result = HackResult.PROTECTED;
+                result = HackResult.SUSPECTED;
             }
+            data.getProbes().put(hack.getId(), new String[]{hack.getKey(), resp, matchingChannels(hack, channels)});
             data.getResults().put(hack.getId(), result);
             log.append(' ').append(hack.getDisplayName()).append('=').append(result).append(" ('").append(resp).append("')");
         }
@@ -330,12 +342,21 @@ public class CheckManager {
         plugin.getLogger().info(log.toString());
 
         data.incrementBatch();
+        plugin.module(HacksModule.class).scanEvent(target.getName(), "hack", "progress", data.getCurrentBatch());
         if (classicEp || channelSuppressionEp) {
             // The client answers every key with the raw key or selectively suppresses mod translations; remaining batches cannot tell anything.
             finishCheck(uuid);
             return;
         }
         scheduleNextOrFinish(uuid);
+    }
+
+    private static String matchingChannels(HackDefinition hack, Set<String> channels) {
+        List<String> matched = new ArrayList<>();
+        for (String channel : channels)
+            if (hack.matchesAnyChannel(List.of(channel))) matched.add(channel);
+        Collections.sort(matched);
+        return String.join(",", matched);
     }
 
     private void scheduleNextOrFinish(UUID uuid) {
@@ -406,11 +427,13 @@ public class CheckManager {
         Map<String, HackResult> results = data.getResults();
         boolean anyDetected  = false;
         boolean anyProtected = false;
+        boolean anyUnsure    = false;   // TIMEOUT or SUSPECTED: worth a second look, never a punishment on their own
         boolean allClean     = true;
         for (HackDefinition hack : allHacks) {
             HackResult r = results.getOrDefault(hack.getId(), HackResult.SKIPPED);
             if (r == HackResult.DETECTED)  { anyDetected = true;  allClean = false; }
-            if (r == HackResult.PROTECTED || r == HackResult.TIMEOUT || r == HackResult.SUSPECTED) { anyProtected = true; allClean = false; }
+            if (r == HackResult.PROTECTED) { anyProtected = true; allClean = false; }
+            if (r == HackResult.TIMEOUT || r == HackResult.SUSPECTED) { anyUnsure = true; allClean = false; }
             if (r == HackResult.SKIPPED)     allClean = false;
         }
 
@@ -418,7 +441,7 @@ public class CheckManager {
 
         // A flagged first pass is only a suspicion: re-scan the flagged mods first and report once, with the
         // confirmed results. Saving and announcing the first pass would leave false positives in the history.
-        if (cfg.isDoubleCheckEnabled() && !data.isConfirmScan() && (anyDetected || anyProtected)) {
+        if (cfg.isDoubleCheckEnabled() && !data.isConfirmScan() && (anyDetected || anyProtected || anyUnsure)) {
             List<HackDefinition> flagged = new ArrayList<>();
             for (HackDefinition hack : allHacks) {
                 HackResult r = results.getOrDefault(hack.getId(), HackResult.SKIPPED);
@@ -443,12 +466,26 @@ public class CheckManager {
 
         boolean hideClean = cfg.isHideClean();
         int shown = 0;
+        String epReason = data.getExploitPreventerReason();
+        int skipped = 0;
+        for (HackDefinition hack : reportHacks)
+            if (report.getOrDefault(hack.getId(), HackResult.SKIPPED) == HackResult.SKIPPED) skipped++;
+        String skippedCount = String.valueOf(skipped);
+        if ("key".equals(epReason)) {
+            sendLine(data, m -> m.get("check-ep-key", Map.of("skipped", skippedCount)));
+        } else if (epReason != null) {
+            sendLine(data, m -> m.get("check-ep-channel", Map.of("hack", epReason, "skipped", skippedCount)));
+        } else if (data.isUnsupportedClient()) {
+            sendLine(data, m -> m.get("check-unsupported", Map.of("skipped", skippedCount)));
+        }
+        boolean stoppedEarly = epReason != null || data.isUnsupportedClient();
         sendLine(data, m -> m.get("check-translation-header"));
 
         for (HackDefinition hack : reportHacks) {
             HackResult r = report.getOrDefault(hack.getId(), HackResult.SKIPPED);
             if (r == HackResult.DETECTED) { reportDetected = true; detectedNames.add(hack.getDisplayName()); }
             if (hideClean && r == HackResult.NOT_DETECTED) continue;
+            if (stoppedEarly && r == HackResult.SKIPPED) continue;  // already told in one line above
             shown++;
             resultText.append(hack.getDisplayName()).append(": ").append(r.name()).append("\n");
 
@@ -461,6 +498,7 @@ public class CheckManager {
 
         if (targetPlayer != null) {
             var profile = plugin.profileOf(uuid);
+            if (profile != null) sendVerdicts(data, profile);
             if (cfg.isShowChannels() && profile != null && !profile.getChannels().isEmpty()) {
                 String channels = String.join(", ", new java.util.TreeSet<>(profile.getChannels()));
                 sendLine(data, m -> m.get("check-channels", Map.of("channels", channels)));
@@ -474,13 +512,18 @@ public class CheckManager {
         }
 
         List<Object[]> dbRows = new ArrayList<>(reportHacks.size());
-        for (HackDefinition hack : reportHacks)
+        for (HackDefinition hack : reportHacks) {
+            String[] probe = data.getProbes().getOrDefault(hack.getId(), new String[3]);
             dbRows.add(new Object[]{hack.getId(), hack.getDisplayName(),
-                    report.getOrDefault(hack.getId(), HackResult.SKIPPED).name()});
+                    report.getOrDefault(hack.getId(), HackResult.SKIPPED).name(), hack.getKey(), probe[1], probe[2]});
+        }
         // Off the main thread: database I/O
         final boolean detectedForDb = reportDetected;
-        FoliaScheduler.runAsync(plugin, () -> plugin.database().scans().saveScanWithResults(
-                "hack", targetName, targetUUID, checkerName, data.getReason(), detectedForDb, dbRows));
+        FoliaScheduler.runAsync(plugin, () -> {
+            plugin.database().scans().saveScanWithResults(
+                    "hack", targetName, targetUUID, checkerName, data.getReason(), detectedForDb, dbRows);
+            plugin.module(HacksModule.class).scanEvent(targetName, "hack", "done", 0);
+        });
 
         if (cfg.isDiscordEnabled()) {
             String hacksChecked = reportHacks.stream()
@@ -507,6 +550,20 @@ public class CheckManager {
         executeResultActions(data, targetName, anyDetected, anyProtected, allClean, results, allHacks);
     }
 
+    private void sendVerdicts(CheckPlayerData data, com.veneer.core.PlayerProfile profile) {
+        verdictLine(data, "ExploitPreventer", profile.exploitPreventerVerdict(), null);
+        verdictLine(data, "FakePlayer", profile.fakePlayerVerdict(), null);
+        verdictLine(data, "Brand", profile.brandVerdict(), profile.getBrand());
+        verdictLine(data, "Language", profile.languageVerdict(), profile.getLanguage());
+        verdictLine(data, "Protocol Version", profile.protocolVerdict(), profile.getVersionReal());
+    }
+
+    private void verdictLine(CheckPlayerData data, String check, com.veneer.core.Verdict verdict, String detail) {
+        String extra = detail == null ? "" : " (" + detail + ")";
+        String key = "verdict-" + verdict.name().toLowerCase(Locale.ROOT).replace('_', '-');
+        sendLine(data, m -> m.with("check-verdict-line", "check", check, "verdict", m.raw(key), "detail", extra));
+    }
+
     private void sendLine(CheckPlayerData data, Function<Messages, Component> line) {
         plugin.alerts().send(line);
         plugin.alerts().notifyInitiator(data.getInitiatorUUID(), line);
@@ -523,6 +580,9 @@ public class CheckManager {
                 original.getInitiatorUUID(), batches, original.isAutoCheck(), original.getReason(), true);
         data.setFirstPass(allHacks, new LinkedHashMap<>(original.getResults()));
         data.setLastSignLocation(original.getLastSignLocation());
+        data.getProbes().putAll(original.getProbes());
+        data.setExploitPreventerReason(original.getExploitPreventerReason());
+        data.setUnsupportedClient(original.isUnsupportedClient());
         activeChecks.put(target.getUniqueId(), data);
 
         Function<Messages, Component> msg = m -> m.get("doublecheck", Map.of("player", target.getName()));
@@ -546,10 +606,7 @@ public class CheckManager {
                 .map(HackDefinition::getDisplayName)
                 .reduce((a, b) -> a + ", " + b).orElse("");
         String protectedList = allHacks.stream()
-                .filter(h -> {
-                    HackResult r = results.getOrDefault(h.getId(), HackResult.SKIPPED);
-                    return r == HackResult.PROTECTED || r == HackResult.TIMEOUT || r == HackResult.SUSPECTED;
-                })
+                .filter(h -> results.getOrDefault(h.getId(), HackResult.SKIPPED) == HackResult.PROTECTED)
                 .map(HackDefinition::getDisplayName)
                 .reduce((a, b) -> a + ", " + b).orElse("");
         String detectedOrProtectedList = allHacks.stream()

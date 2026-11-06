@@ -26,7 +26,7 @@ anticheat-trigger: "{prefix}<gray>Das Anticheat hat <yellow><click:run_command:'
 join-check: "{prefix}<gray>Automatische Überprüfung von <yellow><click:run_command:'/veneer player {player}'><hover:show_text:'<gray>Open profile'>{player}</hover></click> <gray>beim Beitritt..."
 already-checking: "{prefix}<yellow>{player} <white>wird bereits überprüft."
 invalid-hack: "{prefix}<red>Unbekannter Hack: <white>{hack}"
-hackcheck-usage: "{prefix}<red>Verwendung: /hackcheck \\<player> [hack1,hack2,...]</red>"
+hackcheck-usage: "{prefix}<red>Usage: /hackcheck \\<player> [all|version|lang|hack] [list]</red>"
 hackcheck-no-valid: "{prefix}<red>Keine gültigen Hacks zum Überprüfen.</red>"
 
 # ======================================================================
