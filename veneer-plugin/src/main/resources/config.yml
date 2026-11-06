@@ -456,6 +456,12 @@ hacks:
     # Open the panel at exactly this address: browsers keep the login per address.
     # Without HTTPS on a public address the login cookie can be read on the network.
     host: "localhost"
+    # true: the panel itself serves HTTPS on the port below, with a certificate it creates for itself
+    # (plugins/Veneer/web-https.p12). Everything between the browser and the panel is encrypted; no domain or proxy needed.
+    # Browsers warn once about such a certificate: accept it only if its SHA-256 matches the one in the console and in
+    # /hackeditor. The old http:// address stops working, and browsers log in again. Applied on a server restart.
+    # Leave false behind an HTTPS proxy that talks plain HTTP to the panel.
+    https: false
     # Address the panel listens on. 127.0.0.1 only accepts connections from this machine
     # (use a reverse proxy or tunnel); 0.0.0.0 listens on every interface.
     bind: "127.0.0.1"
@@ -470,6 +476,9 @@ hacks:
       retention-days: 90
       # An address shared by more accounts than this is ignored (shared networks, mobile data)
       max-accounts-per-ip: 8
+      # With AuthMe installed: also link accounts by its registration and last addresses (also of accounts not
+      # seen since Veneer was installed) and by the same e-mail. Only a hash of the e-mail is stored. Copied every 6 hours.
+      authme: true
       # Provider and country of each address, shown in the panel, from ip-location-db (IPtoASN, PDDL; NRO country
       # data, CC BY 4.0). About 50 MB is downloaded to plugins/Veneer/geo/ via cdn.jsdelivr.net.
       ip-database: true

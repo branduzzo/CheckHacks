@@ -54,6 +54,15 @@ final class Schema {
                     last_seen INTEGER NOT NULL
                 )""");
             s.execute("""
+                CREATE TABLE IF NOT EXISTS authme_accounts (
+                    uuid TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    reg_ip TEXT,
+                    last_ip TEXT,
+                    last_login INTEGER NOT NULL,
+                    email_hash TEXT
+                )""");
+            s.execute("""
                 CREATE TABLE IF NOT EXISTS joins (
                     uuid TEXT NOT NULL,
                     name TEXT NOT NULL,

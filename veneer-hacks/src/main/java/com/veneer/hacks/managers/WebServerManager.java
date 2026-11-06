@@ -5,11 +5,14 @@ import com.veneer.hacks.HacksModule;
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpsConfigurator;
+import com.sun.net.httpserver.HttpsServer;
 import com.veneer.VeneerPlugin;
 import com.veneer.hacks.HackDefinition;
 import com.veneer.hacks.commands.HackEditorCommand;
 import com.veneer.core.FoliaScheduler;
 import com.veneer.core.IpDatabase;
+import com.veneer.core.SelfSignedTls;
 import com.veneer.core.PlayerProfile;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -23,6 +26,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class WebServerManager {
+
+    private volatile String tlsFingerprint;
 
     private final VeneerPlugin plugin;
     private HttpServer server;
@@ -62,7 +67,19 @@ public class WebServerManager {
         int port = plugin.module(HacksModule.class).config().getWebPort();
         try {
             String bind = plugin.module(HacksModule.class).config().getWebBind();
-            server = HttpServer.create(new InetSocketAddress(java.net.InetAddress.getByName(bind), port), 0);
+            InetSocketAddress address = new InetSocketAddress(java.net.InetAddress.getByName(bind), port);
+            // A failure here leaves the panel off: it must not quietly fall back to plain HTTP
+            if (plugin.module(HacksModule.class).config().isWebHttps()) {
+                SelfSignedTls tls = SelfSignedTls.load(plugin.getDataFolder().toPath().resolve("web-https.p12"), tlsNames(bind));
+                HttpsServer secure = HttpsServer.create(address, 0);
+                secure.setHttpsConfigurator(new HttpsConfigurator(tls.context()));
+                server = secure;
+                tlsFingerprint = tls.fingerprint();
+                plugin.getLogger().info("Web panel HTTPS certificate SHA-256: " + tlsFingerprint);
+            } else {
+                server = HttpServer.create(address, 0);
+                tlsFingerprint = null;
+            }
             server.createContext("/", this::handle);
             executor = Executors.newFixedThreadPool(4);
             server.setExecutor(executor);
@@ -72,6 +89,18 @@ public class WebServerManager {
             plugin.getLogger().severe("Failed to start the web panel: " + e.getMessage());
         }
     }
+
+    /** The addresses the panel can be opened at: the certificate lists them. */
+    private List<String> tlsNames(String bind) {
+        Set<String> names = new LinkedHashSet<>(List.of("localhost", "127.0.0.1"));
+        String host = java.net.URI.create(settings().getPanelUrl()).getHost();
+        if (host != null) names.add(host.replaceAll("[\\[\\]]", ""));
+        if (!bind.equals("0.0.0.0") && !bind.equals("::")) names.add(bind);
+        return new ArrayList<>(names);
+    }
+
+    /** SHA-256 of the panel's own certificate, or null when it does not serve HTTPS itself. */
+    public String tlsFingerprint() { return tlsFingerprint; }
 
     private org.bukkit.configuration.ConfigurationSection links() {
         return plugin.config().section("hacks.web-editor.links");
@@ -298,8 +327,23 @@ public class WebServerManager {
                 return;
             }
 
-            if (path.equals("/web/3d-force-graph.min.js") || path.equals("/web/three.min.js")) {
-                serveLibrary(ex, path.substring(1));
+            if (path.equals("/3d-force-graph.min.js") || path.equals("/three.min.js")) {
+                serveLibrary(ex, "web" + path, "public, max-age=86400");
+                return;
+            }
+
+            // Not cached: the page must not run an old script after the plugin is updated
+            if (path.equals("/panel.js")) {
+                serveLibrary(ex, "web/panel.js", "no-store");
+                return;
+            }
+
+            if (path.equals("/i18n.js")) {
+                byte[] bytes = ("window.VENEER_I18N = " + translations() + ";").getBytes(StandardCharsets.UTF_8);
+                ex.getResponseHeaders().set("Content-Type", "text/javascript; charset=utf-8");
+                ex.getResponseHeaders().set("Cache-Control", "no-store");
+                ex.sendResponseHeaders(200, bytes.length);
+                try (OutputStream os = ex.getResponseBody()) { os.write(bytes); }
                 return;
             }
 
@@ -332,7 +376,7 @@ public class WebServerManager {
         ex.getResponseHeaders().set("Cache-Control", "no-store");
         try (InputStream is = plugin.getResource("web/editor.html")) {
             if (is == null) { sendHtml(ex, 500, "<h1>editor.html missing</h1>"); return; }
-            sendHtml(ex, 200, new String(is.readAllBytes(), StandardCharsets.UTF_8).replace("/*I18N*/{}", translations()));
+            sendHtml(ex, 200, new String(is.readAllBytes(), StandardCharsets.UTF_8));
         }
     }
 
@@ -345,13 +389,13 @@ public class WebServerManager {
         }
     }
 
-    /** Bundled scripts; they are public library code, so no token is needed. */
-    private void serveLibrary(HttpExchange ex, String resource) throws IOException {
+    /** Bundled scripts; they hold no data, so no session is needed. */
+    private void serveLibrary(HttpExchange ex, String resource, String cache) throws IOException {
         try (InputStream is = plugin.getResource(resource)) {
             if (is == null) { sendJson(ex, 404, Map.of("error", "not found")); return; }
             byte[] bytes = is.readAllBytes();
             ex.getResponseHeaders().set("Content-Type", "text/javascript; charset=utf-8");
-            ex.getResponseHeaders().set("Cache-Control", "public, max-age=86400");
+            ex.getResponseHeaders().set("Cache-Control", cache);
             ex.sendResponseHeaders(200, bytes.length);
             try (OutputStream os = ex.getResponseBody()) { os.write(bytes); }
         }
@@ -683,10 +727,18 @@ public class WebServerManager {
         return Arrays.asList(playerInfo.getOrDefault("perms", "").split(",")).contains(perm);
     }
 
+    /**
+     * A second line behind the page's escaping: only the panel's own script files run, so text that slips into the
+     * page as markup stays inert. Inline styles stay allowed, the page uses them throughout.
+     */
+    private static final String CONTENT_SECURITY_POLICY = "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; "
+            + "img-src 'self' data: blob: https://mc-heads.net; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
     /** The panel is same-origin, so no CORS; no referrer to the head images either. */
     private void addSecurityHeaders(HttpExchange ex) {
         ex.getResponseHeaders().set("X-Content-Type-Options", "nosniff");
         ex.getResponseHeaders().set("X-Frame-Options", "DENY");
+        ex.getResponseHeaders().set("Content-Security-Policy", CONTENT_SECURITY_POLICY);
         ex.getResponseHeaders().set("Referrer-Policy", "no-referrer");
     }
 

@@ -24,11 +24,11 @@ public final class LinkGraph {
         this.fingerprints = fingerprints;
     }
 
-    private record Rows3(List<String[]> joins, List<String[]> clients, Set<String> detected) {}
+    private record Rows3(List<String[]> joins, List<String[]> clients, List<String[]> authMe, List<String[]> seen, Set<String> detected) {}
 
     /**
      * Graph of linked accounts: {@code nodes} (id, name, detected, links, skin) and {@code edges} (source, target,
-     * type "ip", "rptrack" or "client", label, p = how likely the two accounts are one person, 0 to 1). An address
+     * type "ip", "rptrack", "client" or "email", label, p = how likely the two accounts are one person, 0 to 1). An address
      * shared by more than {@code maxPerIp} accounts is skipped (shared networks); fingerprints link when they overlap
      * by at least {@code minMatch} packs. A client link is the same brand with the same set of at least
      * {@code minChannels} plugin channels, shared by no more than {@code maxPerClient} accounts: a common client
@@ -44,8 +44,8 @@ public final class LinkGraph {
 
     /** As above, plus up to {@code maxUnlinked} accounts without a link, so a lone account still shows in the graph. */
     public Map<String, Object> getLinkGraph(int maxPerIp, int minMatch, int maxPerClient, int minChannels, int maxUnlinked) {
-        Rows3 rows = db.read("getLinkGraph", new Rows3(List.of(), List.of(), Set.of()), c -> {
-            List<String[]> joinRows = new ArrayList<>(), clientRows = new ArrayList<>();
+        Rows3 rows = db.read("getLinkGraph", new Rows3(List.of(), List.of(), List.of(), List.of(), Set.of()), c -> {
+            List<String[]> joinRows = new ArrayList<>(), clientRows = new ArrayList<>(), authMeRows = new ArrayList<>(), seenRows = new ArrayList<>();
             try (Statement st = c.createStatement()) {
                 try (ResultSet rs = st.executeQuery("SELECT uuid, name, ip, last_seen FROM joins ORDER BY last_seen DESC")) {
                     while (rs.next()) joinRows.add(new String[]{rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4)});
@@ -54,7 +54,16 @@ public final class LinkGraph {
                     while (rs.next()) clientRows.add(new String[]{rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4)});
                 }
             }
-            return new Rows3(joinRows, clientRows, scans.detectedAccounts(c));
+            // Accounts linked only by fingerprint or client have no joins row, but were seen too
+            try (Statement st = c.createStatement();
+                 ResultSet rs = st.executeQuery("SELECT uuid, last_seen FROM rptrack UNION ALL SELECT uuid, updated FROM clients")) {
+                while (rs.next()) seenRows.add(new String[]{rs.getString(1), rs.getString(2)});
+            }
+            try (Statement st = c.createStatement();
+                 ResultSet rs = st.executeQuery("SELECT uuid, name, reg_ip, last_ip, last_login, email_hash FROM authme_accounts")) {
+                while (rs.next()) authMeRows.add(new String[]{rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getString(6)});
+            }
+            return new Rows3(joinRows, clientRows, authMeRows, seenRows, scans.detectedAccounts(c));
         });
         List<FingerprintStore.Fingerprint> tracks = fingerprints.masks();
 
@@ -67,6 +76,27 @@ public final class LinkGraph {
             byIp.computeIfAbsent(r[2], k -> new ArrayList<>()).add(r[0]);
             ipsOf.computeIfAbsent(r[0], k -> new ArrayList<>()).add(r[2]);
             lastSeen.merge(r[0], Long.parseLong(r[3]), Math::max);
+        }
+        for (String[] r : rows.seen()) lastSeen.merge(r[0], Long.parseLong(r[1]), Math::max);
+        // AuthMe's addresses reach back before Veneer was installed; they count like any other shared address
+        Map<String, List<String>> byEmail = new LinkedHashMap<>();
+        for (String[] r : rows.authMe()) {
+            names.putIfAbsent(r[0], r[1]);
+            lastSeen.merge(r[0], Long.parseLong(r[4]), Math::max);
+            for (String ip : new String[]{r[2], r[3]}) {
+                if (ip == null) continue;
+                List<String> known = ipsOf.computeIfAbsent(r[0], k -> new ArrayList<>());
+                if (known.contains(ip)) continue;
+                known.add(ip);
+                byIp.computeIfAbsent(ip, k -> new ArrayList<>()).add(r[0]);
+            }
+            if (r[5] != null) byEmail.computeIfAbsent(r[5], k -> new ArrayList<>()).add(r[0]);
+        }
+        for (List<String> ids : byEmail.values()) {
+            if (ids.size() < 2 || ids.size() > maxPerIp) continue;
+            for (int i = 0; i < ids.size(); i++)
+                for (int j = i + 1; j < ids.size(); j++)
+                    edges.add(edge(ids.get(i), ids.get(j), "email", "e-mail", 0.9 / Math.max(1.0, (ids.size() - 1) / 2.0)));
         }
         for (Map.Entry<String, List<String>> e : byIp.entrySet()) {
             List<String> ids = e.getValue();

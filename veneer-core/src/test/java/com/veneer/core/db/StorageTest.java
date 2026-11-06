@@ -47,6 +47,28 @@ class StorageTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void authMeAccountsLinkByAddressAndEmailEvenWithoutAJoin() {
+        storage.players().replaceAuthMeAccounts(List.of(
+                new PlayerStore.AuthMeAccount("u-a", "Alice", "203.0.113.5", null, 1000, null),
+                new PlayerStore.AuthMeAccount("u-b", "Bob", null, "203.0.113.5", 1000, null),
+                new PlayerStore.AuthMeAccount("u-c", "Carol", null, null, 1000, "hash"),
+                new PlayerStore.AuthMeAccount("u-d", "Dave", null, null, 1000, "hash"),
+                new PlayerStore.AuthMeAccount("u-e", "Eve", null, null, 1000, null)));
+
+        var edges = (List<Map<String, Object>>) storage.links().getLinkGraph(8, 5, 5, 3).get("edges");
+        assertEquals(1, edges.stream().filter(e -> e.get("type").equals("ip") && e.get("label").equals("203.0.113.5")).count());
+        assertEquals(1, edges.stream().filter(e -> e.get("type").equals("email")).count());
+        assertEquals(2, edges.size());
+
+        // A new copy replaces the old one and deleting a player removes its row
+        storage.players().replaceAuthMeAccounts(List.of(new PlayerStore.AuthMeAccount("u-a", "Alice", "203.0.113.5", null, 1000, null)));
+        assertTrue(((List<?>) storage.links().getLinkGraph(8, 5, 5, 3).get("edges")).isEmpty());
+        storage.players().deletePlayers(List.of("u-a"));
+        assertTrue(((List<?>) storage.links().getLinkGraph(8, 5, 5, 3, 10).get("nodes")).isEmpty());
+    }
+
+    @Test
     void scansCarryTheirResultsInOrder() {
         long a = storage.scans().saveScanWithResults("hack", "Alice", "u-a", "staff", "manual", true,
                 results("meteor=DETECTED", "wurst=NOT_DETECTED"));

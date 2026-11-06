@@ -50,7 +50,7 @@ public final class VeneerGui implements Listener {
     private static final int SLOT_SPOOF = 1, SLOT_HACKS = 3, SLOT_RPTRACK = 5;
     private static final int SLOT_PLAYERS = 10, SLOT_DETECTIONS = 11, SLOT_BRANDS = 12,
             SLOT_GRIM = 13, SLOT_ALERTS = 14, SLOT_EDITOR = 15, SLOT_CHANNELS = 16;
-    private static final int SLOT_RELOAD = 19, SLOT_VERSION = 21;
+    private static final int SLOT_RELOAD = 19, SLOT_VERSION = 21, SLOT_ALERTS_TOGGLE = 23, SLOT_LANG = 25, SLOT_BROWSERS = 31;
     private static final int SLOT_CLOSE = 35;
 
     // Sub-page nav row (row 6, slots 45–53)
@@ -61,9 +61,13 @@ public final class VeneerGui implements Listener {
     private static final int PI_BRAND = 10, PI_STATUS = 11, PI_CHANNELS = 12, PI_SCANS = 13,
             PI_GRIM = 14, PI_SENSITIVITY = 15;
     private static final int PI_CHECK = 19, PI_DETECTIONS = 22, PI_ALERTS = 25;
+    private static final int PI_BROWSERS = 30, PI_DELETE = 32;
     private static final int PI_BACK = 27, PI_CLOSE = 35;
 
-    public enum Page { MAIN, PLAYERS, DETECTIONS, BRANDS, GRIM, PLAYER_INFO, CHANNELS, ALERTS }
+    // Delete confirmation (3 rows)
+    private static final int CONFIRM_YES = 11, CONFIRM_NO = 15;
+
+    public enum Page { MAIN, PLAYERS, DETECTIONS, BRANDS, GRIM, PLAYER_INFO, CHANNELS, ALERTS, BROWSERS, CONFIRM_DELETE }
 
     record VeneerMenuHolder(Page page, int pageNum, String query) implements InventoryHolder {
         @Override public Inventory getInventory() { return null; }
@@ -72,6 +76,8 @@ public final class VeneerGui implements Listener {
     private final Veneer plugin;
     /** The channel group an item of the channels page stands for, so a click can find its players. */
     private final NamespacedKey channelsKey;
+    /** The browser an item of the browsers page stands for. */
+    private final NamespacedKey browserKey;
     private final GrimViolationTracker grimTracker;
     private final Map<UUID, Page> awaitingSearch = new ConcurrentHashMap<>();
 
@@ -89,6 +95,7 @@ public final class VeneerGui implements Listener {
         }
         grimTracker = tracker;
         channelsKey = new NamespacedKey(plugin, "channels");
+        browserKey = new NamespacedKey(plugin, "browser");
     }
 
     // ── Public entry points ──────────────────────────────────────────────────
@@ -244,6 +251,10 @@ public final class VeneerGui implements Listener {
         inv.setItem(PI_ALERTS, navItem(Material.BELL,
                 m.get("gui-player-btn-alerts"), m.get("gui-player-btn-alerts-lore")));
 
+        if (plugin.hacks().running() && admin.hasPermission("veneer.hacks.editor.admin"))
+            inv.setItem(PI_BROWSERS, navItem(Material.SPYGLASS, m.get("gui-btn-browsers"), m.get("gui-btn-browsers-player-lore")));
+        inv.setItem(PI_DELETE, navItem(Material.LAVA_BUCKET, m.get("gui-btn-delete-player"), m.get("gui-btn-delete-player-lore")));
+
         // Nav
         inv.setItem(PI_BACK,  barItem(Material.RED_STAINED_GLASS_PANE, m.get("gui-nav-back")));
         inv.setItem(PI_CLOSE, barItem(Material.BARRIER, m.get("gui-nav-close")));
@@ -305,9 +316,131 @@ public final class VeneerGui implements Listener {
 
         inv.setItem(SLOT_RELOAD,  navItem(Material.COMPARATOR,    m.get("gui-btn-reload"),   m.get("gui-btn-reload-lore")));
         inv.setItem(SLOT_VERSION, navItem(Material.KNOWLEDGE_BOOK, m.get("gui-btn-version"), m.get("gui-btn-version-lore")));
+        if (player.hasPermission(Alerts.PERMISSION))
+            inv.setItem(SLOT_ALERTS_TOGGLE, alertsToggleItem(player, m));
+        if (player.hasPermission("veneer.lang"))
+            inv.setItem(SLOT_LANG, navItem(Material.BOOK, m.get("gui-btn-lang", Map.of("lang", m.language())), m.get("gui-btn-lang-lore")));
+        if (plugin.hacks().running() && player.hasPermission("veneer.hacks.editor"))
+            inv.setItem(SLOT_BROWSERS, navItem(Material.SPYGLASS, m.get("gui-btn-browsers"), m.get("gui-btn-browsers-lore")));
         inv.setItem(SLOT_CLOSE,   barItem(Material.BARRIER, m.get("gui-nav-close")));
 
         player.openInventory(inv);
+    }
+
+    private ItemStack alertsToggleItem(Player player, Messages m) {
+        boolean on = plugin.alerts().isEnabled(player.getUniqueId());
+        return navItem(on ? Material.LIME_DYE : Material.GRAY_DYE, m.get("gui-btn-alerts-toggle"),
+                m.get(on ? "gui-btn-alerts-toggle-on" : "gui-btn-alerts-toggle-off"));
+    }
+
+    // ── Web panel browsers ────────────────────────────────────────────────────
+
+    private void openBrowsers(Player player, String target) {
+        FoliaScheduler.runAsync(plugin, () -> {
+            List<Map<String, Object>> rows = plugin.database().tokens().listSessions(null, target);
+            FoliaScheduler.runAtEntity(plugin, player, () -> {
+                if (player.isOnline()) showBrowsers(player, target, rows);
+            });
+        });
+    }
+
+    private void showBrowsers(Player player, String target, List<Map<String, Object>> rows) {
+        Messages m = plugin.messages().in(player);
+        Inventory inv = plugin.getServer().createInventory(
+                new VeneerMenuHolder(Page.BROWSERS, 0, target), 54, m.get("gui-page-browsers", Map.of("player", target)));
+        boolean showIp = player.hasPermission("veneer.web.ips");
+        int slot = 0;
+        for (Map<String, Object> row : rows) {
+            if (slot >= PAGE_SIZE) break;
+            ItemStack item = new ItemStack(Material.PAPER);
+            ItemMeta meta = item.getItemMeta();
+            String id = String.valueOf(row.get("id"));
+            meta.displayName(Component.text(id).color(NamedTextColor.WHITE).decoration(TextDecoration.ITALIC, false));
+            meta.lore(List.of(
+                    m.get("gui-browser-dates", Map.of(
+                            "created", DATE_FMT.format(Instant.ofEpochMilli((Long) row.get("created"))),
+                            "used", DATE_FMT.format(Instant.ofEpochMilli((Long) row.get("used"))))).decoration(TextDecoration.ITALIC, false),
+                    m.get("gui-browser-ip", Map.of("ip", showIp ? String.valueOf(row.get("ip")) : "-")).decoration(TextDecoration.ITALIC, false),
+                    m.get("gui-browser-hint").decoration(TextDecoration.ITALIC, false)));
+            meta.getPersistentDataContainer().set(browserKey, PersistentDataType.STRING, id);
+            item.setItemMeta(meta);
+            inv.setItem(slot++, item);
+        }
+        fillGlass(inv, slot, PAGE_SIZE);
+        buildNavRow(inv, 0, false, false, m);
+        player.openInventory(inv);
+    }
+
+    private void handleBrowsers(Player player, VeneerMenuHolder holder, int slot, ItemStack item, ClickType click) {
+        if (slot < PAGE_SIZE) {
+            if (item == null || !item.hasItemMeta()) return;
+            String id = item.getItemMeta().getPersistentDataContainer().get(browserKey, PersistentDataType.STRING);
+            if (id == null) return;
+            // The commands check the rights; block asks for confirmation in chat. Shift guards against a stray ban.
+            if (click == ClickType.LEFT) {
+                player.closeInventory();
+                player.performCommand("hackeditor unauth " + holder.query() + " " + id);
+            } else if (click == ClickType.SHIFT_RIGHT) {
+                player.closeInventory();
+                player.performCommand("hackeditor block " + holder.query() + " " + id);
+            }
+            return;
+        }
+        switch (slot) {
+            case NAV_BACK   -> { player.closeInventory(); open(player); }
+            case NAV_CLOSE2 -> player.closeInventory();
+        }
+    }
+
+    // ── Delete confirmation ───────────────────────────────────────────────────
+
+    private void openDeleteConfirm(Player player, String target) {
+        Messages m = plugin.messages().in(player);
+        Inventory inv = plugin.getServer().createInventory(
+                new VeneerMenuHolder(Page.CONFIRM_DELETE, 0, target), 27, m.get("gui-page-delete", Map.of("player", target)));
+        fillGlass(inv, 0, 27);
+        inv.setItem(CONFIRM_YES, navItem(Material.RED_CONCRETE, m.get("gui-delete-yes"), m.get("gui-delete-yes-lore", Map.of("player", target))));
+        inv.setItem(CONFIRM_NO, navItem(Material.LIME_CONCRETE, m.get("gui-delete-no"), null));
+        player.openInventory(inv);
+    }
+
+    private void handleDeleteConfirm(Player player, VeneerMenuHolder holder, int slot) {
+        if (slot == CONFIRM_YES) {
+            player.closeInventory();
+            player.performCommand("veneer db delete " + holder.query());
+        } else if (slot == CONFIRM_NO) {
+            player.closeInventory();
+            openPlayerInfo(player, holder.query());
+        }
+    }
+
+    /** Opens the panel when this account has a linked browser, otherwise links one. */
+    private void openEditor(Player player) {
+        player.closeInventory();
+        String uuid = player.getUniqueId().toString();
+        FoliaScheduler.runAsync(plugin, () -> {
+            boolean linked = plugin.database().tokens().countSessions(uuid) > 0;
+            FoliaScheduler.runAtEntity(plugin, player, () -> {
+                if (player.isOnline()) player.performCommand(linked ? "hackeditor" : "hackeditor new");
+            });
+        });
+    }
+
+    /** Left click moves to the next language, right click follows the client's language. */
+    private void switchLanguage(Player player, ClickType click) {
+        if (!player.hasPermission("veneer.lang")) return;
+        String code;
+        if (click.isRightClick()) {
+            code = Messages.AUTO;
+        } else if (click.isLeftClick()) {
+            List<String> codes = plugin.messages().languages();
+            if (codes.isEmpty()) return;
+            code = codes.get((codes.indexOf(plugin.messages().in(player).language()) + 1) % codes.size());
+        } else {
+            return;
+        }
+        player.performCommand("veneer lang " + code);
+        openMainChest(player);
     }
 
     // ── Players page ──────────────────────────────────────────────────────────
@@ -670,7 +803,7 @@ public final class VeneerGui implements Listener {
         int slot = event.getRawSlot();
 
         switch (holder.page()) {
-            case MAIN        -> handleMain(player, slot);
+            case MAIN        -> handleMain(player, slot, event);
             case PLAYERS     -> handlePlayers(player, holder, slot, event.getCurrentItem());
             case DETECTIONS  -> handleDetections(player, holder, slot, event.getCurrentItem());
             case BRANDS      -> handleBrands(player, holder, slot, event);
@@ -678,10 +811,12 @@ public final class VeneerGui implements Listener {
             case PLAYER_INFO -> handlePlayerInfo(player, holder, slot);
             case CHANNELS    -> handleChannels(player, holder, slot, event.getCurrentItem(), event.getClick());
             case ALERTS      -> handleAlerts(player, holder, slot, event.getCurrentItem());
+            case BROWSERS    -> handleBrowsers(player, holder, slot, event.getCurrentItem(), event.getClick());
+            case CONFIRM_DELETE -> handleDeleteConfirm(player, holder, slot);
         }
     }
 
-    private void handleMain(Player player, int slot) {
+    private void handleMain(Player player, int slot, InventoryClickEvent event) {
         switch (slot) {
             case SLOT_PLAYERS    -> { player.closeInventory(); openPlayers(player, 0, null); }
             case SLOT_DETECTIONS -> { player.closeInventory(); openDetections(player, 0, null); }
@@ -689,7 +824,15 @@ public final class VeneerGui implements Listener {
             case SLOT_GRIM       -> { if (grimTracker != null) { player.closeInventory(); openGrim(player, 0); } }
             case SLOT_ALERTS     -> { player.closeInventory(); openAlerts(player, 0, null); }
             case SLOT_CHANNELS   -> { player.closeInventory(); openChannels(player, 0); }
-            case SLOT_EDITOR     -> { player.closeInventory(); player.performCommand("hackeditor"); }
+            case SLOT_EDITOR     -> openEditor(player);
+            case SLOT_ALERTS_TOGGLE -> {
+                if (player.hasPermission(Alerts.PERMISSION)) {
+                    player.performCommand("veneer alerts toggle");
+                    event.getInventory().setItem(slot, alertsToggleItem(player, plugin.messages().in(player)));
+                }
+            }
+            case SLOT_LANG       -> switchLanguage(player, event.getClick());
+            case SLOT_BROWSERS   -> { if (plugin.hacks().running() && player.hasPermission("veneer.hacks.editor")) { player.closeInventory(); openBrowsers(player, player.getName()); } }
             case SLOT_RELOAD     -> { player.closeInventory(); player.performCommand("veneer reload"); }
             case SLOT_VERSION    -> { player.closeInventory(); player.performCommand("veneer version"); }
             case SLOT_CLOSE      -> player.closeInventory();
@@ -744,9 +887,10 @@ public final class VeneerGui implements Listener {
             }
             ClickType ct = event.getClick();
             BrandVerdicts.Verdict next;
-            if (ct.isLeftClick()) next = BrandVerdicts.Verdict.ALLOW;
+            // Shift first: a shift-click also counts as a left or right click. Middle click only reaches the server in creative.
+            if (ct.isShiftClick() || ct == ClickType.MIDDLE) next = null;
+            else if (ct.isLeftClick()) next = BrandVerdicts.Verdict.ALLOW;
             else if (ct.isRightClick()) next = BrandVerdicts.Verdict.BLOCK;
-            else if (ct == ClickType.MIDDLE) next = null;
             else return; // drop, number keys and the like must not reset a verdict
             plugin.spoof().verdicts().decide(e.id(), next, player.getName());
             Messages m = plugin.messages().in(player);
@@ -784,6 +928,8 @@ public final class VeneerGui implements Listener {
             case PI_CHECK      -> { player.closeInventory(); if (targetName != null) openCheckDialog(player, targetName); }
             case PI_DETECTIONS -> { player.closeInventory(); if (targetName != null) openDetections(player, 0, targetName); }
             case PI_ALERTS     -> { player.closeInventory(); if (targetName != null) openAlerts(player, 0, targetName); }
+            case PI_BROWSERS   -> { if (targetName != null && plugin.hacks().running() && player.hasPermission("veneer.hacks.editor.admin")) { player.closeInventory(); openBrowsers(player, targetName); } }
+            case PI_DELETE     -> { if (targetName != null) { player.closeInventory(); openDeleteConfirm(player, targetName); } }
             case PI_BACK       -> { player.closeInventory(); open(player); }
             case PI_CLOSE      -> player.closeInventory();
         }

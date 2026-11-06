@@ -7,7 +7,7 @@ description: Client spoof detection, mod detection and cache-based account linki
 authors: [GigaZelensky, Branduzzo]
 website: https://github.com/ReAndrew/veneer
 
-softdepend: [packetevents, ProtocolLib, ProtocolSupport, ViaVersion, ViaBackwards, ViaRewind, Geyser-Spigot, PlaceholderAPI, LuckPerms, GrimAC, Vulcan, Spartan, Matrix, Intave, AAC, floodgate]
+softdepend: [packetevents, ProtocolLib, ProtocolSupport, ViaVersion, ViaBackwards, ViaRewind, Geyser-Spigot, PlaceholderAPI, LuckPerms, AuthMe, GrimAC, Vulcan, Spartan, Matrix, Intave, AAC, floodgate]
 
 commands:
   veneer:

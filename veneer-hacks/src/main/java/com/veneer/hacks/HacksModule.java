@@ -103,6 +103,7 @@ public class HacksModule extends VeneerModule {
     }
 
     public ConfigManager config() { return config; }
+    public WebServerManager webServer() { return web; }
     public CheckManager checks() { return checks; }
     public LangCheckManager langChecks() { return langChecks; }
     /** Whether sign answers can be read from the packet, uncut (see {@link SignPacketListener}). */

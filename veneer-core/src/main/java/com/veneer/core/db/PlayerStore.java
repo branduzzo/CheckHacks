@@ -23,6 +23,43 @@ public final class PlayerStore {
 
     // ------------------------------------------------------------------ writes
 
+    /** A registered account as AuthMe knows it; the addresses and the e-mail hash may be null. */
+    public record AuthMeAccount(String uuid, String name, String regIp, String lastIp, long lastLogin, String emailHash) {}
+
+    /** The current copy of AuthMe's accounts, replacing the previous one. */
+    public void replaceAuthMeAccounts(Collection<AuthMeAccount> accounts) {
+        db.transaction("replaceAuthMeAccounts", null, c -> {
+            try (java.sql.Statement st = c.createStatement()) {
+                st.executeUpdate("DELETE FROM authme_accounts");
+            }
+            try (PreparedStatement ps = c.prepareStatement(
+                    "INSERT OR REPLACE INTO authme_accounts (uuid, name, reg_ip, last_ip, last_login, email_hash) VALUES (?,?,?,?,?,?)")) {
+                for (AuthMeAccount a : accounts) {
+                    ps.setString(1, a.uuid());
+                    ps.setString(2, a.name());
+                    ps.setString(3, a.regIp());
+                    ps.setString(4, a.lastIp());
+                    ps.setLong(5, a.lastLogin());
+                    ps.setString(6, a.emailHash());
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+            }
+            return null;
+        });
+    }
+
+    /** Lowercase name to uuid of every known account. */
+    public Map<String, String> accountUuids() {
+        return db.read("accountUuids", new java.util.HashMap<>(), c -> {
+            Map<String, String> out = new java.util.HashMap<>();
+            try (PreparedStatement ps = c.prepareStatement("SELECT uuid, name FROM accounts"); ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) out.put(Rows.lower(rs.getString(2)), rs.getString(1));
+            }
+            return out;
+        });
+    }
+
     /** Notes that this account joined from this address (one row per account and address). */
     public void recordJoin(String uuid, String name, String ip) {
         long now = System.currentTimeMillis();
@@ -95,7 +132,7 @@ public final class PlayerStore {
             Rows.updateIn(c, "DELETE FROM lang_results WHERE scan_id IN (SELECT id FROM scans WHERE target_uuid IN (%s))", uuids);
             Rows.updateIn(c, "DELETE FROM scans WHERE target_uuid IN (%s)", uuids);
             int removed = Rows.updateIn(c, "DELETE FROM joins WHERE uuid IN (%s)", uuids);
-            for (String table : List.of("skins", "clients", "rptrack", "player_language", "accounts"))
+            for (String table : List.of("skins", "clients", "rptrack", "player_language", "authme_accounts", "accounts"))
                 Rows.updateIn(c, "DELETE FROM " + table + " WHERE uuid IN (%s)", uuids);
             return removed;
         });
@@ -252,7 +289,7 @@ public final class PlayerStore {
     /** Addresses, skins and clients not updated since {@code before}. */
     void purgeBefore(Connection c, long before) throws SQLException {
         for (String sql : List.of("DELETE FROM joins WHERE last_seen < ?", "DELETE FROM skins WHERE updated < ?",
-                "DELETE FROM clients WHERE updated < ?")) {
+                "DELETE FROM clients WHERE updated < ?", "DELETE FROM authme_accounts WHERE last_login < ?")) {
             try (PreparedStatement ps = c.prepareStatement(sql)) {
                 ps.setLong(1, before);
                 ps.executeUpdate();

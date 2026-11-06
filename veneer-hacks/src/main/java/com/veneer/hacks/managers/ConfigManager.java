@@ -151,6 +151,7 @@ public class ConfigManager {
     public boolean isWebEditorEnabled() { return masterConfig.getBoolean("web-editor.enabled", true); }
     public int     getWebPort()         { return masterConfig.getInt("web-editor.port", 8080); }
     public String  getWebHost()         { return masterConfig.getString("web-editor.host", "localhost"); }
+    public boolean isWebHttps()         { return masterConfig.getBoolean("web-editor.https", false); }
     public String  getWebBind()         { return masterConfig.getString("web-editor.bind", "127.0.0.1"); }
     public int     getLinkExpireMinutes() { return Math.max(1, masterConfig.getInt("web-editor.link-expire-minutes", 5)); }
     /** Days a connected browser stays logged in without being used. */
@@ -158,8 +159,9 @@ public class ConfigManager {
     /** The address players open: {@code host} when it is a full URL (behind an HTTPS proxy), else http://host:port. */
     public String  getPanelUrl() {
         String host = getWebHost().strip();
+        if (isWebHttps() && host.startsWith("http://")) host = "https://" + host.substring("http://".length());
         if (host.startsWith("http://") || host.startsWith("https://")) return host.replaceAll("/+$", "");
-        return "http://" + host + ":" + getWebPort();
+        return (isWebHttps() ? "https://" : "http://") + host + ":" + getWebPort();
     }
     public boolean isPanelHttps() { return getPanelUrl().startsWith("https://"); }
     /** Whether the panel's traffic leaves this machine unencrypted. */

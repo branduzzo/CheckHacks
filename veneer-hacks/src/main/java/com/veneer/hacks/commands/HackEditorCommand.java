@@ -75,10 +75,19 @@ public class HackEditorCommand implements CommandExecutor, TabCompleter {
             var tokens = plugin.database().tokens();
             tokens.updatePerms(uuid, perms);
             boolean connected = tokens.countSessions(uuid) > 0;
-            FoliaScheduler.runAtEntity(plugin, player, () -> player.sendMessage(connected
-                    ? plugin.messages().in(player).get("editor-link", Map.of("url", url))
-                    : plugin.messages().in(player).get("editor-not-connected")));
+            FoliaScheduler.runAtEntity(plugin, player, () -> {
+                sendFingerprint(player);
+                player.sendMessage(connected
+                        ? plugin.messages().in(player).get("editor-link", Map.of("url", url))
+                        : plugin.messages().in(player).get("editor-not-connected"));
+            });
         });
+    }
+
+    private void sendFingerprint(Player player) {
+        var web = plugin.module(com.veneer.hacks.HacksModule.class).webServer();
+        String fingerprint = web != null ? web.tlsFingerprint() : null;
+        if (fingerprint != null) player.sendMessage(plugin.messages().in(player).get("editor-https-fingerprint", Map.of("fingerprint", fingerprint)));
     }
 
     private void connect(CommandSender sender, ConfigManager config) {
@@ -96,6 +105,7 @@ public class HackEditorCommand implements CommandExecutor, TabCompleter {
             FoliaScheduler.runAtEntity(plugin, player, () -> {
                 var m = plugin.messages().in(player);
                 player.sendMessage(m.get("editor-new-warning"));
+                sendFingerprint(player);
                 player.sendMessage(m.get("editor-new-link", Map.of("url", url, "minutes", String.valueOf(minutes))));
             });
         });
