@@ -168,9 +168,6 @@
   "The control line came back empty and the client registered no plugin channels.": "Контрольная строка пуста, и клиент не зарегистрировал ни одного канала.",
   "The client resolved the control key on the probe sign.": "Клиент распознал контрольный ключ на табличке.",
   "No mod scan with a usable answer since this player joined, or the client has channels but did not resolve signs.": "С момента входа не было пригодного ответа, либо клиент с каналами не обработал табличку.",
-  "The client sent this brand.": "Клиент отправил этот бренд.",
-  "The player has been online for over 10 seconds and sent no brand.": "Игрок онлайн больше 10 секунд и не отправил бренд.",
-  "The player is offline with no stored brand, or just joined.": "Игрок офлайн без сохранённого бренда либо только что зашёл.",
   "The language sign matched a configured language.": "Ответ таблички совпал с языком из настроек.",
   "The client answered, but the text is blocked or matches no configured language.": "Клиент ответил, но текст скрыт или не совпал ни с одним языком из настроек.",
   "No language check since this player joined.": "С момента входа проверки языка не было.",
@@ -189,5 +186,8 @@
   "scan stopped": "проверка прервана",
   "scan finished": "проверка завершена",
   "Session": "Сессия",
-  "Time until this panel link expires. Run /hackeditor for a new one.": "Сколько осталось до истечения ссылки на панель. Новую выдаёт /hackeditor."
+  "Time until this panel link expires. Run /hackeditor for a new one.": "Сколько осталось до истечения ссылки на панель. Новую выдаёт /hackeditor.",
+  "The client did not send a brand.": "Клиент не передал бренд.",
+  "Mismatch": "Не совпадает",
+  "Match": "Совпадает"
 }

@@ -48,7 +48,7 @@ public class HackEditorCommand implements CommandExecutor {
             String token = plugin.database().tokens().saveToken(uuid, name, expire, perms);
             String url  = "http://" + host + ":" + port + "/editor?token=" + token;
             FoliaScheduler.runAtEntity(plugin, player,
-                    () -> player.sendMessage(plugin.messages().in(player).get("editor-url", Map.of("url", url))));
+                    () -> player.sendMessage(plugin.messages().in(player).get("editor-link", Map.of("url", url))));
         });
         return true;
     }

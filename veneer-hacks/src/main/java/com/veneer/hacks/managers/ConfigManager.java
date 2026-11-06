@@ -177,6 +177,8 @@ public class ConfigManager {
     public long    getFlagCooldownHours(){ return hacksConfig.getLong("detect-flag.cooldown-hours", 24); }
 
     public boolean isJoinCheckEnabled()  { return hacksConfig.getBoolean("auto-check-on-join.enabled", false); }
+    /** BETA: run the join scan while the client loads the resource pack. */
+    public boolean isScanDuringResourcePack() { return hacksConfig.getBoolean("auto-check-on-join.during-resource-pack", false); }
     public boolean isOnlyFirstJoin()     { return hacksConfig.getBoolean("auto-check-on-join.only-first-join", false); }
 
     public long getTimeoutTicks()     { return timeoutTicks; }

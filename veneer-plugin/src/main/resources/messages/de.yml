@@ -64,7 +64,6 @@ lang-join-check: "{prefix}<gray>Automatische Sprachprüfung von <yellow>{player}
 # WEB EDITOR  (/hackeditor)
 # Placeholders: {url}.
 # ======================================================================
-editor-url: "{prefix}<white>Editor: <aqua><click:open_url:'{url}'>{url}</click>"
 editor-disabled: "{prefix}<red>Der Web-Editor ist in der config.yml deaktiviert."
 editor-players-only: "{prefix}<red>Nur Spieler können den Editor öffnen.</red>"
 

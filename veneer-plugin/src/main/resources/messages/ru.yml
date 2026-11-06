@@ -64,7 +64,6 @@ lang-join-check: "{prefix}<gray>Автоматическая проверка я
 # WEB EDITOR  (/hackeditor)
 # Placeholders: {url}.
 # ======================================================================
-editor-url: "{prefix}<white>Редактор: <aqua><click:open_url:'{url}'>{url}</click>"
 editor-disabled: "{prefix}<red>Веб-редактор отключён в config.yml."
 editor-players-only: "{prefix}<red>Открывать редактор могут только игроки.</red>"
 
@@ -411,3 +410,11 @@ veneer-db-deleted: "{prefix}<green>Все данные игрока {player} у�
 veneer-db-purged: "{prefix}<green>Проверки и адреса старше {days} дн. удалены.</green>"
 veneer-db-clear-confirm: "{prefix}<yellow>Будут удалены все игроки, проверки и адреса, отменить нельзя. Введите</yellow> <white>/veneer db clear confirm</white>"
 veneer-db-cleared: "{prefix}<green>База игроков очищена, удалено аккаунтов: {count}.</green>"
+
+check-channels-header: "{prefix}<white>  Каналы<gray>: "
+check-value-line: "{prefix}  <white>{check}<gray>: <white>{value}"
+verdict-warning: "<yellow>Detected</yellow>"
+verdict-mismatch: "<yellow>Mismatch</yellow>"
+verdict-match: "<green>Match</green>"
+# В ссылке токен входа, поэтому в чате только кнопка: адрес не попадает на скриншоты и в логи чата
+editor-link: "{prefix}<aqua><click:open_url:'{url}'><hover:show_text:'<gray>Открыть веб-панель. Не передавайте эту ссылку.</gray>'>[Открыть панель]</hover></click>"

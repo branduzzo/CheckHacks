@@ -717,6 +717,9 @@ hacks:
     auto-check-on-join:
       enabled: false
       only-first-join: false
+      # BETA: start this scan when the client has downloaded the server resource pack, so the probe sign opens behind
+      # the reload screen. Players who get no pack are scanned 20 seconds after joining instead of 3.
+      during-resource-pack: false
       hacks:
         - meteor-client
         - freecam

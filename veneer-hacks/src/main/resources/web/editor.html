@@ -35,9 +35,9 @@
         --success-fg: #10b981;
         --success-bg: rgba(16, 185, 129, 0.12);
         --success-border: rgba(16, 185, 129, 0.3);
-        --suspected-fg: #2dd4bf;
-        --suspected-bg: rgba(14, 165, 164, 0.14);
-        --suspected-border: rgba(14, 165, 164, 0.32);
+        --suspected-fg: #facc15;
+        --suspected-bg: rgba(250, 204, 21, 0.12);
+        --suspected-border: rgba(250, 204, 21, 0.32);
         --text-main: #f1f5f9;
         --text-secondary: #94a3b8;
         --text-muted: #64748b;
@@ -785,7 +785,7 @@
         align-items: start;
       }
 
-      @media (max-width: 980px) {
+      @media (max-width: 1240px) {
         .dossier-grid-top,
         .dossier-grid-bottom {
           grid-template-columns: 1fr;
@@ -808,8 +808,22 @@
       }
 
       .kv-row.kv-row-stack {
-        align-items: flex-start;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
       }
+      .kv-row-stack > .kv-val { text-align: left; }
+      .kv-row-stack .channel-list-box { justify-content: flex-start; }
+      #clientVersionVal { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+      .dossier-actions { flex-basis: 100%; }
+      .dossier-top-row > .dossier-identity { flex: 1 1 0; min-width: 0; }
+      @media (max-width: 600px) {
+        .dossier-top-row > .dossier-identity { flex: 1 1 100%; }
+        #deletePlayerBtn { margin-left: 0; order: 9; }
+      }
+      #deletePlayerBtn { margin-left: auto; align-self: center; flex-shrink: 0; padding: 5px 10px; font-size: 11.5px; }
+      body.no-delete #deletePlayerBtn { display: none; }
+      #modMatrixTableBody td:last-child, .mod-status-head { text-align: center; }
 
       .kv-row:last-child {
         border-bottom: none;
@@ -858,7 +872,8 @@
         border: 1px solid var(--border-subtle);
         border-radius: 3px;
         padding: 1px 5px;
-        white-space: nowrap;
+        max-width: 100%;
+        overflow-wrap: anywhere;
       }
 
       /* Filter Segmented Controls */
@@ -1312,6 +1327,7 @@
                   </div>
                 </div>
 
+                  <button type="button" class="btn btn-danger-ghost" id="deletePlayerBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M6 6l1 15h10l1-15"></path></svg><span>Delete Player</span></button>
                 <!-- Scan Action Buttons -->
                 <div class="dossier-actions">
                   <button type="button" class="btn btn-primary" id="runHackCheckBtn">
@@ -1327,9 +1343,8 @@
                     </svg>
                     <span data-i18n="action.run_lang">Run Lang Check</span>
                   </button>
-                  <button type="button" class="btn btn-secondary" id="runVersionCheckBtn"><span>Run Version Check</span></button>
-                  <button type="button" class="btn btn-secondary" id="runAllCheckBtn"><span>Run All</span></button>
-                  <button type="button" class="btn btn-danger-ghost" id="deletePlayerBtn"><span>Delete Player</span></button>
+                  <button type="button" class="btn btn-secondary" id="runVersionCheckBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12l-8 8-9-9V3h8z"></path><circle cx="7.5" cy="7.5" r="1"></circle></svg><span>Run Version Check</span></button>
+                  <button type="button" class="btn btn-secondary" id="runAllCheckBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg><span>Run All</span></button>
                   <button type="button" class="btn btn-secondary" id="openPlayerGraphBtn">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                       <circle cx="18" cy="5" r="3"></circle>
@@ -1434,7 +1449,7 @@
                         <th>Key / Channel Probe</th>
                         <th>Date</th>
                         <th>Vector</th>
-                        <th>Status</th>
+                        <th class="mod-status-head">Status</th>
                       </tr>
                     </thead>
                     <tbody id="modMatrixTableBody"></tbody>
@@ -1571,7 +1586,7 @@
           </section>
 
           <!-- VIEW 3: ALT GRAPH (2D FORCE-DIRECTED NETWORK VIEW) -->
-          <section class="view-section" id="viewGraph" aria-label="Alt Network Graph View" style="padding: 12px 16px; display: none; flex-direction: column; height: calc(100vh - 56px); box-sizing: border-box; overflow: hidden;">
+          <section class="view-section" id="viewGraph" aria-label="Alt Network Graph View" style="padding: 12px 16px; height: calc(100vh - 56px); box-sizing: border-box; overflow: hidden;">
             <div class="graph-bar" id="graph-controls-bar">
               <input id="g-search" placeholder="Find account or IP..." style="width: 220px;">
               <label><input type="checkbox" id="g-ip" checked> same address</label>
@@ -2389,12 +2404,15 @@
           .replace(/"/g, '&quot;');
       }
 
+      let bannerTimer = 0;
       function showStatusBanner(msg) {
         const banner = document.getElementById('statusFeedbackBanner');
         const text = document.getElementById('statusFeedbackText');
         if (banner && text) {
           text.textContent = msg;
           banner.classList.add('visible');
+          clearTimeout(bannerTimer);
+          bannerTimer = setTimeout(() => banner.classList.remove('visible'), 10000);
         }
       }
 
@@ -2477,11 +2495,6 @@
           NOT_DETECTED: 'The client resolved the control key on the probe sign.',
           UNKNOWN: 'No mod scan with a usable answer since this player joined, or the client has channels but did not resolve signs.',
         },
-        brand: {
-          DETECTED: 'The client sent this brand.',
-          NOT_DETECTED: 'The player has been online for over 10 seconds and sent no brand.',
-          UNKNOWN: 'The player is offline with no stored brand, or just joined.',
-        },
         language: {
           DETECTED: 'The language sign matched a configured language.',
           NOT_DETECTED: 'The client answered, but the text is blocked or matches no configured language.',
@@ -2496,7 +2509,7 @@
 
       function verdictMarkup(check, verdict, detail) {
         const v = verdict || 'UNKNOWN';
-        const cls = v === 'DETECTED' ? 'danger' : v === 'NOT_DETECTED' ? 'success' : 'neutral';
+        const cls = v === 'DETECTED' ? (check === 'exploit_preventer' ? 'warning' : 'danger') : v === 'NOT_DETECTED' ? 'success' : 'neutral';
         const label = v === 'DETECTED' ? 'Detected' : v === 'NOT_DETECTED' ? 'Not detected' : 'Unknown';
         const hint = t(VERDICT_HINTS[check][v]);
         return '<span class="sec-pill ' + cls + '" data-hint="1" title="' + escapeHtml(hint) + '">' + escapeHtml(t(label)) + '</span>' +
@@ -2713,13 +2726,22 @@
         const client = player.client || {};
         const verdicts = client.verdicts || {};
         const storedLanguage = client.language || lastLanguage(player);
-        document.getElementById('clientBrandVal').innerHTML = verdictMarkup('brand', verdicts.brand || (client.brand ? 'DETECTED' : 'UNKNOWN'), client.brand);
+        document.getElementById('clientBrandVal').innerHTML = client.brand
+          ? '<span class="mono">' + escapeHtml(client.brand) + '</span>'
+          : '<span class="sec-pill neutral" data-hint="1" title="' + escapeHtml(t('The client did not send a brand.')) + '">' + escapeHtml(t('Unknown')) + '</span>';
         const versionText = client.version_mismatch
           ? 'Real: ' + client.version_real + ' / Claimed: ' + client.version_claimed
           : client.version_real;
-        document.getElementById('clientVersionVal').innerHTML = verdictMarkup('protocol', verdicts.protocol, versionText);
+        const protocol = client.version_mismatch ? 'DETECTED' : client.version_real ? 'NOT_DETECTED' : 'UNKNOWN';
+        document.getElementById('clientVersionVal').innerHTML =
+          '<span class="sec-pill ' + (protocol === 'DETECTED' ? 'warning' : protocol === 'NOT_DETECTED' ? 'success' : 'neutral') +
+          '" data-hint="1" title="' + escapeHtml(t(VERDICT_HINTS.protocol[protocol])) + '">' +
+          escapeHtml(t(protocol === 'DETECTED' ? 'Mismatch' : protocol === 'NOT_DETECTED' ? 'Match' : 'Unknown')) + '</span>' +
+          (versionText ? ' <span class="mono">' + escapeHtml(versionText) + '</span>' : '');
         document.getElementById('clientLocaleVal').textContent = client.locale || '—';
-        document.getElementById('clientLanguageVal').innerHTML = verdictMarkup('language', verdicts.language || (storedLanguage ? 'DETECTED' : 'UNKNOWN'), storedLanguage);
+        document.getElementById('clientLanguageVal').innerHTML = storedLanguage
+          ? '<span class="mono">' + escapeHtml(storedLanguage) + '</span>'
+          : verdictMarkup('language', verdicts.language);
         document.getElementById('clientFakePlayerVal').innerHTML = verdictMarkup('fake_player', verdicts.fake_player);
         document.getElementById('clientExploitPreventerVal').innerHTML = verdictMarkup('exploit_preventer', verdicts.exploit_preventer);
 
@@ -2898,7 +2920,7 @@
               .filter((r) => r.status === 'DETECTED' || r.status === 'PROTECTED' || r.status === 'SUSPECTED' || (r.status === 'LANG' && r.line))
               .slice(0, 3)
               .map((r) => escapeHtml(r.name) + ' (' + escapeHtml(r.status === 'LANG' ? r.line : r.status) + ')')
-              .join(' · ');
+              .join('<br>');
 
             return (
               '<tr>' +
@@ -3003,10 +3025,26 @@
           const t = new THREE.CanvasTexture(c);
           t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
           t.colorSpace = THREE.SRGBColorSpace;
-          return new THREE.MeshBasicMaterial({map: t, color: n.skin ? 0xffffff : colour});
+          return new THREE.MeshBasicMaterial({map: t, color: 0xffffff});
         });
-        if (n.skin) {
+        const drawFallback = () => {
+          // A plain head with its face on the front only (index 4 is +z), not on all six sides
+          canvases.forEach((c, i) => {
+            const g = c.getContext('2d');
+            g.fillStyle = n.detected ? '#ef4444' : '#3b82f6';
+            g.fillRect(0, 0, 8, 8);
+            if (i === 4) {
+              g.fillStyle = '#1e293b';
+              g.fillRect(1, 3, 2, 2);
+              g.fillRect(5, 3, 2, 2);
+            }
+            mats[i].map.needsUpdate = true;
+          });
+        };
+        {
           const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onerror = drawFallback;
           img.onload = () => {
             const probe = document.createElement('canvas'); probe.width = 32; probe.height = 16;
             const pg = probe.getContext('2d'); pg.drawImage(img, 32, 0, 32, 16, 0, 0, 32, 16);
@@ -3019,18 +3057,8 @@
               mats[i].map.needsUpdate = true;
             });
           };
-          img.src = 'data:image/png;base64,' + n.skin;
-        } else {
-          // Draw deterministic 8x8 face fallback
-          canvases.forEach((c) => {
-            const g = c.getContext('2d');
-            g.fillStyle = n.detected ? '#ef4444' : '#3b82f6';
-            g.fillRect(0, 0, 8, 8);
-            g.fillStyle = '#1e293b';
-            g.fillRect(1, 2, 2, 2);
-            g.fillRect(5, 2, 2, 2);
-            mats.forEach(m => { m.map.needsUpdate = true; });
-          });
+          // Stored skin first; without one (offline-mode servers store none) the service the avatars already use
+          img.src = n.skin ? 'data:image/png;base64,' + n.skin : 'https://mc-heads.net/skin/' + encodeURIComponent(n.name);
         }
         const cube = new THREE.Mesh(new THREE.BoxGeometry(edge, edge, edge), mats);
         group.add(cube);
@@ -3184,6 +3212,10 @@
               fit(600, 'fit after layout');
             })
             .graphData({nodes, links});
+          // The graph takes over the box's content, so the overlays go back on top of it
+          box.appendChild(card);
+          box.appendChild(info);
+          box.appendChild(dbgBox);
 
           const select = async n => {
             if (n && n === selected) n = null;
@@ -3238,7 +3270,8 @@
 
           const fit = (ms, why) => {
             if (!graph3d) return;
-            const vis = nodes;
+            // Before the first layout tick nodes have no position yet; onEngineStop fits again
+            const vis = nodes.filter(n => Number.isFinite(n.x) && Number.isFinite(n.y));
             if (!vis.length) return;
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
             vis.forEach(n => {

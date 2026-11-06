@@ -64,7 +64,6 @@ lang-join-check: "{prefix}<gray>Auto-checking language of <yellow>{player}<gray>
 # WEB EDITOR  (/hackeditor)
 # Placeholders: {url}.
 # ======================================================================
-editor-url: "{prefix}<white>Editor: <aqua><click:open_url:'{url}'>{url}</click>"
 editor-disabled: "{prefix}<red>Web editor is disabled in config.yml."
 editor-players-only: "{prefix}<red>Only players can open the editor.</red>"
 
@@ -411,3 +410,11 @@ veneer-db-deleted: "{prefix}<green>Deleted all stored data of {player}.</green>"
 veneer-db-purged: "{prefix}<green>Removed scans and addresses older than {days} days.</green>"
 veneer-db-clear-confirm: "{prefix}<yellow>This deletes every player, scan and address and cannot be undone. Type</yellow> <white>/veneer db clear confirm</white>"
 veneer-db-cleared: "{prefix}<green>Player database cleared: {count} accounts removed.</green>"
+
+check-channels-header: "{prefix}<white>  Channels<gray>: "
+check-value-line: "{prefix}  <white>{check}<gray>: <white>{value}"
+verdict-warning: "<yellow>Detected</yellow>"
+verdict-mismatch: "<yellow>Mismatch</yellow>"
+verdict-match: "<green>Match</green>"
+# The link carries the log-in token, so the chat shows only a button: the address stays out of screenshots and chat logs
+editor-link: "{prefix}<aqua><click:open_url:'{url}'><hover:show_text:'<gray>Open the web panel. Do not share this link.</gray>'>[Open the panel]</hover></click>"

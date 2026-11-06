@@ -9,6 +9,8 @@ import com.veneer.core.ClientVersions;
 import com.veneer.hacks.utils.SignUtil;
 import com.veneer.core.WrappedTask;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -26,6 +28,8 @@ public class CheckManager {
 
     private static final String CTRL_KEYBIND  = "key.forward";
     private static final int    LINES_PER_SIGN = 3;
+    private static final int    MAX_CHANNEL_GROUPS = 30;
+    private static final int    MAX_CHANNELS_IN_HOVER = 40;
 
     private final VeneerPlugin plugin;
     private final Map<UUID, CheckPlayerData> activeChecks  = new ConcurrentHashMap<>();
@@ -501,12 +505,11 @@ public class CheckManager {
             if (profile != null) sendVerdicts(data, profile);
             if (cfg.isShowChannels() && profile != null && !profile.getChannels().isEmpty()) {
                 String channels = String.join(", ", new java.util.TreeSet<>(profile.getChannels()));
-                sendLine(data, m -> m.get("check-channels", Map.of("channels", channels)));
+                sendChannels(data, profile.getChannels());
                 resultText.append("\nChannels: ").append(channels);
             }
             if (reportDetected && profile != null && profile.getBrand() != null) {
                 String brand = profile.getBrand();
-                sendLine(data, m -> m.get("check-brand", Map.of("brand", brand)));
                 resultText.append("\nSoftware: ").append(brand);
             }
         }
@@ -551,16 +554,58 @@ public class CheckManager {
     }
 
     private void sendVerdicts(CheckPlayerData data, com.veneer.core.PlayerProfile profile) {
-        verdictLine(data, "ExploitPreventer", profile.exploitPreventerVerdict(), null);
-        verdictLine(data, "FakePlayer", profile.fakePlayerVerdict(), null);
-        verdictLine(data, "Brand", profile.brandVerdict(), profile.getBrand());
-        verdictLine(data, "Language", profile.languageVerdict(), profile.getLanguage());
-        verdictLine(data, "Protocol Version", profile.protocolVerdict(), profile.getVersionReal());
+        var ep = profile.exploitPreventerVerdict();
+        verdictLine(data, "ExploitPreventer", ep == com.veneer.core.Verdict.DETECTED ? "verdict-warning" : verdictKey(ep), null);
+        verdictLine(data, "FakePlayer", verdictKey(profile.fakePlayerVerdict()), null);
+        // Plain facts rather than findings: the value itself is the answer
+        valueLine(data, "Brand", profile.getBrand(), "verdict-unknown");
+        var language = profile.languageVerdict();
+        valueLine(data, "Language", profile.getLanguage(), verdictKey(language));
+        var protocol = profile.protocolVerdict();
+        verdictLine(data, "Protocol Version",
+                protocol == com.veneer.core.Verdict.DETECTED ? "verdict-mismatch"
+                        : protocol == com.veneer.core.Verdict.NOT_DETECTED ? "verdict-match" : "verdict-unknown",
+                protocol == com.veneer.core.Verdict.DETECTED ? profile.getVersionReal() + " / " + profile.getVersionClaimed()
+                        : profile.getVersionReal());
     }
 
-    private void verdictLine(CheckPlayerData data, String check, com.veneer.core.Verdict verdict, String detail) {
+    private static String verdictKey(com.veneer.core.Verdict verdict) {
+        return "verdict-" + verdict.name().toLowerCase(Locale.ROOT).replace('_', '-');
+    }
+
+    private void valueLine(CheckPlayerData data, String check, String value, String missingKey) {
+        if (value != null) sendLine(data, m -> m.with("check-value-line", "check", check, "value", value));
+        else verdictLine(data, check, missingKey, null);
+    }
+
+    /** Channels by namespace, one entry each; hovering an entry lists its channels. Built as components: the client names them. */
+    private void sendChannels(CheckPlayerData data, Set<String> channels) {
+        Map<String, List<String>> groups = new TreeMap<>();
+        for (String channel : new TreeSet<>(channels)) {
+            int at = channel.indexOf(':');
+            groups.computeIfAbsent(at > 0 ? channel.substring(0, at) : "other", k -> new ArrayList<>()).add(channel);
+        }
+        sendLine(data, m -> {
+            Component line = m.get("check-channels-header");
+            int shown = 0;
+            for (Map.Entry<String, List<String>> group : groups.entrySet()) {
+                if (shown++ == MAX_CHANNEL_GROUPS) {
+                    line = line.append(Component.text("... +" + (groups.size() - MAX_CHANNEL_GROUPS), NamedTextColor.GRAY));
+                    break;
+                }
+                List<String> items = group.getValue();
+                String hover = String.join("\n", items.subList(0, Math.min(items.size(), MAX_CHANNELS_IN_HOVER)))
+                        + (items.size() > MAX_CHANNELS_IN_HOVER ? "\n... +" + (items.size() - MAX_CHANNELS_IN_HOVER) : "");
+                if (shown > 1) line = line.append(Component.text(", ", NamedTextColor.GRAY));
+                line = line.append(Component.text(group.getKey() + " (" + items.size() + ")", NamedTextColor.AQUA)
+                        .hoverEvent(HoverEvent.showText(Component.text(hover))));
+            }
+            return line;
+        });
+    }
+
+    private void verdictLine(CheckPlayerData data, String check, String key, String detail) {
         String extra = detail == null ? "" : " (" + detail + ")";
-        String key = "verdict-" + verdict.name().toLowerCase(Locale.ROOT).replace('_', '-');
         sendLine(data, m -> m.with("check-verdict-line", "check", check, "verdict", m.raw(key), "detail", extra));
     }
 

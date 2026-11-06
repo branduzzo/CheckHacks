@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 final class Schema {
 
     /** Bump with every step added to {@link #upgrade}. */
-    static final int VERSION = 2;
+    static final int VERSION = 3;
 
     private Schema() {}
 
@@ -140,6 +140,13 @@ final class Schema {
         upgrade(c, log);
     }
 
+    private static boolean hasColumn(Connection c, String table, String column) throws SQLException {
+        try (Statement s = c.createStatement(); ResultSet rs = s.executeQuery("PRAGMA table_info(" + table + ")")) {
+            while (rs.next()) if (column.equals(rs.getString("name"))) return true;
+        }
+        return false;
+    }
+
     private static void upgrade(Connection c, Logger log) throws SQLException {
         int version;
         try (Statement s = c.createStatement(); ResultSet rs = s.executeQuery("PRAGMA user_version")) {
@@ -165,6 +172,10 @@ final class Schema {
                 s.execute("ALTER TABLE hack_results ADD COLUMN probe_key TEXT");
                 s.execute("ALTER TABLE hack_results ADD COLUMN probe_answer TEXT");
                 s.execute("ALTER TABLE hack_results ADD COLUMN probe_channels TEXT");
+            }
+            if (version < 3 && !hasColumn(c, "joins", "count")) {
+                // Databases from before join counting: without it no join could be recorded or read
+                s.execute("ALTER TABLE joins ADD COLUMN count INTEGER NOT NULL DEFAULT 1");
             }
             s.execute("PRAGMA user_version = " + VERSION);
             c.commit();

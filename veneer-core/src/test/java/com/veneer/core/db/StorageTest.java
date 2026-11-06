@@ -270,4 +270,21 @@ class StorageTest {
         f.setAccessible(true);
         return (Database) f.get(s);
     }
+
+    @Test
+    void anOldJoinsTableGetsItsCountColumn(@org.junit.jupiter.api.io.TempDir java.io.File dir) throws Exception {
+        java.io.File file = new java.io.File(dir, "old.db");
+        try (var c = java.sql.DriverManager.getConnection("jdbc:sqlite:" + file); var st = c.createStatement()) {
+            st.execute("CREATE TABLE joins (uuid TEXT NOT NULL, name TEXT NOT NULL, ip TEXT NOT NULL, "
+                    + "first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL, PRIMARY KEY (uuid, ip))");
+            st.execute("PRAGMA user_version = 2");
+            st.execute("CREATE TABLE hack_results (id INTEGER PRIMARY KEY AUTOINCREMENT, scan_id INTEGER NOT NULL, hack_id TEXT NOT NULL, "
+                    + "hack_name TEXT NOT NULL, result TEXT NOT NULL, probe_key TEXT, probe_answer TEXT, probe_channels TEXT)");
+        }
+        try (Storage old = new Storage(file, null)) {
+            old.players().recordJoin("u-1", "Alice", "1.1.1.1");
+            old.players().recordJoin("u-1", "Alice", "1.1.1.1");
+            assertEquals(2L, old.players().getPlayerRecord("Alice").get("joins"));
+        }
+    }
 }
