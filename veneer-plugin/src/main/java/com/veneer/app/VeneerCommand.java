@@ -47,8 +47,8 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
             new HelpEntry(null,      "/veneer lang [{language}|auto|reset]",     "lang",                  "veneer.lang"),
             new HelpEntry(null,      "/veneer player ({player})",                "player",                "veneer.admin"),
             new HelpEntry(null,      "/veneer find <{player}>",                  "find",                  "veneer.admin"),
-            new HelpEntry(null,      "/veneer check <{player}>",                 "check",                 "veneer.admin"),
-            new HelpEntry("spoof",   "/veneer brands",                           "brands",                "veneer.admin"),
+            new HelpEntry(null,      "/veneer check <{player}>",                 "check",                 "veneer.hacks.check"),
+            new HelpEntry("spoof",   "/veneer brands",                           "brands",                "veneer.spoof.admin"),
             new HelpEntry(null,      "/veneer channels",                         "channels",              "veneer.admin"),
             new HelpEntry(null,      "/veneer alerts [{player}|toggle]",         "alerts",                Alerts.PERMISSION),
             new HelpEntry(null,      "/veneer info <{player}>",                  "info",                  "veneer.admin"),
@@ -96,7 +96,8 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
             case "check" -> checkPage(sender, args);
             case "brands" -> {
                 if (!(sender instanceof Player p)) { plugin.messages().send(sender, "veneer-cmd-players-only"); return true; }
-                if (denied(sender, "veneer.admin")) return true;
+                // The menu page of /spoof brands: the same right, inside the veneer.admin menu
+                if (denied(sender, "veneer.admin") || denied(sender, "veneer.spoof.admin")) return true;
                 plugin.gui().openPage(p, new String[]{"gui", "brands"});
             }
             case "channels" -> {
@@ -288,7 +289,7 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
             plugin.messages().send(sender, "veneer-cmd-players-only");
             return;
         }
-        if (denied(sender, "veneer.admin")) return;
+        // A shortcut for /hackcheck and /rptrack: the menu checks their rights, there is none of its own
         if (args.length < 2) {
             plugin.messages().send(sender, "veneer-info-usage", "label", "veneer check");
             return;
@@ -418,7 +419,9 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
         String target = PASSTHROUGH.get(sub);
         if (target != null) {
             PluginCommand c = plugin.getCommand(target);
-            return c == null ? List.of() : c.tabComplete(sender, target, Arrays.copyOfRange(args, 1, args.length));
+            // As when the command runs: its own permission decides, whatever name it was typed under
+            return c == null || !c.testPermissionSilent(sender) ? List.of()
+                    : c.tabComplete(sender, target, Arrays.copyOfRange(args, 1, args.length));
         }
         if (args.length == 2 && (sub.equals("lang") || sub.equals("language"))) {
             List<String> options = new ArrayList<>(plugin.messages().languages());

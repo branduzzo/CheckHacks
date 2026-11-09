@@ -48,6 +48,8 @@ public class CheckManager {
     public boolean claimAutoCheck(UUID uuid) {
         long now = System.currentTimeMillis();
         long cooldownMs = plugin.module(HacksModule.class).config().getFlagCooldownHours() * 3_600_000L;
+        // Cooldowns that ran out are of no use any more; without this the map kept every player ever scanned
+        if (lastAutoCheck.size() > 512) lastAutoCheck.values().removeIf(last -> now - last >= cooldownMs);
         boolean[] claimed = {false};
         lastAutoCheck.compute(uuid, (k, last) -> {
             if (last != null && now - last < cooldownMs) return last;
@@ -55,6 +57,16 @@ public class CheckManager {
             return now;
         });
         return claimed[0];
+    }
+
+    /**
+     * Whether the flag cooldown of an automatic scan still runs, without starting one. Anticheats flag many times a
+     * second: this map look-up comes before anything costly (resolving bypass permissions).
+     */
+    public boolean inAutoCheckCooldown(UUID uuid) {
+        Long last = lastAutoCheck.get(uuid);
+        return last != null && System.currentTimeMillis() - last
+                < plugin.module(HacksModule.class).config().getFlagCooldownHours() * 3_600_000L;
     }
 
     /** True when the edited sign at {@code loc} is this player's current probe sign. */

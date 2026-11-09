@@ -117,9 +117,9 @@ public class HacksModule extends VeneerModule {
         if (!running() || player == null || !config.isSpoofFlagScanEnabled()) return;
         // Bypasses are checked where an automatic scan starts (here and in the anticheat and join listeners):
         // the join check needs veneer.bypass.hacks.join, the managers cannot tell the two apart
-        if (plugin.bypasses(player, "hacks", false)) return;
         UUID uuid = player.getUniqueId();
-        if (checks.isChecking(uuid)) return;
+        if (checks.isChecking(uuid) || checks.inAutoCheckCooldown(uuid)) return;
+        if (plugin.bypasses(player, "hacks", false)) return;
 
         List<HackDefinition> hacks = config.getFlagCheckHacks();
         if (hacks.isEmpty()) hacks = config.getDefaultCheckHacks();

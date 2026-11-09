@@ -155,6 +155,8 @@ public class ConfigManager {
     public String  getWebBind()         { return masterConfig.getString("web-editor.bind", "127.0.0.1"); }
     public int     getLinkExpireMinutes() { return Math.max(1, masterConfig.getInt("web-editor.link-expire-minutes", 5)); }
     /** Days a connected browser stays logged in without being used. */
+    /** Days the browsers of an offline account stay connected when nothing can tell its rights (no LuckPerms). */
+    public int     getOfflineAccessDays() { return Math.max(1, masterConfig.getInt("web-editor.offline-access-days", 7)); }
     public int     getSessionExpireDays() { return Math.max(1, masterConfig.getInt("web-editor.session-expire-days", 30)); }
     /** The address players open: {@code host} when it is a full URL (behind an HTTPS proxy), else http://host:port. */
     public String  getPanelUrl() {

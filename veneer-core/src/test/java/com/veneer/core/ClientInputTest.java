@@ -49,6 +49,16 @@ class ClientInputTest {
     }
 
     @Test
+    void refusesChannelsThatWouldSplitOrForgeALine() {
+        PlayerProfile profile = new PlayerProfile();
+        assertFalse(profile.addChannel(""));
+        assertFalse(profile.addChannel("a:b,c:d"));
+        assertFalse(profile.addChannel("a:b\n[Server] fake"));
+        assertTrue(profile.addChannel("MC|Brand"));
+        assertTrue(profile.addChannel("fabric:registry/sync"));
+    }
+
+    @Test
     void verdictsStayUnknownUntilTheCheckRan() {
         PlayerProfile profile = new PlayerProfile();
         assertEquals(Verdict.UNKNOWN, profile.exploitPreventerVerdict());

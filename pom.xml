@@ -34,11 +34,11 @@
         <maven.compiler.release>21</maven.compiler.release>
         <packetevents.version>2.14.0</packetevents.version>
         <paper.version>1.21.4-R0.1-SNAPSHOT</paper.version>
-        <placeholderapi.version>2.11.6</placeholderapi.version>
-        <adventure.version>4.21.0</adventure.version>
-        <sqlite.version>3.45.3.0</sqlite.version>
-        <gson.version>2.10.1</gson.version>
-        <junit.version>5.10.2</junit.version>
+        <placeholderapi.version>2.12.3</placeholderapi.version>
+        <adventure.version>4.26.1</adventure.version>
+        <sqlite.version>3.54.1.0</sqlite.version>
+        <gson.version>2.15.0</gson.version>
+        <junit.version>5.14.4</junit.version>
     </properties>
 
     <repositories>
@@ -98,7 +98,7 @@
             <dependency>
                 <groupId>net.luckperms</groupId>
                 <artifactId>api</artifactId>
-                <version>5.4</version>
+                <version>5.5</version>
             </dependency>
             <dependency>
                 <groupId>me.clip</groupId>
@@ -166,12 +166,12 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.13.0</version>
+                    <version>3.16.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-resources-plugin</artifactId>
-                    <version>3.3.1</version>
+                    <version>3.5.0</version>
                     <configuration>
                         <encoding>UTF-8</encoding>
                     </configuration>
@@ -179,17 +179,17 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.2.5</version>
+                    <version>3.6.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.4.2</version>
+                    <version>3.5.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>3.5.3</version>
+                    <version>3.6.2</version>
                 </plugin>
             </plugins>
         </pluginManagement>

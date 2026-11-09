@@ -10,10 +10,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** Isolated so GrimAPI classes are only loaded when Grim is installed. */
 final class GrimViolationTracker {
@@ -30,10 +33,19 @@ final class GrimViolationTracker {
     static final String UNSUPPORTED_MESSAGE = "Installed GrimAC version is not supported! Disabling hooks for mouse...";
 
     private static final int MAX = 500;
+    /** Players whose mouse sensitivity is kept: the most recently flagged ones, so the map cannot grow with every player ever seen. */
+    private static final int MAX_SENSITIVITIES = 2000;
     private final VeneerPlugin plugin;
     private volatile boolean sensitivitySupported = true;
     private final ConcurrentLinkedDeque<Violation> recent = new ConcurrentLinkedDeque<>();
-    private final ConcurrentHashMap<UUID, SensitivitySnapshot> sensitivities = new ConcurrentHashMap<>();
+    /** Length of {@link #recent}: the deque counts by walking every element, and this runs on every flag. */
+    private final AtomicInteger recentSize = new AtomicInteger();
+    private final Map<UUID, SensitivitySnapshot> sensitivities = Collections.synchronizedMap(
+            new LinkedHashMap<>(64, 0.75f, true) {
+                @Override protected boolean removeEldestEntry(Map.Entry<UUID, SensitivitySnapshot> eldest) {
+                    return size() > MAX_SENSITIVITIES;
+                }
+            });
 
     GrimViolationTracker(VeneerPlugin plugin) {
         this.plugin = plugin;
@@ -65,7 +77,7 @@ final class GrimViolationTracker {
 
     private void add(Violation v) {
         recent.addFirst(v);
-        while (recent.size() > MAX) recent.removeLast();
+        if (recentSize.incrementAndGet() > MAX && recent.pollLast() != null) recentSize.decrementAndGet();
     }
 
     SensitivitySnapshot getSensitivity(UUID uuid) {

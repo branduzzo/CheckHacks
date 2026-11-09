@@ -98,6 +98,17 @@ class StorageTest {
     }
 
     @Test
+    void storedChannelListIsSortedAndCapped() {
+        assertEquals("a:b,b:c", PlayerStore.channelList(List.of("b:c", "a:b", "x,y", "")));
+        List<String> flood = new java.util.ArrayList<>();
+        for (int i = 0; i < 1024; i++) flood.add(String.format("%04d", i) + "x".repeat(252));
+        String stored = PlayerStore.channelList(flood);
+        assertTrue(stored.length() <= PlayerStore.MAX_STORED_CHANNELS);
+        assertTrue(stored.startsWith("0000x"), "whole channels, in order");
+        assertFalse(stored.endsWith(","));
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void channelSetsCountOnlyForPairsOtherLinksMakeLikelyWhateverTheBrand() {
         List<String> channels = List.of("a:1", "a:2", "a:3", "a:4");

@@ -20,7 +20,9 @@ commands:
   hackcheck:
     description: Scan a player for installed mods
     usage: /hackcheck <player> [all|version|lang|hack] [list]
-    permission: veneer.hacks.check
+    # Either right opens the command (the language check alone needs only veneer.hacks.lang);
+    # the command itself checks the one each scan type needs
+    permission: veneer.hacks.check;veneer.hacks.lang
   hacklang:
     description: Check the client language of a player
     usage: /hacklang <player> [lang1,lang2,...]
@@ -74,7 +76,7 @@ permissions:
     description: Skip the RPTrack fingerprint on join (it only runs on join)
     default: false
   veneer.hacks.check:
-    description: Use /hackcheck
+    description: Use /hackcheck (mod scans; /hackcheck <player> lang needs veneer.hacks.lang instead)
     default: op
   veneer.hacks.lang:
     description: Use /hacklang

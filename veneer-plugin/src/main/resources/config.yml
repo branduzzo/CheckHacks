@@ -470,6 +470,10 @@ hacks:
     link-expire-minutes: 5
     # A connected browser is logged out after this many days without use
     session-expire-days: 30
+    # Without LuckPerms the rights of an offline account cannot be read. Its browsers stay connected for this
+    # many days after it last joined the server, then /hackeditor new is needed again; a banned account is
+    # disconnected at once. With LuckPerms the rights are read from it and this setting is not used.
+    offline-access-days: 7
     # Account graph: addresses accounts join from are stored to link accounts that share one
     links:
       # Days to keep an address after the account last used it (0 = forever)

@@ -65,9 +65,9 @@ Veneer places a sign next to the player with a translation or keybind key from e
 | `/veneer alerts` | `veneer.alerts` | Toggle your own staff alerts (spoof, mod scan and RPTrack share one switch) |
 | `/veneer reload` | `veneer.admin` | Reload `config.yml` and the language files for every module |
 | `/veneer version` | `veneer.admin` | Running and latest release |
-| `/veneer <spoof\|hackcheck\|hacklang\|hackeditor\|rptrack> ...` | that command's | The module commands also run under `/veneer` (`scan` = `hackcheck`, `editor` = `hackeditor`), with the same permissions |
+| `/veneer <spoof\|hackcheck\|hacklang\|hackeditor\|rptrack> ...` | that command's | The module commands also run under `/veneer` (`scan` = `hackcheck`, `editor` and `web` = `hackeditor`); whatever name a command is typed under, its own permission is checked. `/veneer check <player>` runs `/hackcheck` and `/rptrack` with their permissions, `/veneer brands` needs `veneer.spoof.admin` like `/spoof brands` |
 | `/spoof` | `veneer.spoof.use` | Inspect client brand and channels, re-run spoof checks (`check`, `runcheck`, `channels`, `brand`); `brands` (needs `veneer.spoof.admin`) lists unknown brands and allows or blocks them |
-| `/hackcheck <player> [hacks]` | `veneer.hacks.check` | Scan a player for mods |
+| `/hackcheck <player> [hacks]` | `veneer.hacks.check` | Scan a player for mods (`/hackcheck <player> lang` needs `veneer.hacks.lang` instead) |
 | `/hacklang <player>` | `veneer.hacks.lang` | Check a player's client language |
 | `/hackeditor` | `veneer.hacks.editor` | Link to the web panel: scan history and manual scans |
 | `/rptrack <player>` | `veneer.rptrack` | Show a player's cache fingerprint and linked accounts |

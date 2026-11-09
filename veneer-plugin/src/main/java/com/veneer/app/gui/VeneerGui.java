@@ -19,6 +19,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -78,8 +79,14 @@ public final class VeneerGui implements Listener {
     private final NamespacedKey channelsKey;
     /** The browser an item of the browsers page stands for. */
     private final NamespacedKey browserKey;
+    /** The brand verdict an item of the brands page stands for: the list is re-sorted whenever a verdict changes. */
+    private final NamespacedKey brandKey;
     private final GrimViolationTracker grimTracker;
-    private final Map<UUID, Page> awaitingSearch = new ConcurrentHashMap<>();
+
+    /** How long the chat line after "search" is taken as the query. */
+    private static final long SEARCH_WAIT_MS = 60_000;
+    private record Search(Page page, long until) {}
+    private final Map<UUID, Search> awaitingSearch = new ConcurrentHashMap<>();
 
     public VeneerGui(Veneer plugin) {
         this.plugin = plugin;
@@ -96,6 +103,12 @@ public final class VeneerGui implements Listener {
         grimTracker = tracker;
         channelsKey = new NamespacedKey(plugin, "channels");
         browserKey = new NamespacedKey(plugin, "browser");
+        brandKey = new NamespacedKey(plugin, "brand");
+    }
+
+    /** The brands page lists and changes verdicts, as {@code /spoof brands} does: the same right. */
+    private boolean mayBrands(Player player) {
+        return plugin.spoof().running() && player.hasPermission("veneer.spoof.admin");
     }
 
     // ── Public entry points ──────────────────────────────────────────────────
@@ -262,16 +275,21 @@ public final class VeneerGui implements Listener {
         admin.openInventory(inv);
     }
 
-    /** Runs all enabled checks for a player immediately (no dialog). */
+    /**
+     * Runs every check the sender may run on a player, immediately (no dialog). It is a shortcut for
+     * {@code /hackcheck} and {@code /rptrack}, so it asks for their rights and nothing else.
+     */
     public void openCheckDialog(Player admin, String targetName) {
-        if (!admin.hasPermission("veneer.admin")) return;
-        Player target = plugin.getServer().getPlayerExact(targetName);
         Messages m = plugin.messages().in(admin);
+        boolean mods = plugin.hacks().running() && admin.hasPermission("veneer.hacks.check");
+        boolean lang = plugin.hacks().running() && admin.hasPermission("veneer.hacks.lang");
+        boolean rptrack = plugin.rptrack().running() && admin.hasPermission("veneer.rptrack");
+        if (!mods && !lang && !rptrack) { admin.sendMessage(m.get("no-permission")); return; }
+        Player target = plugin.getServer().getPlayerExact(targetName);
         if (target == null) { m.send(admin, "player-not-found", "player", targetName); return; }
-        boolean mods = admin.hasPermission("veneer.hacks.check"), lang = admin.hasPermission("veneer.hacks.lang");
-        if (plugin.hacks().running() && (mods || lang))
-            admin.performCommand("hackcheck " + targetName + (mods && lang ? " all" : mods ? " hack" : " lang"));
-        if (plugin.rptrack().running() && admin.hasPermission("veneer.rptrack"))      admin.performCommand("rptrack " + targetName);
+        if (mods || lang)
+            admin.performCommand("hackcheck " + target.getName() + (mods && lang ? " all" : mods ? " hack" : " lang"));
+        if (rptrack) admin.performCommand("rptrack " + target.getName());
     }
 
     /**
@@ -304,7 +322,7 @@ public final class VeneerGui implements Listener {
 
         inv.setItem(SLOT_PLAYERS,    navItem(Material.PLAYER_HEAD,  m.get("gui-btn-players"),    m.get("gui-btn-players-lore")));
         inv.setItem(SLOT_DETECTIONS, navItem(Material.WRITTEN_BOOK, m.get("gui-btn-detections"), m.get("gui-btn-detections-lore")));
-        if (plugin.spoof().running() && player.hasPermission("veneer.spoof.use"))
+        if (mayBrands(player))
             inv.setItem(SLOT_BRANDS, navItem(Material.NAME_TAG,     m.get("gui-btn-brands"),     m.get("gui-btn-brands-lore")));
         if (GRIM_API && grimTracker != null)
             inv.setItem(SLOT_GRIM,   navItem(Material.SHIELD,       m.get("gui-btn-grim"),       m.get("gui-btn-grim-lore")));
@@ -387,7 +405,12 @@ public final class VeneerGui implements Listener {
             return;
         }
         switch (slot) {
-            case NAV_BACK   -> { player.closeInventory(); open(player); }
+            // Back to where the page was opened from: the player's page, or the main menu for one's own browsers
+            case NAV_BACK   -> {
+                player.closeInventory();
+                if (holder.query() != null && !holder.query().equalsIgnoreCase(player.getName())) openPlayerInfo(player, holder.query());
+                else open(player);
+            }
             case NAV_CLOSE2 -> player.closeInventory();
         }
     }
@@ -624,8 +647,9 @@ public final class VeneerGui implements Listener {
     // ── Brands page ───────────────────────────────────────────────────────────
 
     private void openBrands(Player player, int pageNum) {
-        if (!plugin.spoof().running()) { open(player); return; }
         Messages m = plugin.messages().in(player);
+        if (!plugin.spoof().running()) { open(player); return; }
+        if (!mayBrands(player)) { player.sendMessage(m.get("no-permission")); return; }
         List<BrandVerdicts.Entry> all = plugin.spoof().verdicts().all();
         int from = pageNum * PAGE_SIZE, to = Math.min(from + PAGE_SIZE, all.size());
         List<BrandVerdicts.Entry> entries = from < all.size() ? all.subList(from, to) : List.of();
@@ -657,6 +681,7 @@ public final class VeneerGui implements Listener {
             lore.add(m.get("gui-brand-last", Map.of("player", e.lastPlayer())).decoration(TextDecoration.ITALIC, false));
         lore.add(m.get("gui-brand-hint").decoration(TextDecoration.ITALIC, false));
         meta.lore(lore);
+        meta.getPersistentDataContainer().set(brandKey, PersistentDataType.INTEGER, e.id());
         item.setItemMeta(meta);
         return item;
     }
@@ -795,12 +820,25 @@ public final class VeneerGui implements Listener {
 
     // ── Event handlers ────────────────────────────────────────────────────────
 
+    /** Dragging would drop the player's own items into the menu, where they are lost when it closes. */
+    @EventHandler
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (event.getInventory().getHolder() instanceof VeneerMenuHolder) event.setCancelled(true);
+    }
+
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getInventory().getHolder() instanceof VeneerMenuHolder holder)) return;
         event.setCancelled(true);
         if (!(event.getWhoClicked() instanceof Player player)) return;
         int slot = event.getRawSlot();
+        // Outside the window (-999) or in the player's own inventory below the menu: nothing to press there
+        if (slot < 0 || slot >= event.getInventory().getSize()) return;
+        // The right may have been taken away while the menu was open
+        if (!player.hasPermission("veneer.admin")) {
+            player.closeInventory();
+            return;
+        }
 
         switch (holder.page()) {
             case MAIN        -> handleMain(player, slot, event);
@@ -820,11 +858,11 @@ public final class VeneerGui implements Listener {
         switch (slot) {
             case SLOT_PLAYERS    -> { player.closeInventory(); openPlayers(player, 0, null); }
             case SLOT_DETECTIONS -> { player.closeInventory(); openDetections(player, 0, null); }
-            case SLOT_BRANDS     -> { player.closeInventory(); openBrands(player, 0); }
+            case SLOT_BRANDS     -> { if (mayBrands(player)) { player.closeInventory(); openBrands(player, 0); } }
             case SLOT_GRIM       -> { if (grimTracker != null) { player.closeInventory(); openGrim(player, 0); } }
-            case SLOT_ALERTS     -> { player.closeInventory(); openAlerts(player, 0, null); }
+            case SLOT_ALERTS     -> { if (player.hasPermission(Alerts.PERMISSION)) { player.closeInventory(); openAlerts(player, 0, null); } }
             case SLOT_CHANNELS   -> { player.closeInventory(); openChannels(player, 0); }
-            case SLOT_EDITOR     -> openEditor(player);
+            case SLOT_EDITOR     -> { if (plugin.hacks().running() && player.hasPermission("veneer.hacks.editor")) openEditor(player); }
             case SLOT_ALERTS_TOGGLE -> {
                 if (player.hasPermission(Alerts.PERMISSION)) {
                     player.performCommand("veneer alerts toggle");
@@ -875,13 +913,16 @@ public final class VeneerGui implements Listener {
     }
 
     private void handleBrands(Player player, VeneerMenuHolder holder, int slot, InventoryClickEvent event) {
-        if (slot < PAGE_SIZE && plugin.spoof().running()) {
-            List<BrandVerdicts.Entry> all = plugin.spoof().verdicts().all();
-            int idx = holder.pageNum() * PAGE_SIZE + slot;
-            if (idx >= all.size()) return;
-            BrandVerdicts.Entry e = all.get(idx);
+        if (slot < PAGE_SIZE) {
+            ItemStack item = event.getCurrentItem();
+            if (item == null || !item.hasItemMeta() || !plugin.spoof().running()) return;
+            // By the id stored on the item, not by position: a verdict moves its brand to the end of the list,
+            // so after one click the positions no longer match what the page shows
+            Integer id = item.getItemMeta().getPersistentDataContainer().get(brandKey, PersistentDataType.INTEGER);
+            BrandVerdicts.Entry e = id == null ? null : plugin.spoof().verdicts().get(id);
+            if (e == null) return;
             // Same right as /spoof brands allow|block|forget
-            if (!player.hasPermission("veneer.spoof.admin")) {
+            if (!mayBrands(player)) {
                 player.sendMessage(plugin.messages().in(player).get("no-permission"));
                 return;
             }
@@ -894,7 +935,7 @@ public final class VeneerGui implements Listener {
             else return; // drop, number keys and the like must not reset a verdict
             plugin.spoof().verdicts().decide(e.id(), next, player.getName());
             Messages m = plugin.messages().in(player);
-            event.getInventory().setItem(slot, buildBrandItem(plugin.spoof().verdicts().get(e.id()), m));
+            event.getInventory().setItem(slot, buildBrandItem(e, m));
             return;
         }
         switch (slot) {
@@ -988,13 +1029,14 @@ public final class VeneerGui implements Listener {
     @EventHandler(priority = EventPriority.LOW)
     public void onChat(AsyncChatEvent event) {
         Player player = event.getPlayer();
-        Page page = awaitingSearch.remove(player.getUniqueId());
-        if (page == null) return;
+        Search search = awaitingSearch.remove(player.getUniqueId());
+        // Asked long ago: this line is ordinary chat again
+        if (search == null || System.currentTimeMillis() > search.until()) return;
         event.setCancelled(true);
-        String query = plain(event.message());
-        if (".".equals(query)) return;
+        String query = plain(event.message()).strip();
+        if (query.isEmpty() || ".".equals(query)) return;
         FoliaScheduler.runAtEntity(plugin, player, () -> {
-            if (page == Page.PLAYERS) openPlayers(player, 0, query);
+            if (search.page() == Page.PLAYERS && player.hasPermission("veneer.admin")) openPlayers(player, 0, query);
         });
     }
 
@@ -1002,7 +1044,10 @@ public final class VeneerGui implements Listener {
 
     private void startSearch(Player player, Page page) {
         player.closeInventory();
-        awaitingSearch.put(player.getUniqueId(), page);
+        long now = System.currentTimeMillis();
+        // Entries of players who never answered (or left) go here, so the map cannot grow
+        awaitingSearch.values().removeIf(s -> now > s.until());
+        awaitingSearch.put(player.getUniqueId(), new Search(page, now + SEARCH_WAIT_MS));
         plugin.messages().in(player).send(player, "gui-search-prompt");
     }
 

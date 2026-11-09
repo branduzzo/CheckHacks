@@ -66,7 +66,13 @@ public class PlayerProfile {
      * these, so their number and length are capped well above what real modpacks use.
      */
     public boolean addChannel(String channel) {
-        if (channel.length() > MAX_CHANNEL_LENGTH || channels.size() >= MAX_CHANNELS) return false;
+        if (channel.isEmpty() || channel.length() > MAX_CHANNEL_LENGTH || channels.size() >= MAX_CHANNELS) return false;
+        // No real channel has these: a comma would split into two channels where the list is stored, a line break
+        // would forge a console line
+        for (int i = 0; i < channel.length(); i++) {
+            char c = channel.charAt(i);
+            if (c < 0x20 || c == 0x7f || c == ',') return false;
+        }
         return channels.add(channel);
     }
 

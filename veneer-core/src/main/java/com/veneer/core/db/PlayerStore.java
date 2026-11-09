@@ -80,6 +80,24 @@ public final class PlayerStore {
         });
     }
 
+    /**
+     * Characters of a stored channel list. A large modpack registers a few hundred channels of some 30 characters;
+     * a client can register a thousand of 256, and the list is kept per account and once more in an index.
+     */
+    static final int MAX_STORED_CHANNELS = 16_384;
+
+    /** The channels sorted and comma separated, as many as fit into {@link #MAX_STORED_CHANNELS}. */
+    static String channelList(Collection<String> channels) {
+        StringBuilder out = new StringBuilder();
+        for (String channel : new TreeSet<>(channels)) {
+            if (channel.isEmpty() || channel.indexOf(',') >= 0) continue;
+            if (out.length() + channel.length() + 1 > MAX_STORED_CHANNELS) break;
+            if (out.length() > 0) out.append(',');
+            out.append(channel);
+        }
+        return out.toString();
+    }
+
     /** Stores the client brand and plugin channels an account last played with (for client links). */
     public void recordClient(String uuid, String name, String brand, Collection<String> channels) {
         long now = System.currentTimeMillis();
@@ -91,7 +109,7 @@ public final class PlayerStore {
                 ps.setString(1, uuid);
                 ps.setString(2, name);
                 ps.setString(3, brand);
-                ps.setString(4, String.join(",", new TreeSet<>(channels)));
+                ps.setString(4, channelList(channels));
                 ps.setLong(5, now);
                 ps.executeUpdate();
             }

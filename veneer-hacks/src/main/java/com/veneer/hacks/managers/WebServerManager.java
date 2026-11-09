@@ -208,6 +208,7 @@ public class WebServerManager {
             online.put(id, HackEditorCommand.webPerms(p));
             if (p.hasPermission("veneer.hacks.editor")) allowed.add(id);
         }
+        long offlineLimit = System.currentTimeMillis() - settings().getOfflineAccessDays() * 86_400_000L;
         FoliaScheduler.runAsync(plugin, () -> {
             var tokens = plugin.database().tokens();
             for (String owner : tokens.owners()) {
@@ -218,11 +219,27 @@ public class WebServerManager {
                 List<String> nodes = new ArrayList<>(List.of("veneer.hacks.editor"));
                 for (String perm : HackEditorCommand.WEB_PERMS) nodes.add("veneer.web." + perm);
                 var lookup = plugin.permissions().offlinePermissions(UUID.fromString(owner), nodes);
-                if (lookup == null) continue;
+                if (lookup == null) {
+                    // Nothing can tell the rights of an offline account (no LuckPerms). It must not keep the panel
+                    // for good by never joining again: a demoted or banned moderator would stay inside.
+                    revokeUnverified(owner, offlineLimit);
+                    continue;
+                }
                 lookup.thenAccept(granted -> applyAccess(owner, granted.contains("veneer.hacks.editor"),
                         String.join(",", HackEditorCommand.WEB_PERMS.stream().filter(p -> granted.contains("veneer.web." + p)).toList())));
             }
         });
+    }
+
+    private void revokeUnverified(String owner, long offlineLimit) {
+        boolean banned = Bukkit.getOfflinePlayer(UUID.fromString(owner)).isBanned();
+        long lastJoin = 0;
+        for (Map<String, Object> row : plugin.database().players().getAddresses(owner))
+            if (row.get("last_seen") instanceof Number n) lastJoin = Math.max(lastJoin, n.longValue());
+        if (!banned && lastJoin >= offlineLimit) return;
+        if (plugin.database().tokens().revokeByUuid(owner) > 0)
+            plugin.getLogger().info("[Hacks] Web panel: " + owner + (banned ? " is banned" : " has not joined for "
+                    + settings().getOfflineAccessDays() + " days and its rights cannot be checked") + ", browsers disconnected.");
     }
 
     private void applyAccess(String owner, boolean allowed, String perms) {

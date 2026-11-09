@@ -104,10 +104,12 @@ public class AntiCheatListener implements Listener {
 
     public void queueCheck(Player player, String acName) {
         if (!plugin.module(HacksModule.class).config().isDetectFlagEnabled()) return;
-        if (plugin.bypasses(player, "hacks", false)) return;
-        if (plugin.module(HacksModule.class).checks().isChecking(player.getUniqueId())) return;
+        var checks = plugin.module(HacksModule.class).checks();
+        // The cheap look-ups first: this runs on every flag, and resolving the bypass walks the player's permissions
+        if (checks.isChecking(player.getUniqueId()) || checks.inAutoCheckCooldown(player.getUniqueId())) return;
         List<HackDefinition> hacks = plugin.module(HacksModule.class).config().getFlagCheckHacks();
         if (hacks.isEmpty()) return;
+        if (plugin.bypasses(player, "hacks", false)) return;
         // Anticheats flag many times a second: one alert and one scan per cooldown
         if (!plugin.module(HacksModule.class).checks().claimAutoCheck(player.getUniqueId())) return;
 
