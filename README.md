@@ -26,7 +26,17 @@ It uses the **Sign Translation Vulnerability** (MC-265322), the same trick Donut
 
 ---
 
-## 🆕 What is new in 1.4.4
+## 🆕 What is new in 1.4.x
+
+- **Ordered commands (1.4.0)** - use a `commands` list to run several console commands for one mod/result, in order. Existing `command` rules still work.
+- **Custom sign placement (1.4.1)** - configure barriers, relative offsets, named regions and static destinations. Temporary blocks are restored after checks.
+- **Custom sign layouts (1.4.2)** - choose what each of the four rows contains, change the number of mods per batch and add a language probe to hack checks.
+- **Response validation (1.4.3)** - opt into row delimiters that reject stale replies, altered boundaries and edited static text with `SKIPPED`.
+- **Join readiness (1.4.4)** - configure join delays, optionally wait for the client to load the world and run automatic hack/language checks in sequence.
+
+---
+
+## 🆕 What is new in 1.3.0
 
 This is a pretty big update, so here is a quick rundown of what has changed:
 
@@ -58,7 +68,7 @@ Every mod registers its own translation keys, so a vanilla client and a modded c
 
 > 👀 The player might see a sign flicker for a moment, but by the time they notice, it is already gone. It is too fast to read or screenshot.
 
-> 💡 One sign can check up to 3 mods. If you have more, we just send them one after another. You can set the delay yourself.
+> 💡 By default, one sign checks 3 mods. You can customize the four-row layout; fewer mod rows means more signs. You can set the delay yourself.
 
 ---
 
@@ -88,7 +98,7 @@ Every mod registers its own translation keys, so a vanilla client and a modded c
 ### 🔄 Auto Updater
 
 - On startup we check `https://github.com/branduzzo/CheckHacks/releases/latest` in the background. If you are offline we just skip it, nothing gets spammed in console
-- If we find a newer `vX.Y.Z`, everyone with `checkhacks.update` will see a message when they join: `CheckHacks 1.4.4 is available! Click here to download.` It is already translated in every `messages/*.yml`
+- If we find a newer `vX.Y.Z`, everyone with `checkhacks.update` will see a message when they join: `CheckHacks 1.3.1 is available! Click here to download.` It is already translated in every `messages/*.yml`
 - If they click it, it runs `/checkhacksupdate`, downloads `CheckHacks-X.Y.Z.jar` into `plugins/`, backs up or removes the old jar and says `Download completed! Restart the server`
 - You need `checkhacks.update` to see the message and to run the command. It is already included in `checkhacks.*` so server operators have it by default
 
@@ -209,6 +219,70 @@ plugins/CheckHacks/
 │   └── ...             # de, es, fr, br, ru, lolcat, uwu
 └── database.db         # Scan history, it just shows up by itself
 ```
+
+### 🪧 Sign placement and layouts (1.4.x)
+
+Existing configs do not need regeneration. Missing options keep the original defaults; add the settings you want to `config.yml`, then run `/chreload`.
+
+```yaml
+# config.yml
+sign-placement:
+  barriers:
+    enabled: true
+    remove-after-check: true
+  y-offset: 1
+  fallback-near-player: true
+  require-sent-chunk: true
+  static-target:
+    enabled: false
+    replace-occupied-block: false
+    world: "world"
+    x: 0
+    y: 65
+    z: 0
+sign-layout:
+  hack-check: [mod, mod, mod, control]
+  language-check: [language, blank, blank, blank]
+sign-response-validation:
+  enabled: false
+```
+
+- **Placement:** `y-offset` tries air above/below the player. Named cuboid `regions` can override the destination; the first matching region takes priority over `static-target`. See the [commented region example](src/main/resources/config.yml). Custom targets must be nearby, in the same world, in loaded chunks and owned by the current Folia region when applicable. `require-sent-chunk: false` bypasses only the sent-chunk check.
+- **Fallback and replacement:** `fallback-near-player` retains the original nearby-air search. Set it to `false` to skip when the destination is unusable. Occupied-block replacement is opt-in and applies only to the static target; captured block states are restored afterwards.
+- **Barriers:** disable `barriers.enabled` to avoid support barriers. `remove-after-check: false` deliberately leaves newly placed barriers behind. Crashes and Folia disable across other regions cannot guarantee cleanup.
+- **Rows:** use exactly four entries: `mod`, `control`, `language`, `blank` or `'text:your text'`. Hack layouts need a `mod`; language layouts need a `language`. A hack scan reports/saves its first language response. Invalid layouts fall back to the defaults with a warning.
+- **Validation:** `sign-response-validation.enabled: true` checks row delimiters, blank/literal rows and empty mod replies. Invalid batches become `SKIPPED`; timeouts outside edit range are also skipped. Delimiters add 14 characters per row, so keep labels short. They cannot authenticate a modified client that preserves them and fabricates the text inside.
+
+### 🚪 Automatic join checks (1.4.4)
+
+Edit `auto-check-on-join` in `checkhacks.yml` and/or `checklang.yml`:
+
+```yaml
+auto-check-on-join:
+  enabled: true
+  wait-for-world-ready: true
+  delay-ticks: 0
+  # Keep the other existing options, including the hack list in checkhacks.yml.
+```
+
+With `wait-for-world-ready: true`, the delay starts after the client loads the world, with movement as the fallback when acknowledgement is unavailable or times out. Without it, the delay starts at join: 60 ticks for hacks and 80 ticks for language by default. Both checks remain disabled by default. Automatic language checks wait for hack checks and confirmation scans to finish. Apply edits with `/chreload`.
+
+### 📋 Multiple commands per rule (1.4.0)
+
+Replace a rule's `command` key with `commands` to run several console commands in list order:
+
+```yaml
+# checkhacks.yml
+command-rules:
+  meteorclient1:
+    mod: meteorclient
+    result: DETECTED
+    commands:
+      - "broadcast %player%: detected %hack%"
+      - "tempban %player% 31d %hack%"
+```
+
+Placeholders are expanded on every line. A present legacy `command` takes precedence, even when blank: remove it to enable the list. Empty lists and blank entries execute nothing. With DoubleCheck enabled and a confirmation scan started, `DETECTED` rules use that second scan's positive results; each rule still matches its configured result.
 
 **Stuff you will actually use**
 
