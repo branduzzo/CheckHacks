@@ -220,6 +220,14 @@ command-if-clean:
   command: "give %player% diamond 1"
 
 # Per-mod rules: executed when a specific mod returns a specific result
+# Use either the original single 'command' or a 'commands' YAML list.
+# If 'command' is present it takes precedence; a blank command keeps the rule
+# inactive. Remove that key to use 'commands'. Empty list entries are ignored.
+# Commands run from console, in list order, with the same placeholders.
+# Example inside a rule (replace its command key):
+#   commands:
+#     - "broadcast %player%: detected %hack%"
+#     - "tempban %player% 31d %hack%"
 command-rules:
   meteorclient1:
     mod: meteorclient
@@ -230,6 +238,8 @@ command-rules:
 # PERFORMANCE / RELIABILITY
 # ──────────────────────────────────────────────
 # Re-check DETECTED/PROTECTED results with a second confirmation scan to reduce false positives
+# If enabled, command-rules use only mods confirmed positive
+# by the second check.
 doublecheck: true
 # How long to wait for client response per sign (ticks, 20 = 1s)
 timeout-ticks: 200

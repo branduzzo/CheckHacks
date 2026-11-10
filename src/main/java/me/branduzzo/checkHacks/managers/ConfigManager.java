@@ -106,8 +106,18 @@ public class ConfigManager {
         if (section != null) {
             for (String name : section.getKeys(false)) {
                 String mod = section.getString(name + ".mod", "");
-                String cmd = section.getString(name + ".command", "");
-                if (mod == null || mod.isBlank() || cmd == null || cmd.isBlank()) continue;
+                if (mod == null || mod.isBlank()) continue;
+                List<String> commands;
+                // A present legacy key wins, even when blank: a disabled old rule
+                // must not start executing a new list merely because of an upgrade.
+                if (section.contains(name + ".command")) {
+                    String command = section.getString(name + ".command", "");
+                    commands = command == null || command.isBlank() ? List.of() : List.of(command);
+                } else {
+                    commands = section.getStringList(name + ".commands").stream()
+                            .filter(command -> !command.isBlank()).toList();
+                }
+                if (commands.isEmpty()) continue;
                 HackResult result;
                 try {
                     result = HackResult.valueOf(
@@ -116,7 +126,7 @@ public class ConfigManager {
                 } catch (IllegalArgumentException e) {
                     result = HackResult.DETECTED;
                 }
-                commandRules.put(name, new CommandRule(name, mod.trim(), result, cmd));
+                commandRules.put(name, new CommandRule(name, mod.trim(), result, commands));
             }
         }
         rulesByHack.clear();

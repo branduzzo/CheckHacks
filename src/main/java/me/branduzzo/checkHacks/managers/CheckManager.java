@@ -374,8 +374,13 @@ public class CheckManager {
             HackResult r = results.getOrDefault(hack.getId(), HackResult.SKIPPED);
             for (CommandRule rule : cfg.getRulesForHack(hack.getId())) {
                 if (rule.getResult() == r) {
-                    String cmd = applyCommandPlaceholders(rule.getCommand(), tn, hack.getDisplayName());
-                    FoliaScheduler.runGlobal(plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd));
+                    List<String> commands = rule.getCommands().stream()
+                            .map(command -> applyCommandPlaceholders(command, tn, hack.getDisplayName())).toList();
+                    // One scheduled action preserves the configured list order on Paper and Folia.
+                    FoliaScheduler.runGlobal(plugin, () -> {
+                        for (String command : commands)
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                    });
                 }
             }
         }
