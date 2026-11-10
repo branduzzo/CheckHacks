@@ -45,21 +45,38 @@ public final class Storage implements AutoCloseable {
 
     public boolean available() { return db.available(); }
 
+    /** Scans deleted per transaction: their results go with them, and other writes get their turn in between. */
+    private static final int PURGE_BATCH = 2_000;
+
     /**
-     * Deletes what is older than the given number of days (0 or less keeps it): addresses and skins of accounts
-     * not seen for {@code linkDays} (a skin is refreshed on join, so an old one belongs to an absent player), and
-     * scans with their results after {@code scanDays}.
+     * Deletes what is older than the given number of days (0 or less keeps it): addresses, skins, clients and
+     * RPTrack fingerprints of accounts not seen for {@code linkDays} (they are refreshed on every join, so an old one
+     * belongs to an absent player), and scans with their results after {@code scanDays}. Expired web panel links
+     * and sessions go whatever the settings are. Call it off the main thread.
+     * <p>
+     * In small transactions: one big delete (a year of scans with their results) held the only write connection
+     * for seconds, and every join and scan waited behind it.
+     *
+     * @return the rows deleted
      */
-    public void purge(int linkDays, int scanDays) {
-        if (linkDays <= 0 && scanDays <= 0) return;
+    public int purge(int linkDays, int scanDays) {
         long now = System.currentTimeMillis();
-        db.transaction("purge", null, c -> {
-            if (linkDays > 0) players.purgeBefore(c, now - linkDays * 86_400_000L);
-            // results go with their scan (ON DELETE CASCADE)
-            if (scanDays > 0) scans.purgeBefore(c, now - scanDays * 86_400_000L);
-            players.pruneAccounts(c);
-            return null;
-        });
+        int removed = tokens.purgeExpired(now);
+        if (scanDays > 0) {
+            long before = now - scanDays * 86_400_000L;
+            int batch;
+            do {
+                // results go with their scan (ON DELETE CASCADE)
+                batch = db.transaction("purge scans", 0, c -> scans.purgeBefore(c, before, PURGE_BATCH));
+                removed += batch;
+            } while (batch == PURGE_BATCH && db.available());
+        }
+        if (linkDays > 0)
+            removed += db.transaction("purge accounts", 0, c -> players.purgeBefore(c, now - linkDays * 86_400_000L));
+        if (linkDays > 0 || scanDays > 0)
+            removed += db.transaction("prune accounts", 0, players::pruneAccounts);
+        if (removed > 0) db.reclaim();
+        return removed;
     }
 
     @Override

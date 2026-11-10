@@ -457,7 +457,7 @@ public class WebServerManager {
         }
 
         if (path.equals("/api/stats")) {
-            Map<String, Object> stats = plugin.database().scans().getStats();
+            Map<String, Object> stats = new LinkedHashMap<>(stats());
             stats.put("online", cachedPlayers.size());
             sendJson(ex, 200, stats);
             return;
@@ -465,7 +465,8 @@ public class WebServerManager {
 
         if (path.equals("/api/players/search")) {
             String q = params.getOrDefault("q", "").trim();
-            sendJson(ex, 200, q.isEmpty() || q.length() > 16 ? List.of() : plugin.database().players().searchPlayers(q, 12));
+            // One letter matches a large part of all accounts, and the page asks on every keystroke
+            sendJson(ex, 200, q.length() < 2 || q.length() > 16 ? List.of() : plugin.database().players().searchPlayers(q, 12));
             return;
         }
 
@@ -660,6 +661,18 @@ public class WebServerManager {
         Map<String, Object> graph = buildLinkGraph(ips);
         graphCache.put(ips, new CachedGraph(graph, System.currentTimeMillis()));
         return graph;
+    }
+
+    private record CachedStats(Map<String, Object> stats, long read) {}
+    private volatile CachedStats statsCache;
+
+    /** Every open panel asks every 10 s, and the counts walk the scan table: read at most once in that time. */
+    private Map<String, Object> stats() {
+        CachedStats cached = statsCache;
+        if (cached != null && System.currentTimeMillis() - cached.read() < 10_000) return cached.stats();
+        Map<String, Object> stats = plugin.database().scans().getStats();
+        statsCache = new CachedStats(stats, System.currentTimeMillis());
+        return stats;
     }
 
     private static final int MAX_UNLINKED_NODES = 300;

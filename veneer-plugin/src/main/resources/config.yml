@@ -476,7 +476,8 @@ hacks:
     offline-access-days: 7
     # Account graph: addresses accounts join from are stored to link accounts that share one
     links:
-      # Days to keep an address after the account last used it (0 = forever)
+      # Days to keep what is stored about an account after it was last seen: addresses, client brand and
+      # channels, skin, RPTrack fingerprint (0 = forever). Old data is cleared every hour.
       retention-days: 90
       # An address shared by more accounts than this is ignored (shared networks, mobile data)
       max-accounts-per-ip: 8
@@ -529,7 +530,7 @@ hacks:
       max-accounts-per-client: 5
     # Scan history (mod scans and language checks with their results)
     history:
-      # Days to keep a scan (0 = forever)
+      # Days to keep a scan (0 = forever). Old scans are cleared every hour.
       retention-days: 180
 
   # Discord webhook for mod scan results

@@ -133,6 +133,32 @@ public final class Database implements AutoCloseable {
         });
     }
 
+    /** Free pages (4 KiB each) worth giving back, and the share of the file they must be. */
+    private static final long RECLAIM_MIN_PAGES = 5_000;
+    private static final double RECLAIM_MIN_SHARE = 0.25;
+
+    /**
+     * After a clean-up: SQLite keeps deleted pages in the file for reuse, so the file never shrank. When a quarter of
+     * it (and at least some 20 MB) is free, the file is rewritten without them; otherwise only the write-ahead log
+     * is cut back. A rewrite holds up writes for its duration, which is why it waits for that much to be gained.
+     */
+    public void reclaim() {
+        write("reclaim", null, c -> {
+            long free, pages;
+            try (Statement s = c.createStatement()) {
+                try (java.sql.ResultSet rs = s.executeQuery("PRAGMA freelist_count")) { free = rs.next() ? rs.getLong(1) : 0; }
+                try (java.sql.ResultSet rs = s.executeQuery("PRAGMA page_count")) { pages = rs.next() ? rs.getLong(1) : 0; }
+                if (free >= RECLAIM_MIN_PAGES && free >= pages * RECLAIM_MIN_SHARE) {
+                    s.execute("VACUUM");
+                    log.info("Database compacted: " + free + " of " + pages + " pages were free.");
+                }
+                s.execute("PRAGMA wal_checkpoint(TRUNCATE)");
+                s.execute("PRAGMA optimize");
+            }
+            return null;
+        });
+    }
+
     @Override
     public void close() {
         if (closed) return;

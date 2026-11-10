@@ -48,6 +48,14 @@ public final class SettingsStore {
         });
     }
 
+    public void deleteBrandVerdicts(java.util.Collection<Integer> ids) {
+        if (ids.isEmpty()) return;
+        db.transaction("deleteBrandVerdicts", null, c -> {
+            Rows.updateIn(c, "DELETE FROM brand_verdicts WHERE id IN (%s)", ids);
+            return null;
+        });
+    }
+
     /** {@code /veneer lang} choices: uuid to language code or {@code auto}. */
     public Map<String, String> getLanguageChoices() {
         return db.read("getLanguageChoices", new HashMap<>(), c -> {

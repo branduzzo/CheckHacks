@@ -92,6 +92,12 @@ public class SpoofModule extends VeneerModule {
         else if (events != null) PacketEvents.getAPI().getEventManager().unregisterListener(events);
     }
 
+    /** Brands nobody decided on are kept as long as addresses are, a month when those are kept forever. */
+    @Override
+    public void cleanUp(long linksBefore) {
+        verdicts.forgetUndecidedBefore(linksBefore > 0 ? linksBefore : System.currentTimeMillis() - 30 * 86_400_000L);
+    }
+
     @Override
     protected void reload() {
         config.reload();

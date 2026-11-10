@@ -708,6 +708,8 @@
         modFilter: 'ALL',
         historyScans: [],
         historyFilter: 'ALL',
+        historyLimit: 50,
+        historyMore: false,
         graphData: { nodes: [], edges: [] },
         graphMinPct: 0,
       };
@@ -1248,6 +1250,8 @@
             : STATE.historyScans.filter((s) => s.scan_type === STATE.historyFilter);
 
         totalEl.textContent = 'Showing ' + filtered.length + ' scans';
+        const moreBtn = document.getElementById('historyMoreBtn');
+        if (moreBtn) moreBtn.style.display = STATE.historyMore ? '' : 'none';
 
         if (filtered.length === 0) {
           tbody.innerHTML = '<tr><td colspan="7" class="empty-box">No scan records match current filter.</td></tr>';
@@ -1815,9 +1819,11 @@
       }
 
       async function refreshHistoryScans() {
-        const scans = await apiRequest('/api/scans?limit=50&offset=0');
+        // One more than shown tells whether older scans exist; the server gives at most 500 at once
+        const scans = await apiRequest('/api/scans?limit=' + Math.min(500, STATE.historyLimit + 1) + '&offset=0');
         if (Array.isArray(scans)) {
-          STATE.historyScans = scans;
+          STATE.historyMore = scans.length > STATE.historyLimit && STATE.historyLimit < 500;
+          STATE.historyScans = scans.slice(0, STATE.historyLimit);
           renderHistoryView();
         }
       }
@@ -1949,6 +1955,10 @@
         document.getElementById('runVersionCheckBtn').addEventListener('click', () => triggerPlayerScan('version'));
         document.getElementById('runAllCheckBtn').addEventListener('click', () => triggerPlayerScan('all'));
         document.getElementById('deletePlayerBtn').addEventListener('click', deleteCurrentPlayer);
+        document.getElementById('historyMoreBtn').addEventListener('click', () => {
+          STATE.historyLimit = Math.min(500, STATE.historyLimit + 50);
+          refreshHistoryScans().catch(() => {});
+        });
         document.getElementById('openPlayerGraphBtn').addEventListener('click', () => {
           const uuid = STATE.currentPlayer?.uuid || STATE.selectedPlayerName;
           switchView('graph', uuid);
@@ -2070,12 +2080,12 @@
           targetInitialPlayer = decodeURIComponent(rawHash.slice('player/'.length));
         }
 
-        const [authInfo, stats, online, linksData, allScans] = await Promise.all([
+        // The account graph is not asked for here: it is the costliest request and only the graph view shows it
+        const [authInfo, stats, online, allScans] = await Promise.all([
           apiRequest('/api/validate').catch(() => null),
           apiRequest('/api/stats').catch(() => null),
           apiRequest('/api/players/online').catch(() => []),
-          apiRequest('/api/links').catch(() => ({ nodes: [], edges: [] })),
-          apiRequest('/api/scans?limit=50&offset=0').catch(() => []),
+          apiRequest('/api/scans?limit=51&offset=0').catch(() => []),
         ]);
 
         if (authInfo) {
@@ -2106,7 +2116,8 @@
           }
         }
         if (Array.isArray(allScans)) {
-          STATE.historyScans = allScans;
+          STATE.historyMore = allScans.length > STATE.historyLimit;
+          STATE.historyScans = allScans.slice(0, STATE.historyLimit);
           renderHistoryView();
           if (!rawHash.startsWith('player/') && (!online || online.length === 0) && allScans.length > 0 && allScans[0].player) {
             targetInitialPlayer = allScans[0].player;

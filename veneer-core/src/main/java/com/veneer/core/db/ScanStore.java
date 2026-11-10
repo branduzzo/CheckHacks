@@ -329,11 +329,13 @@ public final class ScanStore {
         return detected;
     }
 
-    /** Deletes scans (with their results, ON DELETE CASCADE) older than {@code before}. */
-    void purgeBefore(Connection c, long before) throws SQLException {
-        try (PreparedStatement ps = c.prepareStatement("DELETE FROM scans WHERE timestamp < ?")) {
+    /** Deletes up to {@code limit} of the oldest scans before {@code before} (with their results, ON DELETE CASCADE); how many went. */
+    int purgeBefore(Connection c, long before, int limit) throws SQLException {
+        try (PreparedStatement ps = c.prepareStatement(
+                "DELETE FROM scans WHERE id IN (SELECT id FROM scans WHERE timestamp < ? ORDER BY timestamp LIMIT ?)")) {
             ps.setLong(1, before);
-            ps.executeUpdate();
+            ps.setInt(2, limit);
+            return ps.executeUpdate();
         }
     }
 }

@@ -2,6 +2,7 @@ package com.veneer;
 
 import com.veneer.core.Alerts;
 import com.veneer.core.Bedrock;
+import com.veneer.core.FoliaScheduler;
 import com.veneer.core.Messages;
 import com.veneer.core.PacketEventsHook;
 import com.veneer.core.PermissionSource;
@@ -98,9 +99,42 @@ public abstract class VeneerPlugin extends JavaPlugin {
             }
         }
 
+        // Old data is cleared on a schedule of its own (it used to wait for somebody to join)
+        FoliaScheduler.runGlobalTimer(this, () -> FoliaScheduler.runAsync(this, this::cleanUp), CLEANUP_FIRST_TICKS, CLEANUP_TICKS);
+
         long loadedMs = System.currentTimeMillis() - begin;
         if (config.updateCheckEnabled()) updates.start(() -> printBanner(loadedMs, started.toString()));
         else printBanner(loadedMs, started.toString());
+    }
+
+    private static final long CLEANUP_FIRST_TICKS = 2 * 60 * 20L, CLEANUP_TICKS = 60 * 60 * 20L;
+    private final java.util.concurrent.atomic.AtomicBoolean cleaning = new java.util.concurrent.atomic.AtomicBoolean();
+
+    /**
+     * Deletes what the retention settings no longer keep (scans, addresses, clients, skins, fingerprints, expired
+     * panel sessions) and lets the modules drop their own leftovers. Hourly, off the main thread.
+     */
+    private void cleanUp() {
+        if (!isEnabled() || !cleaning.compareAndSet(false, true)) return;
+        try {
+            var hacks = config.section("hacks");
+            int linkDays = hacks.getInt("web-editor.links.retention-days", 90);
+            int removed = database.purge(linkDays, hacks.getInt("web-editor.history.retention-days", 180));
+            if (removed > 0) debug("Clean-up removed " + removed + " old rows.");
+            long linksBefore = linkDays > 0 ? System.currentTimeMillis() - linkDays * 86_400_000L : 0;
+            for (VeneerModule module : modules) {
+                if (!module.running()) continue;
+                try {
+                    module.cleanUp(linksBefore);
+                } catch (Throwable t) {
+                    getLogger().warning("Module '" + module.id() + "' failed to clean up: " + t);
+                }
+            }
+        } catch (Throwable t) {
+            getLogger().warning("Clean-up failed: " + t);
+        } finally {
+            cleaning.set(false);
+        }
     }
 
     private void printBanner(long loadedMs, String started) {

@@ -17,7 +17,6 @@ import java.util.List;
 public final class PlayerEvents implements Listener {
 
     private final VeneerPlugin plugin;
-    private volatile long lastPurge;
 
     public PlayerEvents(VeneerPlugin plugin) {
         this.plugin = plugin;
@@ -38,13 +37,6 @@ public final class PlayerEvents implements Listener {
                 if (skinUrl != null && !plugin.database().players().hasFreshSkin(uuid, 7 * 86_400_000L)) {
                     String skinPng = Heads.fetch(skinUrl);
                     if (skinPng != null) plugin.database().players().saveSkin(uuid, skinPng);
-                }
-                long now = System.currentTimeMillis();
-                if (now - lastPurge > 3_600_000L) {
-                    lastPurge = now;
-                    var hacks = plugin.config().section("hacks");
-                    plugin.database().purge(hacks.getInt("web-editor.links.retention-days", 90),
-                            hacks.getInt("web-editor.history.retention-days", 180));
                 }
             });
         }

@@ -142,6 +142,8 @@ final class Schema {
             s.execute("CREATE INDEX IF NOT EXISTS idx_lang_results_scan ON lang_results(scan_id)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_scans_time ON scans(timestamp)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_scans_target ON scans(target_uuid)");
+            // History of one scan type, newest first: without it every scan of the type was sorted for one page
+            s.execute("CREATE INDEX IF NOT EXISTS idx_scans_type_time ON scans(type, timestamp)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_joins_ip ON joins(ip)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_joins_last ON joins(last_seen)");
             // "Latest mod scan of each player" (stats, detected mods, link graph): answered from this index alone

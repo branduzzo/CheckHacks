@@ -80,6 +80,21 @@ public final class TokenStore {
         });
     }
 
+    /** Links nobody opened and sessions nobody used in time, and what the old URL log-in left; how many rows went. */
+    int purgeExpired(long now) {
+        return db.transaction("purge sessions", 0, c -> {
+            int removed;
+            try (PreparedStatement ps = c.prepareStatement("DELETE FROM web_sessions WHERE expires_at < ?")) {
+                ps.setLong(1, now);
+                removed = ps.executeUpdate();
+            }
+            try (java.sql.Statement s = c.createStatement()) {
+                removed += s.executeUpdate("DELETE FROM editor_tokens");
+            }
+            return removed;
+        });
+    }
+
     /** Uses up a link and starts a session for this browser; null when the link is unknown, used or expired. */
     public Redeemed redeemLink(String secret, String ip, int sessionDays) {
         if (secret == null) return null;

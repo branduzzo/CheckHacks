@@ -97,6 +97,12 @@ public abstract class VeneerModule {
         if (executor instanceof TabCompleter tc) cmd.setTabCompleter(tc);
     }
 
+    /**
+     * Hourly, off the main thread: drop what the module itself keeps and no longer needs. {@code linksBefore} is the
+     * time before which account data is not kept ({@code hacks.web-editor.links.retention-days}), 0 for "keep".
+     */
+    public void cleanUp(long linksBefore) {}
+
     /** plugin.yml commands that only work while this module runs. */
     public List<String> commandNames() {
         return List.of();

@@ -254,6 +254,27 @@ class StorageTest {
     }
 
     @Test
+    void purgeGoesThroughAllOldScansInBatchesAndKeepsTheNewOnes() throws Exception {
+        for (int i = 0; i < 4_500; i++)
+            storage.scans().saveScanWithResults("hack", "Old", "u-old", "AutoCheck", "test", false,
+                    List.<Object[]>of(new Object[]{"freecam", "Freecam", "NOT_DETECTED"}));
+        try (java.sql.Connection c = java.sql.DriverManager.getConnection("jdbc:sqlite:" + dir.resolve("data.db"));
+             java.sql.Statement s = c.createStatement()) {
+            s.execute("PRAGMA busy_timeout = 5000");
+            s.executeUpdate("UPDATE scans SET timestamp = 0");
+        }
+        long kept = storage.scans().saveScanWithResults("hack", "New", "u-new", "AutoCheck", "test", false,
+                List.<Object[]>of(new Object[]{"freecam", "Freecam", "NOT_DETECTED"}));
+        storage.fingerprints().save("u-fp", "Fp", 0b111, false, false);
+
+        assertTrue(storage.purge(0, 30) >= 4_500, "more than one batch of scans");
+        List<Map<String, Object>> left = storage.scans().getRecentScans(null, 10);
+        assertEquals(List.of(kept), left.stream().map(r -> ((Number) r.get("id")).longValue()).toList());
+        assertEquals(1, ((List<?>) left.get(0).get("results")).size());
+        assertEquals(1, storage.fingerprints().masks().size(), "a fresh fingerprint stays");
+    }
+
+    @Test
     void fingerprintsMergeOrReplace() {
         storage.fingerprints().save("u-a", "Alice", 0b0011, false, false);
         storage.fingerprints().save("u-a", "Alice", 0b0100, true, false);

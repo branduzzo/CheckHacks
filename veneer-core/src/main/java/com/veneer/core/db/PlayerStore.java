@@ -310,25 +310,28 @@ public final class PlayerStore {
 
     // ------------------------------------------------------------------- purge
 
-    /** Addresses, skins and clients not updated since {@code before}. */
-    void purgeBefore(Connection c, long before) throws SQLException {
+    /** Addresses, skins, clients and fingerprints not updated since {@code before}; how many rows went. */
+    int purgeBefore(Connection c, long before) throws SQLException {
+        int removed = 0;
         for (String sql : List.of("DELETE FROM joins WHERE last_seen < ?", "DELETE FROM skins WHERE updated < ?",
-                "DELETE FROM clients WHERE updated < ?", "DELETE FROM authme_accounts WHERE last_login < ?")) {
+                "DELETE FROM clients WHERE updated < ?", "DELETE FROM authme_accounts WHERE last_login < ?",
+                "DELETE FROM rptrack WHERE last_seen < ?")) {
             try (PreparedStatement ps = c.prepareStatement(sql)) {
                 ps.setLong(1, before);
-                ps.executeUpdate();
+                removed += ps.executeUpdate();
             }
         }
+        return removed;
     }
 
     /** Drops accounts of which nothing is left after a purge, as the player list showed before it had its own table. */
-    void pruneAccounts(Connection c) throws SQLException {
+    int pruneAccounts(Connection c) throws SQLException {
         try (PreparedStatement ps = c.prepareStatement("""
                 DELETE FROM accounts WHERE NOT EXISTS (SELECT 1 FROM joins j WHERE j.uuid = accounts.uuid)
                   AND NOT EXISTS (SELECT 1 FROM scans s WHERE s.target_uuid = accounts.uuid)
                   AND NOT EXISTS (SELECT 1 FROM clients k WHERE k.uuid = accounts.uuid)
                   AND NOT EXISTS (SELECT 1 FROM rptrack r WHERE r.uuid = accounts.uuid)""")) {
-            ps.executeUpdate();
+            return ps.executeUpdate();
         }
     }
 }

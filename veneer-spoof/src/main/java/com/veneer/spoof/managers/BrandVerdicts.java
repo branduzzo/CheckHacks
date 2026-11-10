@@ -95,6 +95,22 @@ public class BrandVerdicts {
         return e;
     }
 
+    /**
+     * Forgets the brands staff never decided on that were first seen before {@code before}. A client can send any
+     * brand, and the undecided ones are capped: without this a flood of random brands filled the cap for good and no
+     * new brand could be asked about. How many went.
+     */
+    public int forgetUndecidedBefore(long before) {
+        List<Integer> gone = new ArrayList<>();
+        for (Entry e : byId.values())
+            if (e.verdict == null && e.firstSeen < before && byId.remove(e.id, e)) {
+                byBrand.remove(e.brand, e);
+                gone.add(e.id);
+            }
+        plugin.database().settings().deleteBrandVerdicts(gone);
+        return gone.size();
+    }
+
     public Entry get(int id) {
         return byId.get(id);
     }
