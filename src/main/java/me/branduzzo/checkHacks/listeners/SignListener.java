@@ -23,8 +23,11 @@ public class SignListener implements Listener {
         Player player = event.getPlayer();
         UUID   uuid   = player.getUniqueId();
 
-        boolean hackChecking = plugin.getCheckManager().isChecking(uuid);
-        boolean langChecking = plugin.getLangCheckManager().isChecking(uuid);
+        // Ordinary sign edits must pass through untouched, even during a scan.
+        // Both the editor phase and the exact front-side block must match.
+        if (event.getSide() != org.bukkit.block.sign.Side.FRONT) return;
+        boolean hackChecking = plugin.getCheckManager().isExpectedSign(uuid, event.getBlock().getLocation());
+        boolean langChecking = plugin.getLangCheckManager().isExpectedSign(uuid, event.getBlock().getLocation());
         if (!hackChecking && !langChecking) return;
 
         event.setCancelled(true);

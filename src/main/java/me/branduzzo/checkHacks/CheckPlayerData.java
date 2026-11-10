@@ -1,14 +1,22 @@
 package me.branduzzo.checkHacks;
 
 import me.branduzzo.checkHacks.utils.WrappedTask;
+import me.branduzzo.checkHacks.utils.SignLayout;
+import me.branduzzo.checkHacks.utils.SignChallenge;
+import me.branduzzo.checkHacks.utils.SignPlacement;
 import org.bukkit.Location;
-import org.bukkit.block.BlockState;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Mutable state for one scan, including its confirmation-pass identity.
+ * The layout is captured for the scan so reloading configuration cannot change
+ * the row-to-mod mapping between batches. Lease and challenge
+ * belong to the current sign; acceptingResponse closes after its first reply.
+ */
 public class CheckPlayerData {
 
     private final UUID targetUUID;
@@ -21,10 +29,11 @@ public class CheckPlayerData {
     private final String reason;
     private long scanId = -1;
 
-    private Location signLocation;
-    private BlockState originalState;
-    private boolean barrierPlaced;
-    private Location barrierLocation;
+    private SignPlacement.Lease signLease;
+    private SignLayout layout = SignLayout.HACK_DEFAULT;
+    private SignChallenge challenge;
+    private boolean acceptingResponse;
+    private boolean languageRecorded;
     private WrappedTask signTimeoutTask;
 
     public CheckPlayerData(UUID targetUUID, UUID initiatorUUID,
@@ -60,14 +69,17 @@ public class CheckPlayerData {
     public long getScanId()                            { return scanId; }
     public void setScanId(long id)                     { this.scanId = id; }
 
-    public Location getSignLocation()            { return signLocation; }
-    public void setSignLocation(Location l)      { this.signLocation = l; }
-    public BlockState getOriginalState()         { return originalState; }
-    public void setOriginalState(BlockState s)   { this.originalState = s; }
-    public boolean isBarrierPlaced()             { return barrierPlaced; }
-    public void setBarrierPlaced(boolean b)      { this.barrierPlaced = b; }
-    public Location getBarrierLocation()         { return barrierLocation; }
-    public void setBarrierLocation(Location l)   { this.barrierLocation = l; }
+    public Location getSignLocation() { return signLease == null ? null : signLease.location(); }
+    public SignPlacement.Lease getSignLease() { return signLease; }
+    public void setSignLease(SignPlacement.Lease lease) { signLease = lease; }
+    public SignLayout getLayout() { return layout; }
+    public void setLayout(SignLayout layout) { this.layout = layout; }
+    public SignChallenge getChallenge() { return challenge; }
+    public void setChallenge(SignChallenge challenge) { this.challenge = challenge; }
+    public boolean isAcceptingResponse() { return acceptingResponse; }
+    public void setAcceptingResponse(boolean accepting) { acceptingResponse = accepting; }
+    public boolean isLanguageRecorded() { return languageRecorded; }
+    public void setLanguageRecorded(boolean recorded) { languageRecorded = recorded; }
     public WrappedTask getSignTimeoutTask()       { return signTimeoutTask; }
     public void setSignTimeoutTask(WrappedTask t) { this.signTimeoutTask = t; }
 }

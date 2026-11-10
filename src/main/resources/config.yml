@@ -42,3 +42,111 @@ bedrock:
 alerts:
   # true = all with checkhacks.alerts receive alerts by default ( /chalerts to toggle )
   default-enabled: true
+
+# Upgrade compatibility: missing options below retain the original sign
+# placement, contents and timings. Existing configs do not need regeneration;
+# custom positioning, block replacement and validation require opting in.
+# Shared by hack scans and language scans. These are REAL temporary blocks;
+# other nearby players can see them. Non-air blocks are left intact unless
+# static-target.replace-occupied-block is explicitly enabled below.
+sign-placement:
+  barriers:
+    # An OAK_SIGN needs support. If the block immediately below the temporary
+    # sign is air, a BARRIER is placed there to stop neighbour updates breaking
+    # the sign while the client is replying. Existing support is left intact.
+    # false = never place barriers (unsupported signs can break during a scan).
+    enabled: true
+    # Restore the original air block after a response or timeout, and on Paper stop.
+    # Abrupt stops/crashes (and disabling Folia while a sign belongs to a different
+    # region) cannot guarantee cleanup of in-flight real blocks.
+    # false deliberately LEAVES newly placed barriers in the world; use with care.
+    # This does not remove pre-existing barriers or other players' blocks.
+    remove-after-check: true
+
+  # First relative position to try: player block + (0, y-offset, 0).
+  # Negative values can hide a sign below the player ONLY if that block is air.
+  # Minecraft 1.21.4 accepts replies only within block-interaction-range + 4
+  # (8.5 by default in survival), measured from the eyes to the sign's block box.
+  # Moving away can invalidate a scan. Custom positions outside this range,
+  # world height or server-loaded chunks are skipped. The client must actually
+  # have the chunk to display the sign, even when require-sent-chunk is false.
+  # Default nearby placement preserves the original air search without adding
+  # new sent-chunk, reach or world-border eligibility gates.
+  y-offset: 1
+  # If a region/static/relative position is occupied or unusable, try nearby air.
+  # This fallback uses the original local air search, without the custom target's
+  # sent-chunk/reach/world-border gates. Custom target checks remain in effect.
+  # false = skip the check if the selected position cannot be used.
+  fallback-near-player: true
+
+  # Check the client's sent-chunk list before using a custom destination
+  # (static-target, region target or a non-default y-offset).
+  # Uses getSentChunkKeys() instead of Paper/Purpur 1.21.4's broken isChunkSent().
+  # false = ignore ONLY this eligibility check; useful if Purpur's tracking
+  # incorrectly reports an unsent chunk. This does not send/load client chunks
+  # or bypass edit distance, world height/border, block eligibility or Folia ownership.
+  # If the client really lacks the chunk, the editor may fail and the scan time out.
+  # Applies on any supported server; true preserves the existing custom checks.
+  require-sent-chunk: true
+
+  # A fixed destination is still subject to Minecraft's distance limit. It is
+  # useful only for a small area around it, NOT for players anywhere in a world.
+  # The first matching region takes priority over this optional default.
+  static-target:
+    enabled: false
+    # true = temporarily replace the block at these exact static coordinates,
+    # even if it is not air. Its full BlockState snapshot is restored after the
+    # response/timeout and on normal cleanup, without applying block physics.
+    # Applies ONLY to static-target, never regions, y-offset or nearby fallback.
+    # Existing support blocks are not replaced; other scan reservations still win.
+    # Crash/Folia-disable cleanup limitations described under barriers also apply.
+    replace-occupied-block: false
+    world: "world"
+    x: 0
+    y: 65
+    z: 0
+
+  # Cuboids use inclusive block coordinates. The first matching enabled region
+  # wins. Destinations must be in the same world, nearby, loaded, and air.
+  # On Folia the destination must also belong to the player's current region.
+  # Concurrent checks reserve both the sign and its support block; a busy target
+  # falls back nearby (or skips the check when fallback-near-player is false).
+  regions:
+    example:
+      enabled: false
+      world: "world"
+      min: {x: -2, y: 64, z: -2}
+      max: {x: 2, y: 66, z: 2}
+      target: {x: 0, y: 62, z: 0}
+
+# Exactly four physical rows, top to bottom. Repeated 'mod' entries consume the
+# next mods in the requested list; fewer mod rows means more signs per scan.
+# Row types: mod, control (keybind probe), language (language translation probe),
+# blank, or 'text:your literal text'. Text is plain, without formatting/placeholders.
+# Hack layouts require at least one mod. control and language rows are optional;
+# omitting both removes the reference used to identify some client protections.
+# Language layouts require at least one language row; mod rows are not allowed.
+# Invalid layouts log a warning and use the defaults below.
+sign-layout:
+  hack-check: [mod, mod, mod, control]
+  language-check: [language, blank, blank, blank]
+  # Example: two mods, a label, and the language probe on every sign.
+  # hack-check: [mod, mod, 'text:hack check', language]
+  # Three mods and a custom static character (no control probe):
+  # hack-check: [mod, mod, mod, 'text:#']
+  # Resource-pack glyphs can be literal UTF-8 or YAML double-quoted escapes:
+  # hack-check: [mod, mod, mod, "text:\uE800\uF801\uE800\uF801\uE800"]
+  # The client must already have the pack loaded and the glyphs in its default
+  # font. Rendering size/clipping depends on the client and the pack.
+  # The first language response in a hack scan is reported/saved as a lang check.
+
+sign-response-validation:
+  # Opt-in to preserve the original sign contents and detection rules by default.
+  # Adds random per-sign/per-row delimiters. Missing/edited delimiters or changed
+  # static rows make the batch SKIPPED, not DETECTED/PROTECTED. Empty mod replies
+  # are SKIPPED too. Normal typing/backspace at row boundaries is detected.
+  # This cannot authenticate a hostile client or detect all edits INSIDE the
+  # delimiters. Translation/keybind detection is still only a client-side signal.
+  # Delimiters add 14 characters per row. Paper normally limits replies to 80;
+  # long translated text can be truncated and safely skipped. Keep labels short.
+  enabled: false

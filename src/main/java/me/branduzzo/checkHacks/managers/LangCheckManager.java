@@ -5,13 +5,12 @@ import me.branduzzo.checkHacks.LangCheckData;
 import me.branduzzo.checkHacks.utils.FoliaScheduler;
 import me.branduzzo.checkHacks.utils.SignUtil;
 import me.branduzzo.checkHacks.utils.WebhookUtil;
-import me.branduzzo.checkHacks.utils.WrappedTask;
+import me.branduzzo.checkHacks.utils.SignChallenge;
+import me.branduzzo.checkHacks.utils.SignPlacement;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
 import org.bukkit.block.sign.Side;
 import org.bukkit.entity.Player;
@@ -22,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class LangCheckManager {
 
     private static final String LANG_KEY      = "key.forward";
-    private static final String LANG_FALLBACK = "\u27e6LANG_UNKNOWN\u27e7";
+    public static final String LANG_FALLBACK = "\u27e6LANG_UNKNOWN\u27e7";
 
     private final CheckHacksPlugin plugin;
     private final Map<UUID, LangCheckData> activeChecks     = new ConcurrentHashMap<>();
@@ -38,7 +37,7 @@ public class LangCheckManager {
     public void startCheck(Player target, Player initiator, Map<String, String> languages) {
         UUID uuid = target.getUniqueId();
 
-        if (activeChecks.containsKey(uuid)) {
+        if (activeChecks.containsKey(uuid) || plugin.getCheckManager().isChecking(uuid)) {
             if (initiator != null)
                 initiator.sendMessage(plugin.getMessageManager().get("already-checking",
                         Map.of("player", target.getName())));
@@ -47,6 +46,7 @@ public class LangCheckManager {
 
         LangCheckData data = new LangCheckData(uuid,
                 initiator != null ? initiator.getUniqueId() : null, languages);
+        data.setLayout(plugin.getConfigManager().getLangSignLayout());
         activeChecks.put(uuid, data);
 
         if (initiator != null)
@@ -58,69 +58,92 @@ public class LangCheckManager {
 
     private void setupLangSign(Player target, LangCheckData data) {
         UUID uuid = target.getUniqueId();
-
-        Location signLoc = SignUtil.findAirBlock(target);
-        if (signLoc == null) { activeChecks.remove(uuid); return; }
-
-        Block block = signLoc.getBlock();
-        BlockState originalState = block.getState();
-
-        Location belowLoc   = signLoc.clone().subtract(0, 1, 0);
-        Block    belowBlock = belowLoc.getBlock();
-        boolean  placedBarrier = belowBlock.getType().isAir();
-        if (placedBarrier) belowBlock.setType(Material.BARRIER, false);
-
-        block.setType(Material.OAK_SIGN, false);
-        BlockState freshState = block.getState();
-        if (!(freshState instanceof Sign sign)) {
-            originalState.update(true, false);
-            if (placedBarrier) belowBlock.setType(Material.AIR, false);
-            activeChecks.remove(uuid);
-            return;
+        if (activeChecks.get(uuid) != data || !target.isOnline()) return;
+        SignPlacement.Lease lease = SignPlacement.place(target,
+                plugin.getConfigManager().getSignPlacementSettings(), plugin.getLogger()::warning);
+        if (lease == null) { activeChecks.remove(uuid, data); return; }
+        Location signLoc = lease.location();
+        Sign sign = lease.sign();
+        data.setSignLease(lease);
+        SignChallenge challenge = plugin.getConfigManager().isSignResponseValidationEnabled() ? new SignChallenge() : null;
+        data.setChallenge(challenge);
+        for (int row = 0; row < 4; row++) {
+            String type = data.getLayout().rows().get(row);
+            Component content;
+            if (type.equals("language")) content = Component.translatable(LANG_KEY, LANG_FALLBACK);
+            else if (type.equals("control")) content = Component.keybind(LANG_KEY);
+            else content = Component.text(type.startsWith("text:") ? type.substring(5) : "");
+            sign.getSide(Side.FRONT).line(row, challenge == null ? content : challenge.wrap(row, content));
         }
-
-        sign.getSide(Side.FRONT).line(0, Component.translatable(LANG_KEY, LANG_FALLBACK));
         sign.update(true, false);
-
-        data.setSignLocation(signLoc);
-        data.setOriginalState(originalState);
-        data.setBarrierPlaced(placedBarrier);
-        data.setBarrierLocation(belowLoc);
-
         SignUtil.setAllowedEditor(signLoc, uuid, plugin);
-
-        FoliaScheduler.runAtEntity(plugin, target, () -> {
-            if (!activeChecks.containsKey(uuid)) return;
-            SignUtil.sendBlockEntityPacket(target, signLoc, plugin);
-            FoliaScheduler.runAtEntityLater(plugin, target, () -> {
-                if (!activeChecks.containsKey(uuid)) return;
-                SignUtil.sendOpenSignPacket(target, signLoc, plugin);
-                target.sendBlockChange(signLoc, Material.AIR.createBlockData());
-            }, 1L);
-        });
-
-        WrappedTask timeout = FoliaScheduler.runAtLocationLater(plugin, signLoc, () -> {
-            if (!activeChecks.containsKey(uuid)) return;
+        data.setTimeoutTask(FoliaScheduler.runAtEntityLater(plugin, target, () -> {
+            if (data.getSignLease() != lease || !activeChecks.remove(uuid, data)) return;
             restoreSign(data);
-            activeChecks.remove(uuid);
             Component msg = plugin.getMessageManager().get("lang-check-timeout",
                     Map.of("player", target.getName()));
             plugin.getMessageManager().broadcastAlerts(msg);
             notifyInitiator(data, msg);
-        }, plugin.getConfigManager().getLangTimeoutTicks());
+        }, plugin.getConfigManager().getLangTimeoutTicks()));
+        FoliaScheduler.runAtEntityLater(plugin, target, () -> {
+            if (activeChecks.get(uuid) != data || data.getSignLease() != lease || !target.isOnline()) return;
+            if (!SignUtil.sendSignSnapshot(target, signLoc, sign, plugin)) {
+                if (data.getTimeoutTask() != null) data.getTimeoutTask().cancel();
+                restoreSign(data);
+                activeChecks.remove(uuid, data);
+                return;
+            }
+            FoliaScheduler.runAtEntityLater(plugin, target, () -> {
+                if (activeChecks.get(uuid) != data || data.getSignLease() != lease || !target.isOnline()) return;
+                data.setAcceptingResponse(true);
+                SignUtil.sendOpenSignPacket(target, signLoc, plugin);
+                target.sendBlockChange(signLoc, Material.AIR.createBlockData());
+            }, 1L);
+        }, 1L);
+    }
 
-        data.setTimeoutTask(timeout);
+
+    /** Accepts only the current editor's block while its first response is pending. */
+    public boolean isExpectedSign(UUID uuid, Location location) {
+        LangCheckData data = activeChecks.get(uuid);
+        return data != null && data.isAcceptingResponse() && SignUtil.isSameBlock(data.getSignLocation(), location);
     }
 
     public void handleResponse(Player target, String[] lines) {
         UUID uuid = target.getUniqueId();
-        LangCheckData data = activeChecks.remove(uuid);
-        if (data == null) return;
+        LangCheckData data = activeChecks.get(uuid);
+        if (data == null || !data.isAcceptingResponse()) return;
 
+        data.setAcceptingResponse(false);
         if (data.getTimeoutTask() != null) data.getTimeoutTask().cancel();
+        String[] reply = lines == null ? null : lines.clone();
+        if (activeChecks.remove(uuid, data)) processResponse(target, data, reply);
+    }
+
+    private void processResponse(Player target, LangCheckData data, String[] lines) {
         restoreSign(data);
 
-        String response = lines.length > 0 ? lines[0].strip() : "";
+        String[] decoded = data.getChallenge() == null ? lines : data.getChallenge().unwrap(lines);
+        if (decoded == null || decoded.length != 4) {
+            plugin.getLogger().info("[CheckHacks] Ignored edited or stale language reply from " + target.getName());
+            return;
+        }
+        for (int row = 0; data.getChallenge() != null && row < 4; row++) {
+            String type = data.getLayout().rows().get(row);
+            if ((type.equals("blank") && !decoded[row].isEmpty())
+                    || (type.startsWith("text:") && !decoded[row].equals(type.substring(5)))) return;
+        }
+        String response = decoded[data.getLayout().rows().indexOf("language")].strip();
+        recordResponse(target, data.getInitiatorUUID(), data.getLanguages(), response);
+    }
+
+    /**
+     * Shares language reporting/persistence between standalone probes and the
+     * optional language row in a hack scan. Callers validate the sign envelope
+     * first; this method owns no temporary block or active-check registration.
+     */
+    public void recordResponse(Player target, UUID initiator, Map<String, String> languages, String response) {
+        LangCheckData data = new LangCheckData(target.getUniqueId(), initiator, languages);
         plugin.getLogger().info("[CheckHacks] LangCheck response from " + target.getName() + ": '" + response + "'");
 
         if (response.isEmpty() || response.equals(LANG_FALLBACK)) {
@@ -178,16 +201,30 @@ public class LangCheckManager {
     }
 
     private void restoreSign(LangCheckData data) {
-        Location loc = data.getSignLocation();
-        if (loc == null) return;
-        FoliaScheduler.runAtLocation(plugin, loc, () -> {
-            try { if (data.getOriginalState() != null) data.getOriginalState().update(true, false); }
-            catch (Exception e) { plugin.getLogger().warning("[CheckHacks] LangRestore: " + e.getMessage()); }
-            if (data.isBarrierPlaced() && data.getBarrierLocation() != null) {
-                try { data.getBarrierLocation().getBlock().setType(Material.AIR, false); }
-                catch (Exception e) { plugin.getLogger().warning("[CheckHacks] LangBarrier: " + e.getMessage()); }
+        // Invalidate queued entity callbacks before restoring on the block's
+        // region, which may differ after the player moves or disconnects.
+        data.setAcceptingResponse(false);
+        SignPlacement.Lease lease = data.getSignLease();
+        data.setSignLease(null);
+        if (lease == null) return;
+        Runnable restore = lease::restore;
+        if ((!FoliaScheduler.isFolia() && Bukkit.isPrimaryThread())
+                || (FoliaScheduler.isFolia() && Bukkit.getServer().isOwnedByCurrentRegion(lease.location()))) restore.run();
+        else {
+            try { FoliaScheduler.runAtLocation(plugin, lease.location(), restore); }
+            catch (RuntimeException ex) {
+                plugin.getLogger().severe("Cannot restore temporary language sign at " + lease.location()
+                        + ": " + ex.getMessage());
             }
-        });
+        }
+    }
+
+    /** Aborts the pending probe without broadcasting a timeout or language result. */
+    public void cancelCheck(UUID uuid) {
+        LangCheckData data = activeChecks.remove(uuid);
+        if (data == null) return;
+        if (data.getTimeoutTask() != null) data.getTimeoutTask().cancel();
+        restoreSign(data);
     }
 
     public void cleanup() {

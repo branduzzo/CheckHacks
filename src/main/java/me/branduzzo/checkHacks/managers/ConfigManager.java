@@ -5,6 +5,8 @@ import me.branduzzo.checkHacks.CommandRule;
 import me.branduzzo.checkHacks.DetectionMode;
 import me.branduzzo.checkHacks.HackDefinition;
 import me.branduzzo.checkHacks.HackResult;
+import me.branduzzo.checkHacks.utils.SignLayout;
+import me.branduzzo.checkHacks.utils.SignPlacementSettings;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -32,6 +34,9 @@ public class ConfigManager {
     private String protectedCommand;
     private boolean commandIfCleanEnabled;
     private String cleanCommand;
+    private SignPlacementSettings signPlacementSettings;
+    private SignLayout hackSignLayout;
+    private SignLayout langSignLayout;
 
     public ConfigManager(CheckHacksPlugin plugin) {
         this.plugin = plugin;
@@ -106,8 +111,18 @@ public class ConfigManager {
         if (section != null) {
             for (String name : section.getKeys(false)) {
                 String mod = section.getString(name + ".mod", "");
-                String cmd = section.getString(name + ".command", "");
-                if (mod == null || mod.isBlank() || cmd == null || cmd.isBlank()) continue;
+                if (mod == null || mod.isBlank()) continue;
+                List<String> commands;
+                // A present legacy key wins, even when blank: a disabled old rule
+                // must not start executing a new list merely because of an upgrade.
+                if (section.contains(name + ".command")) {
+                    String command = section.getString(name + ".command", "");
+                    commands = command == null || command.isBlank() ? List.of() : List.of(command);
+                } else {
+                    commands = section.getStringList(name + ".commands").stream()
+                            .filter(command -> !command.isBlank()).toList();
+                }
+                if (commands.isEmpty()) continue;
                 HackResult result;
                 try {
                     result = HackResult.valueOf(
@@ -116,7 +131,7 @@ public class ConfigManager {
                 } catch (IllegalArgumentException e) {
                     result = HackResult.DETECTED;
                 }
-                commandRules.put(name, new CommandRule(name, mod.trim(), result, cmd));
+                commandRules.put(name, new CommandRule(name, mod.trim(), result, commands));
             }
         }
         rulesByHack.clear();
@@ -137,6 +152,11 @@ public class ConfigManager {
     }
 
     private void cacheSettings() {
+        // Missing opt-in sections retain legacy behavior. Parsing does not save
+        // defaults into user files, so removing an override also works on reload.
+        signPlacementSettings = SignPlacementSettings.from(masterConfig.getConfigurationSection("sign-placement"), plugin.getLogger()::warning);
+        hackSignLayout = SignLayout.from(masterConfig.getConfigurationSection("sign-layout"), "hack-check", true, plugin.getLogger()::warning);
+        langSignLayout = SignLayout.from(masterConfig.getConfigurationSection("sign-layout"), "language-check", false, plugin.getLogger()::warning);
         prefix                 = masterConfig.getString("prefix", "<yellow>[CheckHacks] <gray>");
         timeoutTicks           = hacksConfig.getLong("timeout-ticks", 200);
         betweenSignTicks       = hacksConfig.getLong("between-sign-ticks", 5);
@@ -206,6 +226,12 @@ public class ConfigManager {
 
     public boolean isJoinCheckEnabled()  { return hacksConfig.getBoolean("auto-check-on-join.enabled", false); }
     public boolean isOnlyFirstJoin()     { return hacksConfig.getBoolean("auto-check-on-join.only-first-join", false); }
+    public long getJoinCheckDelayTicks() { return Math.max(0L, hacksConfig.getLong("auto-check-on-join.delay-ticks", 60L)); }
+    public boolean isJoinCheckWaitForWorldReady() { return hacksConfig.getBoolean("auto-check-on-join.wait-for-world-ready", false); }
+    public boolean isSignResponseValidationEnabled() { return masterConfig.getBoolean("sign-response-validation.enabled", false); }
+    public SignPlacementSettings getSignPlacementSettings() { return signPlacementSettings; }
+    public SignLayout getHackSignLayout() { return hackSignLayout; }
+    public SignLayout getLangSignLayout() { return langSignLayout; }
 
     public long getTimeoutTicks()     { return timeoutTicks; }
     public long getBetweenSignTicks() { return betweenSignTicks; }
@@ -221,6 +247,8 @@ public class ConfigManager {
 
     public boolean isLangJoinCheckEnabled() { return langConfig.getBoolean("auto-check-on-join.enabled", false); }
     public boolean isLangOnlyFirstJoin()    { return langConfig.getBoolean("auto-check-on-join.only-first-join", false); }
+    public long getLangJoinCheckDelayTicks() { return Math.max(0L, langConfig.getLong("auto-check-on-join.delay-ticks", 80L)); }
+    public boolean isLangJoinCheckWaitForWorldReady() { return langConfig.getBoolean("auto-check-on-join.wait-for-world-ready", false); }
     public boolean isLangDiscordEnabled()   { return langConfig.getBoolean("discord.enabled", false); }
     public String  getLangWebhookUrl()      { return langConfig.getString("discord.webhook-url", ""); }
     public int     getLangEmbedColor()      { return langConfig.getInt("discord.embed-color", 5763719); }
