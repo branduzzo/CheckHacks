@@ -45,6 +45,7 @@ public class LangCheckManager {
 
         LangCheckData data = new LangCheckData(uuid,
                 initiator != null ? initiator.getUniqueId() : null, languages);
+        data.setLayout(plugin.getConfigManager().getLangSignLayout());
         activeChecks.put(uuid, data);
 
         if (initiator != null)
@@ -63,7 +64,14 @@ public class LangCheckManager {
         Location signLoc = lease.location();
         Sign sign = lease.sign();
         data.setSignLease(lease);
-        sign.getSide(Side.FRONT).line(0, Component.translatable(LANG_KEY, LANG_FALLBACK));
+        for (int row = 0; row < 4; row++) {
+            String type = data.getLayout().rows().get(row);
+            Component content;
+            if (type.equals("language")) content = Component.translatable(LANG_KEY, LANG_FALLBACK);
+            else if (type.equals("control")) content = Component.keybind(LANG_KEY);
+            else content = Component.text(type.startsWith("text:") ? type.substring(5) : "");
+            sign.getSide(Side.FRONT).line(row, content);
+        }
         sign.update(true, false);
         SignUtil.setAllowedEditor(signLoc, uuid, plugin);
         data.setTimeoutTask(FoliaScheduler.runAtEntityLater(plugin, target, () -> {
@@ -113,13 +121,14 @@ public class LangCheckManager {
 
         String[] decoded = lines;
         if (decoded == null || decoded.length != 4) return;
-        String response = decoded[0].strip();
+        String response = decoded[data.getLayout().rows().indexOf("language")].strip();
         recordResponse(target, data.getInitiatorUUID(), data.getLanguages(), response);
     }
 
     /**
-     * Reports and persists a completed language probe after its sign is restored.
-     * This method owns no temporary block or active-check registration.
+     * Shares language reporting/persistence between standalone probes and the
+     * optional language row in a hack scan. This method owns no temporary block
+     * or active-check registration.
      */
     public void recordResponse(Player target, UUID initiator, Map<String, String> languages, String response) {
         LangCheckData data = new LangCheckData(target.getUniqueId(), initiator, languages);

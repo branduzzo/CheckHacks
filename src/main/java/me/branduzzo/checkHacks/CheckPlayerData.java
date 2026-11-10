@@ -1,6 +1,7 @@
 package me.branduzzo.checkHacks;
 
 import me.branduzzo.checkHacks.utils.WrappedTask;
+import me.branduzzo.checkHacks.utils.SignLayout;
 import me.branduzzo.checkHacks.utils.SignPlacement;
 import org.bukkit.Location;
 
@@ -26,7 +27,9 @@ public class CheckPlayerData {
     private long scanId = -1;
 
     private SignPlacement.Lease signLease;
+    private SignLayout layout = SignLayout.HACK_DEFAULT;
     private boolean acceptingResponse;
+    private boolean languageRecorded;
     private WrappedTask signTimeoutTask;
 
     public CheckPlayerData(UUID targetUUID, UUID initiatorUUID,
@@ -65,8 +68,12 @@ public class CheckPlayerData {
     public Location getSignLocation() { return signLease == null ? null : signLease.location(); }
     public SignPlacement.Lease getSignLease() { return signLease; }
     public void setSignLease(SignPlacement.Lease lease) { signLease = lease; }
+    public SignLayout getLayout() { return layout; }
+    public void setLayout(SignLayout layout) { this.layout = layout; }
     public boolean isAcceptingResponse() { return acceptingResponse; }
     public void setAcceptingResponse(boolean accepting) { acceptingResponse = accepting; }
+    public boolean isLanguageRecorded() { return languageRecorded; }
+    public void setLanguageRecorded(boolean recorded) { languageRecorded = recorded; }
     public WrappedTask getSignTimeoutTask()       { return signTimeoutTask; }
     public void setSignTimeoutTask(WrappedTask t) { this.signTimeoutTask = t; }
 }

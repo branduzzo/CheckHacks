@@ -4,6 +4,7 @@ import me.branduzzo.checkHacks.*;
 import me.branduzzo.checkHacks.utils.FoliaScheduler;
 import me.branduzzo.checkHacks.utils.SignUtil;
 import me.branduzzo.checkHacks.utils.WebhookUtil;
+import me.branduzzo.checkHacks.utils.SignLayout;
 import me.branduzzo.checkHacks.utils.SignPlacement;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -20,7 +21,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CheckManager {
 
     private static final String CTRL_KEYBIND  = "key.forward";
-    private static final int LINES_PER_SIGN = 3;
     private static final MiniMessage MM = MiniMessage.miniMessage();
     private static final List<String> DEFAULT_BEDROCK_PREFIXES = List.of(".", "*");
 
@@ -65,12 +65,14 @@ public class CheckManager {
 
         if (autoCheck) lastAutoCheck.put(uuid, System.currentTimeMillis());
 
-        List<List<HackDefinition>> batches = buildBatches(hacks, LINES_PER_SIGN);
+        SignLayout layout = plugin.getConfigManager().getHackSignLayout();
+        List<List<HackDefinition>> batches = buildBatches(hacks, layout.modSlots());
         if (batches.isEmpty()) return;
 
         CheckPlayerData data = new CheckPlayerData(uuid,
                 initiator != null ? initiator.getUniqueId() : null,
                 batches, autoCheck, reason);
+        data.setLayout(layout);
         activeChecks.put(uuid, data);
 
         if (initiator != null)
@@ -102,9 +104,16 @@ public class CheckManager {
         Sign sign = lease.sign();
         data.setSignLease(lease);
         var front = sign.getSide(Side.FRONT);
-        for (int row = 0; row < LINES_PER_SIGN; row++)
-            front.line(row, row < batch.size() ? buildComponent(batch.get(row)) : Component.empty());
-        front.line(3, Component.keybind(CTRL_KEYBIND));
+        int modIndex = 0;
+        for (int row = 0; row < 4; row++) {
+            String type = data.getLayout().rows().get(row);
+            Component content;
+            if (type.equals("mod")) content = modIndex < batch.size() ? buildComponent(batch.get(modIndex++)) : Component.empty();
+            else if (type.equals("control")) content = Component.keybind(CTRL_KEYBIND);
+            else if (type.equals("language")) content = Component.translatable(CTRL_KEYBIND, LangCheckManager.LANG_FALLBACK);
+            else content = Component.text(type.startsWith("text:") ? type.substring(5) : "");
+            front.line(row, content);
+        }
         sign.update(true, false);
         SignUtil.setAllowedEditor(signLoc, uuid, plugin);
         data.setSignTimeoutTask(FoliaScheduler.runAtEntityLater(plugin, target, () -> {
@@ -159,21 +168,45 @@ public class CheckManager {
 
     private void processBatchResponse(Player target, CheckPlayerData data, String[] lines) {
         UUID uuid = target.getUniqueId();
+        String[] decoded = lines;
+        boolean valid = decoded != null && decoded.length == 4;
         restoreCurrentSign(data);
+
         List<HackDefinition> batch = data.getCurrentBatchHacks();
-        String ctrlResp = lines != null && lines.length > 3 ? lines[3].strip() : "";
-        boolean exploitPreventer = ctrlResp.equalsIgnoreCase(CTRL_KEYBIND);
+        boolean exploitPreventer = false;
+        if (valid) {
+            for (int row = 0; row < 4; row++) {
+                String type = data.getLayout().rows().get(row);
+                if ((type.equals("control") || type.equals("language")) && decoded[row].strip().equalsIgnoreCase(CTRL_KEYBIND))
+                    exploitPreventer = true;
+            }
+        }
+
         StringBuilder log = new StringBuilder("[CheckHacks] Batch ").append(data.getCurrentBatch())
                 .append(" from ").append(target.getName());
         if (exploitPreventer) log.append(" [ExploitPreventer DETECTED]");
-        for (int index = 0; index < batch.size(); index++) {
-            HackDefinition hack = batch.get(index);
-            String response = lines != null && index < lines.length ? lines[index].strip() : "";
-            HackResult result = evaluateResponse(hack, response, exploitPreventer);
+        if (!valid) log.append(" [edited or stale reply: SKIPPED]");
+        int index = 0;
+        for (int row = 0; row < 4 && index < batch.size(); row++) {
+            if (!data.getLayout().rows().get(row).equals("mod")) continue;
+            HackDefinition hack = batch.get(index++);
+            String resp = valid ? decoded[row].strip() : "";
+            HackResult result = valid ? evaluateResponse(hack, resp, exploitPreventer) : HackResult.SKIPPED;
             data.getResults().put(hack.getId(), result);
-            log.append(' ').append(hack.getDisplayName()).append('=').append(result).append(" ('").append(response).append("')");
+            log.append(' ').append(hack.getDisplayName()).append('=').append(result).append(" ('").append(resp).append("')");
         }
         plugin.getLogger().info(log.toString());
+        if (valid && !data.isLanguageRecorded()) {
+            for (int row = 0; row < 4; row++) {
+                if (data.getLayout().rows().get(row).equals("language")) {
+                    plugin.getLangCheckManager().recordResponse(target, data.getInitiatorUUID(),
+                            plugin.getConfigManager().getLanguages(), decoded[row]);
+                    data.setLanguageRecorded(true);
+                    break;
+                }
+            }
+        }
+
         data.incrementBatch();
         scheduleNextOrFinish(uuid);
     }
@@ -309,11 +342,13 @@ public class CheckManager {
     }
 
     private boolean startConfirmScan(Player target, CheckPlayerData original, List<HackDefinition> flagged) {
-        List<List<HackDefinition>> batches = buildBatches(flagged, LINES_PER_SIGN);
+        List<List<HackDefinition>> batches = buildBatches(flagged, original.getLayout().modSlots());
         if (batches.isEmpty()) return false;
 
         CheckPlayerData data = new CheckPlayerData(target.getUniqueId(),
                 original.getInitiatorUUID(), batches, false, original.getReason(), true);
+        data.setLayout(original.getLayout());
+        data.setLanguageRecorded(original.isLanguageRecorded());
         activeChecks.put(target.getUniqueId(), data);
 
         Component msg = plugin.getMessageManager().get("doublecheck", Map.of("player", target.getName()));

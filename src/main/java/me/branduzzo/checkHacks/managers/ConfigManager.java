@@ -5,6 +5,7 @@ import me.branduzzo.checkHacks.CommandRule;
 import me.branduzzo.checkHacks.DetectionMode;
 import me.branduzzo.checkHacks.HackDefinition;
 import me.branduzzo.checkHacks.HackResult;
+import me.branduzzo.checkHacks.utils.SignLayout;
 import me.branduzzo.checkHacks.utils.SignPlacementSettings;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -34,6 +35,8 @@ public class ConfigManager {
     private boolean commandIfCleanEnabled;
     private String cleanCommand;
     private SignPlacementSettings signPlacementSettings;
+    private SignLayout hackSignLayout;
+    private SignLayout langSignLayout;
 
     public ConfigManager(CheckHacksPlugin plugin) {
         this.plugin = plugin;
@@ -152,6 +155,8 @@ public class ConfigManager {
         // Missing opt-in sections retain legacy behavior. Parsing does not save
         // defaults into user files, so removing an override also works on reload.
         signPlacementSettings = SignPlacementSettings.from(masterConfig.getConfigurationSection("sign-placement"), plugin.getLogger()::warning);
+        hackSignLayout = SignLayout.from(masterConfig.getConfigurationSection("sign-layout"), "hack-check", true, plugin.getLogger()::warning);
+        langSignLayout = SignLayout.from(masterConfig.getConfigurationSection("sign-layout"), "language-check", false, plugin.getLogger()::warning);
         prefix                 = masterConfig.getString("prefix", "<yellow>[CheckHacks] <gray>");
         timeoutTicks           = hacksConfig.getLong("timeout-ticks", 200);
         betweenSignTicks       = hacksConfig.getLong("between-sign-ticks", 5);
@@ -222,6 +227,8 @@ public class ConfigManager {
     public boolean isJoinCheckEnabled()  { return hacksConfig.getBoolean("auto-check-on-join.enabled", false); }
     public boolean isOnlyFirstJoin()     { return hacksConfig.getBoolean("auto-check-on-join.only-first-join", false); }
     public SignPlacementSettings getSignPlacementSettings() { return signPlacementSettings; }
+    public SignLayout getHackSignLayout() { return hackSignLayout; }
+    public SignLayout getLangSignLayout() { return langSignLayout; }
 
     public long getTimeoutTicks()     { return timeoutTicks; }
     public long getBetweenSignTicks() { return betweenSignTicks; }

@@ -118,3 +118,24 @@ sign-placement:
       min: {x: -2, y: 64, z: -2}
       max: {x: 2, y: 66, z: 2}
       target: {x: 0, y: 62, z: 0}
+
+# Exactly four physical rows, top to bottom. Repeated 'mod' entries consume the
+# next mods in the requested list; fewer mod rows means more signs per scan.
+# Row types: mod, control (keybind probe), language (language translation probe),
+# blank, or 'text:your literal text'. Text is plain, without formatting/placeholders.
+# Hack layouts require at least one mod. control and language rows are optional;
+# omitting both removes the reference used to identify some client protections.
+# Language layouts require at least one language row; mod rows are not allowed.
+# Invalid layouts log a warning and use the defaults below.
+sign-layout:
+  hack-check: [mod, mod, mod, control]
+  language-check: [language, blank, blank, blank]
+  # Example: two mods, a label, and the language probe on every sign.
+  # hack-check: [mod, mod, 'text:hack check', language]
+  # Three mods and a custom static character (no control probe):
+  # hack-check: [mod, mod, mod, 'text:#']
+  # Resource-pack glyphs can be literal UTF-8 or YAML double-quoted escapes:
+  # hack-check: [mod, mod, mod, "text:\uE800\uF801\uE800\uF801\uE800"]
+  # The client must already have the pack loaded and the glyphs in its default
+  # font. Rendering size/clipping depends on the client and the pack.
+  # The first language response in a hack scan is reported/saved as a lang check.
