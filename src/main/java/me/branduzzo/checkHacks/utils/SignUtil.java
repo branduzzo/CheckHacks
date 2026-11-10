@@ -2,6 +2,7 @@ package me.branduzzo.checkHacks.utils;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.block.Sign;
 import org.bukkit.plugin.Plugin;
 
 import java.lang.reflect.Field;
@@ -12,6 +13,15 @@ import java.util.List;
 import java.util.UUID;
 
 public class SignUtil {
+
+    /** A block has no player yaw/pitch; Location.equals compares those as well. */
+    public static boolean isSameBlock(Location expected, Location actual) {
+        return expected != null && actual != null && expected.getWorld() != null
+                && expected.getWorld().equals(actual.getWorld())
+                && expected.getBlockX() == actual.getBlockX()
+                && expected.getBlockY() == actual.getBlockY()
+                && expected.getBlockZ() == actual.getBlockZ();
+    }
 
     public static void setAllowedEditor(Location loc, UUID playerUUID, Plugin plugin) {
         try {
@@ -43,27 +53,15 @@ public class SignUtil {
         }
     }
 
-    public static void sendBlockEntityPacket(Player player, Location loc, Plugin plugin) {
+    /** Sends the captured sign state without reflection or reading its world on the entity thread. */
+    public static boolean sendSignSnapshot(Player player, Location loc, Sign sign, Plugin plugin) {
         try {
-            Object world = loc.getWorld().getClass().getMethod("getHandle").invoke(loc.getWorld());
-            Class<?> bpClass = Class.forName("net.minecraft.core.BlockPos");
-            Object bp = bpClass.getConstructor(int.class, int.class, int.class)
-                    .newInstance(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
-            Method gbe = Arrays.stream(world.getClass().getMethods())
-                    .filter(m -> m.getName().equals("getBlockEntity") && m.getParameterCount() == 1)
-                    .findFirst().orElse(null);
-            if (gbe == null) return;
-            Object be = gbe.invoke(world, bp);
-            if (be == null) return;
-            Class<?> pktClass = Class.forName(
-                    "net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket");
-            Method create = Arrays.stream(pktClass.getMethods())
-                    .filter(m -> m.getName().equals("create") && m.getParameterCount() == 1)
-                    .findFirst().orElse(null);
-            if (create == null) return;
-            sendPacket(player, create.invoke(null, be), plugin);
-        } catch (Exception e) {
-            plugin.getLogger().warning("[CheckHacks] sendBlockEntityPacket: " + e.getMessage());
+            player.sendBlockUpdate(loc, sign);
+            return true;
+        } catch (RuntimeException e) {
+            plugin.getLogger().warning("[CheckHacks] Cannot send sign data to " + player.getName()
+                    + " at " + loc + ": " + e);
+            return false;
         }
     }
 
@@ -82,6 +80,7 @@ public class SignUtil {
     }
 
     public static void sendPacket(Player player, Object packet, Plugin plugin) {
+        if (packet == null) return;
         try {
             Object handle = player.getClass().getMethod("getHandle").invoke(player);
             Object conn = null;

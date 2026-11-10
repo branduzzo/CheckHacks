@@ -1,14 +1,18 @@
 package me.branduzzo.checkHacks;
 
 import me.branduzzo.checkHacks.utils.WrappedTask;
+import me.branduzzo.checkHacks.utils.SignPlacement;
 import org.bukkit.Location;
-import org.bukkit.block.BlockState;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Mutable state for one hack scan and its current temporary sign.
+ * Close acceptingResponse on the first reply and detach the lease before cleanup.
+ */
 public class CheckPlayerData {
 
     private final UUID targetUUID;
@@ -21,10 +25,8 @@ public class CheckPlayerData {
     private final String reason;
     private long scanId = -1;
 
-    private Location signLocation;
-    private BlockState originalState;
-    private boolean barrierPlaced;
-    private Location barrierLocation;
+    private SignPlacement.Lease signLease;
+    private boolean acceptingResponse;
     private WrappedTask signTimeoutTask;
 
     public CheckPlayerData(UUID targetUUID, UUID initiatorUUID,
@@ -60,14 +62,11 @@ public class CheckPlayerData {
     public long getScanId()                            { return scanId; }
     public void setScanId(long id)                     { this.scanId = id; }
 
-    public Location getSignLocation()            { return signLocation; }
-    public void setSignLocation(Location l)      { this.signLocation = l; }
-    public BlockState getOriginalState()         { return originalState; }
-    public void setOriginalState(BlockState s)   { this.originalState = s; }
-    public boolean isBarrierPlaced()             { return barrierPlaced; }
-    public void setBarrierPlaced(boolean b)      { this.barrierPlaced = b; }
-    public Location getBarrierLocation()         { return barrierLocation; }
-    public void setBarrierLocation(Location l)   { this.barrierLocation = l; }
+    public Location getSignLocation() { return signLease == null ? null : signLease.location(); }
+    public SignPlacement.Lease getSignLease() { return signLease; }
+    public void setSignLease(SignPlacement.Lease lease) { signLease = lease; }
+    public boolean isAcceptingResponse() { return acceptingResponse; }
+    public void setAcceptingResponse(boolean accepting) { acceptingResponse = accepting; }
     public WrappedTask getSignTimeoutTask()       { return signTimeoutTask; }
     public void setSignTimeoutTask(WrappedTask t) { this.signTimeoutTask = t; }
 }

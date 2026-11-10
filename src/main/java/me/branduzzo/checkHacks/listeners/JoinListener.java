@@ -83,7 +83,10 @@ public class JoinListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        plugin.getClientDataManager().remove(event.getPlayer().getUniqueId());
+        UUID uuid = event.getPlayer().getUniqueId();
+        plugin.getCheckManager().cancelCheck(uuid);
+        plugin.getLangCheckManager().cancelCheck(uuid);
+        plugin.getClientDataManager().remove(uuid);
     }
 
     private ClientType detectClientType(Set<String> channels) {

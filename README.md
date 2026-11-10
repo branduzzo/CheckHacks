@@ -6,7 +6,7 @@
 
 It uses the **Sign Translation Vulnerability** (MC-265322), the same trick DonutSMP uses to catch cheaters. Signs pop up for just a split second, too fast to actually read.
 
-[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg?style=for-the-badge)](https://github.com/Branduzzo/CheckHacks/releases)
+[![Version](https://img.shields.io/badge/version-1.4.1-blue.svg?style=for-the-badge)](https://github.com/Branduzzo/CheckHacks/releases)
 [![Platform](https://img.shields.io/badge/platform-Paper%20%7C%20Spigot-orange.svg?style=for-the-badge)](https://papermc.io/)
 [![Minecraft](https://img.shields.io/badge/minecraft-1.21+-green.svg?style=for-the-badge)](https://www.minecraft.net/)
 [![Java](https://img.shields.io/badge/java-21+-red.svg?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
@@ -26,7 +26,7 @@ It uses the **Sign Translation Vulnerability** (MC-265322), the same trick Donut
 
 ---
 
-## 🆕 What is new in 1.4.0
+## 🆕 What is new in 1.4.1
 
 This is a pretty big update, so here is a quick rundown of what has changed:
 
@@ -88,7 +88,7 @@ Every mod registers its own translation keys, so a vanilla client and a modded c
 ### 🔄 Auto Updater
 
 - On startup we check `https://github.com/branduzzo/CheckHacks/releases/latest` in the background. If you are offline we just skip it, nothing gets spammed in console
-- If we find a newer `vX.Y.Z`, everyone with `checkhacks.update` will see a message when they join: `CheckHacks 1.4.0 is available! Click here to download.` It is already translated in every `messages/*.yml`
+- If we find a newer `vX.Y.Z`, everyone with `checkhacks.update` will see a message when they join: `CheckHacks 1.4.1 is available! Click here to download.` It is already translated in every `messages/*.yml`
 - If they click it, it runs `/checkhacksupdate`, downloads `CheckHacks-X.Y.Z.jar` into `plugins/`, backs up or removes the old jar and says `Download completed! Restart the server`
 - You need `checkhacks.update` to see the message and to run the command. It is already included in `checkhacks.*` so server operators have it by default
 

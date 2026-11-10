@@ -5,6 +5,7 @@ import me.branduzzo.checkHacks.CommandRule;
 import me.branduzzo.checkHacks.DetectionMode;
 import me.branduzzo.checkHacks.HackDefinition;
 import me.branduzzo.checkHacks.HackResult;
+import me.branduzzo.checkHacks.utils.SignPlacementSettings;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -32,6 +33,7 @@ public class ConfigManager {
     private String protectedCommand;
     private boolean commandIfCleanEnabled;
     private String cleanCommand;
+    private SignPlacementSettings signPlacementSettings;
 
     public ConfigManager(CheckHacksPlugin plugin) {
         this.plugin = plugin;
@@ -147,6 +149,9 @@ public class ConfigManager {
     }
 
     private void cacheSettings() {
+        // Missing opt-in sections retain legacy behavior. Parsing does not save
+        // defaults into user files, so removing an override also works on reload.
+        signPlacementSettings = SignPlacementSettings.from(masterConfig.getConfigurationSection("sign-placement"), plugin.getLogger()::warning);
         prefix                 = masterConfig.getString("prefix", "<yellow>[CheckHacks] <gray>");
         timeoutTicks           = hacksConfig.getLong("timeout-ticks", 200);
         betweenSignTicks       = hacksConfig.getLong("between-sign-ticks", 5);
@@ -216,6 +221,7 @@ public class ConfigManager {
 
     public boolean isJoinCheckEnabled()  { return hacksConfig.getBoolean("auto-check-on-join.enabled", false); }
     public boolean isOnlyFirstJoin()     { return hacksConfig.getBoolean("auto-check-on-join.only-first-join", false); }
+    public SignPlacementSettings getSignPlacementSettings() { return signPlacementSettings; }
 
     public long getTimeoutTicks()     { return timeoutTicks; }
     public long getBetweenSignTicks() { return betweenSignTicks; }

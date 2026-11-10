@@ -4,14 +4,12 @@ import me.branduzzo.checkHacks.*;
 import me.branduzzo.checkHacks.utils.FoliaScheduler;
 import me.branduzzo.checkHacks.utils.SignUtil;
 import me.branduzzo.checkHacks.utils.WebhookUtil;
-import me.branduzzo.checkHacks.utils.WrappedTask;
+import me.branduzzo.checkHacks.utils.SignPlacement;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
 import org.bukkit.block.sign.Side;
 import org.bukkit.entity.Player;
@@ -22,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CheckManager {
 
     private static final String CTRL_KEYBIND  = "key.forward";
-    private static final int    LINES_PER_SIGN = 3;
+    private static final int LINES_PER_SIGN = 3;
     private static final MiniMessage MM = MiniMessage.miniMessage();
     private static final List<String> DEFAULT_BEDROCK_PREFIXES = List.of(".", "*");
 
@@ -50,7 +48,7 @@ public class CheckManager {
                            List<HackDefinition> hacks, boolean autoCheck, String reason) {
         UUID uuid = target.getUniqueId();
 
-        if (activeChecks.containsKey(uuid)) {
+        if (activeChecks.containsKey(uuid) || plugin.getLangCheckManager().isChecking(uuid)) {
             if (initiator != null)
                 initiator.sendMessage(plugin.getMessageManager().get("already-checking",
                         Map.of("player", target.getName())));
@@ -67,7 +65,7 @@ public class CheckManager {
 
         if (autoCheck) lastAutoCheck.put(uuid, System.currentTimeMillis());
 
-        List<List<HackDefinition>> batches = buildBatches(hacks);
+        List<List<HackDefinition>> batches = buildBatches(hacks, LINES_PER_SIGN);
         if (batches.isEmpty()) return;
 
         CheckPlayerData data = new CheckPlayerData(uuid,
@@ -82,74 +80,57 @@ public class CheckManager {
         FoliaScheduler.runAtEntity(plugin, target, () -> processBatch(target, data));
     }
 
-    private List<List<HackDefinition>> buildBatches(List<HackDefinition> hacks) {
+    private List<List<HackDefinition>> buildBatches(List<HackDefinition> hacks, int slots) {
         List<List<HackDefinition>> batches = new ArrayList<>();
-        for (int i = 0; i < hacks.size(); i += LINES_PER_SIGN)
-            batches.add(new ArrayList<>(hacks.subList(i, Math.min(i + LINES_PER_SIGN, hacks.size()))));
+        for (int i = 0; i < hacks.size(); i += slots)
+            batches.add(new ArrayList<>(hacks.subList(i, Math.min(i + slots, hacks.size()))));
         return batches;
     }
 
     private void processBatch(Player target, CheckPlayerData data) {
         UUID uuid = target.getUniqueId();
+        // A delayed callback must still own both this scan and its current lease.
+        if (activeChecks.get(uuid) != data || !target.isOnline()) return;
         List<HackDefinition> batch = data.getCurrentBatchHacks();
-
-        Location signLoc = SignUtil.findAirBlock(target);
-        if (signLoc == null) {
+        SignPlacement.Lease lease = SignPlacement.place(target,
+                plugin.getConfigManager().getSignPlacementSettings(), plugin.getLogger()::warning);
+        if (lease == null) {
             finishCheck(uuid);
             return;
         }
-
-        Block block = signLoc.getBlock();
-        BlockState originalState = block.getState();
-
-        Location belowLoc    = signLoc.clone().subtract(0, 1, 0);
-        Block    belowBlock  = belowLoc.getBlock();
-        boolean  placedBarrier = belowBlock.getType().isAir();
-        if (placedBarrier) belowBlock.setType(Material.BARRIER, false);
-
-        block.setType(Material.OAK_SIGN, false);
-        BlockState freshState = block.getState();
-        if (!(freshState instanceof Sign sign)) {
-            originalState.update(true, false);
-            if (placedBarrier) belowBlock.setType(Material.AIR, false);
-            finishCheck(uuid);
-            return;
-        }
-
+        Location signLoc = lease.location();
+        Sign sign = lease.sign();
+        data.setSignLease(lease);
         var front = sign.getSide(Side.FRONT);
-        for (int i = 0; i < LINES_PER_SIGN; i++)
-            front.line(i, i < batch.size() ? buildComponent(batch.get(i)) : Component.empty());
+        for (int row = 0; row < LINES_PER_SIGN; row++)
+            front.line(row, row < batch.size() ? buildComponent(batch.get(row)) : Component.empty());
         front.line(3, Component.keybind(CTRL_KEYBIND));
         sign.update(true, false);
-
-        data.setSignLocation(signLoc);
-        data.setOriginalState(originalState);
-        data.setBarrierPlaced(placedBarrier);
-        data.setBarrierLocation(belowLoc);
-
         SignUtil.setAllowedEditor(signLoc, uuid, plugin);
-
-        FoliaScheduler.runAtEntity(plugin, target, () -> {
-            if (!activeChecks.containsKey(uuid)) return;
-            SignUtil.sendBlockEntityPacket(target, signLoc, plugin);
+        data.setSignTimeoutTask(FoliaScheduler.runAtEntityLater(plugin, target, () -> {
+            if (activeChecks.get(uuid) != data || data.getSignLease() != lease) return;
+            restoreCurrentSign(data);
+            for (HackDefinition hack : batch) data.getResults().put(hack.getId(), HackResult.PROTECTED);
+            data.incrementBatch();
+            scheduleNextOrFinish(uuid);
+        }, plugin.getConfigManager().getTimeoutTicks()));
+        FoliaScheduler.runAtEntityLater(plugin, target, () -> {
+            if (activeChecks.get(uuid) != data || data.getSignLease() != lease || !target.isOnline()) return;
+            if (!SignUtil.sendSignSnapshot(target, signLoc, sign, plugin)) {
+                if (data.getSignTimeoutTask() != null) data.getSignTimeoutTask().cancel();
+                restoreCurrentSign(data);
+                for (HackDefinition hack : batch) data.getResults().put(hack.getId(), HackResult.SKIPPED);
+                data.incrementBatch();
+                scheduleNextOrFinish(uuid);
+                return;
+            }
             FoliaScheduler.runAtEntityLater(plugin, target, () -> {
-                if (!activeChecks.containsKey(uuid)) return;
+                if (activeChecks.get(uuid) != data || data.getSignLease() != lease || !target.isOnline()) return;
+                data.setAcceptingResponse(true);
                 SignUtil.sendOpenSignPacket(target, signLoc, plugin);
                 target.sendBlockChange(signLoc, Material.AIR.createBlockData());
             }, 1L);
-        });
-
-        WrappedTask timeout = FoliaScheduler.runAtLocationLater(plugin, signLoc, () -> {
-            CheckPlayerData d = activeChecks.get(uuid);
-            if (d == null) return;
-            restoreCurrentSign(d);
-            for (HackDefinition h : batch)
-                d.getResults().put(h.getId(), HackResult.PROTECTED);
-            d.incrementBatch();
-            scheduleNextOrFinish(uuid);
-        }, plugin.getConfigManager().getTimeoutTicks());
-
-        data.setSignTimeoutTask(timeout);
+        }, 1L);
     }
 
     private Component buildComponent(HackDefinition hack) {
@@ -159,31 +140,40 @@ public class CheckManager {
         };
     }
 
+    /** Accepts only the current editor's block while its first response is pending. */
+    public boolean isExpectedSign(UUID uuid, Location location) {
+        CheckPlayerData data = activeChecks.get(uuid);
+        return data != null && data.isAcceptingResponse() && SignUtil.isSameBlock(data.getSignLocation(), location);
+    }
+
     public void handleBatchResponse(Player target, String[] lines) {
         UUID uuid = target.getUniqueId();
         CheckPlayerData data = activeChecks.get(uuid);
-        if (data == null) return;
+        if (data == null || !data.isAcceptingResponse()) return;
 
+        data.setAcceptingResponse(false);
         if (data.getSignTimeoutTask() != null) data.getSignTimeoutTask().cancel();
+        String[] reply = lines == null ? null : lines.clone();
+        if (activeChecks.get(uuid) == data) processBatchResponse(target, data, reply);
+    }
+
+    private void processBatchResponse(Player target, CheckPlayerData data, String[] lines) {
+        UUID uuid = target.getUniqueId();
         restoreCurrentSign(data);
-
         List<HackDefinition> batch = data.getCurrentBatchHacks();
-        String ctrlResp = lines.length > 3 ? lines[3].strip() : "";
-
+        String ctrlResp = lines != null && lines.length > 3 ? lines[3].strip() : "";
         boolean exploitPreventer = ctrlResp.equalsIgnoreCase(CTRL_KEYBIND);
-
         StringBuilder log = new StringBuilder("[CheckHacks] Batch ").append(data.getCurrentBatch())
                 .append(" from ").append(target.getName());
         if (exploitPreventer) log.append(" [ExploitPreventer DETECTED]");
-        for (int i = 0; i < batch.size(); i++) {
-            HackDefinition hack = batch.get(i);
-            String resp = i < lines.length ? lines[i].strip() : "";
-            HackResult result = evaluateResponse(hack, resp, exploitPreventer);
+        for (int index = 0; index < batch.size(); index++) {
+            HackDefinition hack = batch.get(index);
+            String response = lines != null && index < lines.length ? lines[index].strip() : "";
+            HackResult result = evaluateResponse(hack, response, exploitPreventer);
             data.getResults().put(hack.getId(), result);
-            log.append(' ').append(hack.getDisplayName()).append('=').append(result).append(" ('").append(resp).append("')");
+            log.append(' ').append(hack.getDisplayName()).append('=').append(result).append(" ('").append(response).append("')");
         }
         plugin.getLogger().info(log.toString());
-
         data.incrementBatch();
         scheduleNextOrFinish(uuid);
     }
@@ -196,8 +186,9 @@ public class CheckManager {
             long delay = plugin.getConfigManager().getBetweenSignTicks();
             Runnable next = () -> {
                 Player t = Bukkit.getPlayer(uuid);
+                if (activeChecks.get(uuid) != data) return;
                 if (t != null && t.isOnline()) processBatch(t, data);
-                else finishCheck(uuid);
+                else cancelCheck(uuid);
             };
             if (target != null) FoliaScheduler.runAtEntityLater(plugin, target, next, delay);
             else                FoliaScheduler.runGlobalLater(plugin, next, delay);
@@ -318,7 +309,7 @@ public class CheckManager {
     }
 
     private boolean startConfirmScan(Player target, CheckPlayerData original, List<HackDefinition> flagged) {
-        List<List<HackDefinition>> batches = buildBatches(flagged);
+        List<List<HackDefinition>> batches = buildBatches(flagged, LINES_PER_SIGN);
         if (batches.isEmpty()) return false;
 
         CheckPlayerData data = new CheckPlayerData(target.getUniqueId(),
@@ -404,17 +395,30 @@ public class CheckManager {
     }
 
     private void restoreCurrentSign(CheckPlayerData data) {
-        Location loc = data.getSignLocation();
-        if (loc == null) return;
-        FoliaScheduler.runAtLocation(plugin, loc, () -> {
-            try { if (data.getOriginalState() != null) data.getOriginalState().update(true, false); }
-            catch (Exception e) { plugin.getLogger().warning("[CheckHacks] Restore: " + e.getMessage()); }
-            if (data.isBarrierPlaced() && data.getBarrierLocation() != null) {
-                try { data.getBarrierLocation().getBlock().setType(Material.AIR, false); }
-                catch (Exception e) { plugin.getLogger().warning("[CheckHacks] Barrier: " + e.getMessage()); }
+        // Detach first so delayed entity callbacks cannot reuse this lease;
+        // actual block restoration belongs to the sign's current region.
+        data.setAcceptingResponse(false);
+        SignPlacement.Lease lease = data.getSignLease();
+        data.setSignLease(null);
+        if (lease == null) return;
+        Runnable restore = lease::restore;
+        if ((!FoliaScheduler.isFolia() && Bukkit.isPrimaryThread())
+                || (FoliaScheduler.isFolia() && Bukkit.getServer().isOwnedByCurrentRegion(lease.location()))) restore.run();
+        else {
+            try { FoliaScheduler.runAtLocation(plugin, lease.location(), restore); }
+            catch (RuntimeException ex) {
+                plugin.getLogger().severe("Cannot restore temporary sign at " + lease.location()
+                        + ": " + ex.getMessage());
             }
-        });
-        data.setSignLocation(null);
+        }
+    }
+
+    /** Aborts without recording a completed scan or executing result actions. */
+    public void cancelCheck(UUID uuid) {
+        CheckPlayerData data = activeChecks.remove(uuid);
+        if (data == null) return;
+        if (data.getSignTimeoutTask() != null) data.getSignTimeoutTask().cancel();
+        restoreCurrentSign(data);
     }
 
     public void cleanup() {
