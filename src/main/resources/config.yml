@@ -45,7 +45,7 @@ alerts:
 
 # Upgrade compatibility: missing options below retain the original sign
 # placement, contents and timings. Existing configs do not need regeneration;
-# New behavior requires explicitly enabling the relevant options below.
+# custom positioning, block replacement and validation require opting in.
 # Shared by hack scans and language scans. These are REAL temporary blocks;
 # other nearby players can see them. Non-air blocks are left intact unless
 # static-target.replace-occupied-block is explicitly enabled below.
@@ -139,3 +139,14 @@ sign-layout:
   # The client must already have the pack loaded and the glyphs in its default
   # font. Rendering size/clipping depends on the client and the pack.
   # The first language response in a hack scan is reported/saved as a lang check.
+
+sign-response-validation:
+  # Opt-in to preserve the original sign contents and detection rules by default.
+  # Adds random per-sign/per-row delimiters. Missing/edited delimiters or changed
+  # static rows make the batch SKIPPED, not DETECTED/PROTECTED. Empty mod replies
+  # are SKIPPED too. Normal typing/backspace at row boundaries is detected.
+  # This cannot authenticate a hostile client or detect all edits INSIDE the
+  # delimiters. Translation/keybind detection is still only a client-side signal.
+  # Delimiters add 14 characters per row. Paper normally limits replies to 80;
+  # long translated text can be truncated and safely skipped. Keep labels short.
+  enabled: false

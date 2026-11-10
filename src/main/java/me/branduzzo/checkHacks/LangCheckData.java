@@ -2,6 +2,7 @@ package me.branduzzo.checkHacks;
 
 import me.branduzzo.checkHacks.utils.WrappedTask;
 import me.branduzzo.checkHacks.utils.SignLayout;
+import me.branduzzo.checkHacks.utils.SignChallenge;
 import me.branduzzo.checkHacks.utils.SignPlacement;
 import org.bukkit.Location;
 
@@ -9,8 +10,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Mutable state for one language probe and its current temporary sign.
- * Close acceptingResponse on the first reply and detach the lease before cleanup.
+ * State for a single language probe. Keep its layout, challenge and lease paired
+ * until the response is processed.
+ * acceptingResponse closes immediately on receipt to reject duplicate events.
  */
 public class LangCheckData {
 
@@ -20,6 +22,7 @@ public class LangCheckData {
 
     private SignPlacement.Lease signLease;
     private SignLayout layout = SignLayout.LANG_DEFAULT;
+    private SignChallenge challenge;
     private boolean acceptingResponse;
     private WrappedTask timeoutTask;
 
@@ -37,6 +40,8 @@ public class LangCheckData {
     public void setSignLease(SignPlacement.Lease lease) { signLease = lease; }
     public SignLayout getLayout() { return layout; }
     public void setLayout(SignLayout layout) { this.layout = layout; }
+    public SignChallenge getChallenge() { return challenge; }
+    public void setChallenge(SignChallenge challenge) { this.challenge = challenge; }
     public boolean isAcceptingResponse() { return acceptingResponse; }
     public void setAcceptingResponse(boolean accepting) { acceptingResponse = accepting; }
     public WrappedTask getTimeoutTask()         { return timeoutTask; }

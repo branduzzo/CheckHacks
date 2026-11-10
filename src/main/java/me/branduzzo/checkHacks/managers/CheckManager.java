@@ -5,6 +5,7 @@ import me.branduzzo.checkHacks.utils.FoliaScheduler;
 import me.branduzzo.checkHacks.utils.SignUtil;
 import me.branduzzo.checkHacks.utils.WebhookUtil;
 import me.branduzzo.checkHacks.utils.SignLayout;
+import me.branduzzo.checkHacks.utils.SignChallenge;
 import me.branduzzo.checkHacks.utils.SignPlacement;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -103,6 +104,8 @@ public class CheckManager {
         Location signLoc = lease.location();
         Sign sign = lease.sign();
         data.setSignLease(lease);
+        SignChallenge challenge = plugin.getConfigManager().isSignResponseValidationEnabled() ? new SignChallenge() : null;
+        data.setChallenge(challenge);
         var front = sign.getSide(Side.FRONT);
         int modIndex = 0;
         for (int row = 0; row < 4; row++) {
@@ -112,14 +115,16 @@ public class CheckManager {
             else if (type.equals("control")) content = Component.keybind(CTRL_KEYBIND);
             else if (type.equals("language")) content = Component.translatable(CTRL_KEYBIND, LangCheckManager.LANG_FALLBACK);
             else content = Component.text(type.startsWith("text:") ? type.substring(5) : "");
-            front.line(row, content);
+            front.line(row, challenge == null ? content : challenge.wrap(row, content));
         }
         sign.update(true, false);
         SignUtil.setAllowedEditor(signLoc, uuid, plugin);
         data.setSignTimeoutTask(FoliaScheduler.runAtEntityLater(plugin, target, () -> {
             if (activeChecks.get(uuid) != data || data.getSignLease() != lease) return;
+            boolean inRange = data.getChallenge() == null || SignPlacement.canEdit(target, signLoc);
             restoreCurrentSign(data);
-            for (HackDefinition hack : batch) data.getResults().put(hack.getId(), HackResult.PROTECTED);
+            for (HackDefinition hack : batch)
+                data.getResults().put(hack.getId(), inRange ? HackResult.PROTECTED : HackResult.SKIPPED);
             data.incrementBatch();
             scheduleNextOrFinish(uuid);
         }, plugin.getConfigManager().getTimeoutTicks()));
@@ -141,6 +146,7 @@ public class CheckManager {
             }, 1L);
         }, 1L);
     }
+
 
     private Component buildComponent(HackDefinition hack) {
         return switch (hack.getMode()) {
@@ -168,8 +174,17 @@ public class CheckManager {
 
     private void processBatchResponse(Player target, CheckPlayerData data, String[] lines) {
         UUID uuid = target.getUniqueId();
-        String[] decoded = lines;
+        // Decode the entire envelope before evaluating any mod. An edited or
+        // stale response must not trigger positive/protected command actions.
+        String[] decoded = data.getChallenge() == null ? lines : data.getChallenge().unwrap(lines);
         boolean valid = decoded != null && decoded.length == 4;
+        if (valid && data.getChallenge() != null) {
+            for (int row = 0; row < 4; row++) {
+                String type = data.getLayout().rows().get(row);
+                if (type.equals("blank") && !decoded[row].isEmpty()) valid = false;
+                if (type.startsWith("text:") && !decoded[row].equals(type.substring(5))) valid = false;
+            }
+        }
         restoreCurrentSign(data);
 
         List<HackDefinition> batch = data.getCurrentBatchHacks();
@@ -192,6 +207,7 @@ public class CheckManager {
             HackDefinition hack = batch.get(index++);
             String resp = valid ? decoded[row].strip() : "";
             HackResult result = valid ? evaluateResponse(hack, resp, exploitPreventer) : HackResult.SKIPPED;
+            if (data.getChallenge() != null && resp.isEmpty()) result = HackResult.SKIPPED;
             data.getResults().put(hack.getId(), result);
             log.append(' ').append(hack.getDisplayName()).append('=').append(result).append(" ('").append(resp).append("')");
         }

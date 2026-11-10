@@ -226,6 +226,7 @@ public class ConfigManager {
 
     public boolean isJoinCheckEnabled()  { return hacksConfig.getBoolean("auto-check-on-join.enabled", false); }
     public boolean isOnlyFirstJoin()     { return hacksConfig.getBoolean("auto-check-on-join.only-first-join", false); }
+    public boolean isSignResponseValidationEnabled() { return masterConfig.getBoolean("sign-response-validation.enabled", false); }
     public SignPlacementSettings getSignPlacementSettings() { return signPlacementSettings; }
     public SignLayout getHackSignLayout() { return hackSignLayout; }
     public SignLayout getLangSignLayout() { return langSignLayout; }

@@ -5,6 +5,7 @@ import me.branduzzo.checkHacks.LangCheckData;
 import me.branduzzo.checkHacks.utils.FoliaScheduler;
 import me.branduzzo.checkHacks.utils.SignUtil;
 import me.branduzzo.checkHacks.utils.WebhookUtil;
+import me.branduzzo.checkHacks.utils.SignChallenge;
 import me.branduzzo.checkHacks.utils.SignPlacement;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -64,13 +65,15 @@ public class LangCheckManager {
         Location signLoc = lease.location();
         Sign sign = lease.sign();
         data.setSignLease(lease);
+        SignChallenge challenge = plugin.getConfigManager().isSignResponseValidationEnabled() ? new SignChallenge() : null;
+        data.setChallenge(challenge);
         for (int row = 0; row < 4; row++) {
             String type = data.getLayout().rows().get(row);
             Component content;
             if (type.equals("language")) content = Component.translatable(LANG_KEY, LANG_FALLBACK);
             else if (type.equals("control")) content = Component.keybind(LANG_KEY);
             else content = Component.text(type.startsWith("text:") ? type.substring(5) : "");
-            sign.getSide(Side.FRONT).line(row, content);
+            sign.getSide(Side.FRONT).line(row, challenge == null ? content : challenge.wrap(row, content));
         }
         sign.update(true, false);
         SignUtil.setAllowedEditor(signLoc, uuid, plugin);
@@ -99,6 +102,7 @@ public class LangCheckManager {
         }, 1L);
     }
 
+
     /** Accepts only the current editor's block while its first response is pending. */
     public boolean isExpectedSign(UUID uuid, Location location) {
         LangCheckData data = activeChecks.get(uuid);
@@ -119,16 +123,24 @@ public class LangCheckManager {
     private void processResponse(Player target, LangCheckData data, String[] lines) {
         restoreSign(data);
 
-        String[] decoded = lines;
-        if (decoded == null || decoded.length != 4) return;
+        String[] decoded = data.getChallenge() == null ? lines : data.getChallenge().unwrap(lines);
+        if (decoded == null || decoded.length != 4) {
+            plugin.getLogger().info("[CheckHacks] Ignored edited or stale language reply from " + target.getName());
+            return;
+        }
+        for (int row = 0; data.getChallenge() != null && row < 4; row++) {
+            String type = data.getLayout().rows().get(row);
+            if ((type.equals("blank") && !decoded[row].isEmpty())
+                    || (type.startsWith("text:") && !decoded[row].equals(type.substring(5)))) return;
+        }
         String response = decoded[data.getLayout().rows().indexOf("language")].strip();
         recordResponse(target, data.getInitiatorUUID(), data.getLanguages(), response);
     }
 
     /**
      * Shares language reporting/persistence between standalone probes and the
-     * optional language row in a hack scan. This method owns no temporary block
-     * or active-check registration.
+     * optional language row in a hack scan. Callers validate the sign envelope
+     * first; this method owns no temporary block or active-check registration.
      */
     public void recordResponse(Player target, UUID initiator, Map<String, String> languages, String response) {
         LangCheckData data = new LangCheckData(target.getUniqueId(), initiator, languages);

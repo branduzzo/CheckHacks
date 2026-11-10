@@ -1,5 +1,5 @@
 name: CheckHacks
-version: 1.4.2
+version: 1.4.3
 main: me.branduzzo.checkHacks.CheckHacksPlugin
 api-version: '1.21'
 folia-supported: true
