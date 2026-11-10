@@ -192,18 +192,13 @@ public class SpoofCommand implements CommandExecutor, TabCompleter {
                 send(sender, "spoof-verdict-unknown-id", "id", args[2]);
                 return;
             }
-            if (!verdicts.decide(id, verdict, sender.getName())) {
+            if (!plugin.module(SpoofModule.class).decideBrand(id, verdict, sender.getName())) {
                 send(sender, "spoof-verdict-unknown-id", "id", args[2]);
                 return;
             }
             String brand = verdicts.get(id).brand();
             send(sender, verdict == null ? "spoof-verdict-forgotten"
                     : verdict == BrandVerdicts.Verdict.ALLOW ? "spoof-verdict-allowed" : "spoof-verdict-blocked", "brand", brand);
-            plugin.getLogger().info(sender.getName() + (verdict == null ? " cleared the verdict on"
-                    : verdict == BrandVerdicts.Verdict.ALLOW ? " allowed" : " blocked") + " client brand '" + brand + "'");
-            // Apply it to players online with that brand now, not on their next join
-            for (Player p : Bukkit.getOnlinePlayers())
-                if (brand.equals(plugin.brandOf(p))) plugin.module(SpoofModule.class).detection().checkPlayerAsync(p, false, true);
             return;
         }
 

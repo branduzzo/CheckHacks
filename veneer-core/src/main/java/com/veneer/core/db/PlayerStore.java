@@ -163,6 +163,11 @@ public final class PlayerStore {
      * when they were last seen, most recent first.
      */
     public List<Map<String, Object>> searchPlayers(String prefix, int limit) {
+        return searchPlayers(prefix, limit, 0);
+    }
+
+    /** As above, skipping the first {@code offset} accounts: the next pages of a search. */
+    public List<Map<String, Object>> searchPlayers(String prefix, int limit, int offset) {
         String lo = Rows.lower(prefix);
         char last = lo.isEmpty() ? 0 : lo.charAt(lo.length() - 1);
         // A prefix is a range of the LOWER(name) indexes: [prefix, prefix with its last letter + 1). LIKE on an
@@ -174,7 +179,7 @@ public final class PlayerStore {
                     SELECT name, uuid, last_seen AS ts FROM joins WHERE LOWER(name)%1$s
                     UNION ALL SELECT target_name, target_uuid, timestamp FROM scans WHERE LOWER(target_name)%2$s
                     UNION ALL SELECT name, uuid, updated FROM clients WHERE LOWER(name)%1$s
-                ) GROUP BY LOWER(name) ORDER BY last_seen DESC LIMIT ?""".formatted(
+                ) GROUP BY LOWER(name) ORDER BY last_seen DESC, LOWER(name) LIMIT ? OFFSET ?""".formatted(
                 cond.formatted("name"), cond.formatted("target_name"));
         String like = lo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
         String hi = range ? lo.substring(0, lo.length() - 1) + (char) (last + 1) : null;
@@ -185,7 +190,8 @@ public final class PlayerStore {
                     if (range) { ps.setString(i++, lo); ps.setString(i++, hi); }
                     else ps.setString(i++, like);
                 }
-                ps.setInt(i, limit);
+                ps.setInt(i++, limit);
+                ps.setInt(i, Math.max(0, offset));
                 return Rows.all(ps);
             }
         });

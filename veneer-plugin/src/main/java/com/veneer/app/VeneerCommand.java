@@ -38,7 +38,7 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
 
     /**
      * One line of {@code /veneer help}: shown when the module runs (null: always) and the sender has the
-     * permission (null: everyone). {@code {arg}} in the usage is replaced by {@code veneer-help-arg-<arg>}, the description is {@code veneer-cmd-<key>}.
+     * permission (null: everyone; {@code a;b} is any of them, as in plugin.yml). {@code {arg}} in the usage is replaced by {@code veneer-help-arg-<arg>}, the description is {@code veneer-cmd-<key>}.
      */
     private record HelpEntry(String module, String usage, String key, String permission) {}
 
@@ -47,7 +47,7 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
             new HelpEntry(null,      "/veneer lang [{language}|auto|reset]",     "lang",                  "veneer.lang"),
             new HelpEntry(null,      "/veneer player ({player})",                "player",                "veneer.admin"),
             new HelpEntry(null,      "/veneer find <{player}>",                  "find",                  "veneer.admin"),
-            new HelpEntry(null,      "/veneer check <{player}>",                 "check",                 "veneer.hacks.check"),
+            new HelpEntry(null,      "/veneer check <{player}>",                 "check",                 "veneer.hacks.check;veneer.hacks.lang;veneer.rptrack"),
             new HelpEntry("spoof",   "/veneer brands",                           "brands",                "veneer.spoof.admin"),
             new HelpEntry(null,      "/veneer channels",                         "channels",              "veneer.admin"),
             new HelpEntry(null,      "/veneer alerts [{player}|toggle]",         "alerts",                Alerts.PERMISSION),
@@ -57,7 +57,7 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
             new HelpEntry(null,      "/veneer version",                          "version",               "veneer.admin"),
             new HelpEntry("spoof",   "/spoof brand <{player}>",                  "spoof-brand",           "veneer.spoof.use"),
             new HelpEntry("spoof",   "/spoof channels <{player}>",               "spoof-channels",        "veneer.spoof.use"),
-            new HelpEntry("spoof",   "/spoof runcheck [{player}|*]",             "spoof-runcheck",        "veneer.spoof.use"),
+            new HelpEntry("spoof",   "/spoof runcheck [{player}|*]",             "spoof-runcheck",        "veneer.spoof.admin"),
             new HelpEntry("spoof",   "/spoof check [{player}|*]",                "spoof-check",           "veneer.spoof.admin"),
             new HelpEntry("spoof",   "/spoof brands [allow|block|forget <id>]",  "spoof-brands",          "veneer.spoof.admin"),
             new HelpEntry("spoof",   "/spoof blockedbrands",                     "spoof-blockedbrands",   "veneer.spoof.admin"),
@@ -172,6 +172,20 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    private static boolean allowed(CommandSender sender, String permission) {
+        if (permission == null) return true;
+        for (String any : permission.split(";")) if (sender.hasPermission(any)) return true;
+        return false;
+    }
+
+    /** The right each /veneer subcommand asks for (null: everyone), so tab completion offers only what would run. */
+    private static final Map<String, String> SUB_PERMISSIONS = Map.ofEntries(
+            Map.entry("info", "veneer.admin"), Map.entry("player", "veneer.admin"), Map.entry("find", "veneer.admin"),
+            Map.entry("check", "veneer.hacks.check;veneer.hacks.lang;veneer.rptrack"),
+            Map.entry("brands", "veneer.spoof.admin"), Map.entry("channels", "veneer.admin"),
+            Map.entry("alerts", Alerts.PERMISSION), Map.entry("lang", "veneer.lang"), Map.entry("reload", "veneer.admin"),
+            Map.entry("version", "veneer.admin"), Map.entry("db", "veneer.admin"));
+
     /** The commands the sender can use, grouped by module, each clickable to put it into the chat box. */
     private void help(CommandSender sender) {
         Messages m = plugin.messages().in(sender);
@@ -179,7 +193,7 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
         String section = "";
         for (HelpEntry e : HELP) {
             if (e.module() != null && !module(e.module()).running()) continue;
-            if (e.permission() != null && !sender.hasPermission(e.permission())) continue;
+            if (!allowed(sender, e.permission())) continue;
             String id = e.module() == null ? "general" : e.module();
             if (!id.equals(section)) {
                 section = id;
@@ -409,7 +423,8 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (args.length == 1) {
-            List<String> options = new ArrayList<>(SUBCOMMANDS);
+            List<String> options = new ArrayList<>();
+            for (String name : SUBCOMMANDS) if (allowed(sender, SUB_PERMISSIONS.get(name))) options.add(name);
             PASSTHROUGH.forEach((name, target) -> {
                 PluginCommand c = plugin.getCommand(target);
                 if (c != null && c.testPermissionSilent(sender)) options.add(name);
@@ -429,11 +444,13 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
             options.add("reset");
             return options.stream().filter(s -> s.startsWith(args[1].toLowerCase(Locale.ROOT))).toList();
         }
+        // Names only to those who may run the command, and none the sender cannot see (vanished staff)
         if (args.length == 2 && (sub.equals("info") || sub.equals("player") || sub.equals("p")
-                || sub.equals("find") || sub.equals("check")))
-            return Bukkit.getOnlinePlayers().stream().map(Player::getName)
+                || sub.equals("find") || sub.equals("check"))
+                && allowed(sender, SUB_PERMISSIONS.get(sub.equals("p") ? "player" : sub)))
+            return Bukkit.getOnlinePlayers().stream().filter(p -> !(sender instanceof Player viewer) || viewer.canSee(p)).map(Player::getName)
                     .filter(n -> n.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))).toList();
-        if (args.length == 2 && sub.equals("alerts"))
+        if (args.length == 2 && sub.equals("alerts") && sender.hasPermission(Alerts.PERMISSION))
             return List.of("toggle");
         return List.of();
     }

@@ -51,6 +51,8 @@ public class HacksModule extends VeneerModule {
     @Override
     public void playerQuit(UUID uuid) {
         if (joinChecks != null) joinChecks.forget(uuid);
+        Player leaving = plugin.getServer().getPlayer(uuid);
+        if (web != null && leaving != null) web.ownerLeft(leaving);
         if (checks != null) checks.abort(uuid);
         if (langChecks != null) langChecks.abort(uuid);
     }

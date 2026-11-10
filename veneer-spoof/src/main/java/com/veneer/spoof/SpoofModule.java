@@ -132,6 +132,20 @@ public class SpoofModule extends VeneerModule {
         plugin.debug("Cleaned up all data for player with UUID: " + uuid);
     }
 
+    /**
+     * Records a staff verdict on a brand (null clears it), logs who gave it and applies it to the players online with
+     * that brand now, not on their next join. The command and the menu both come here; false when there is no such id.
+     */
+    public boolean decideBrand(int id, BrandVerdicts.Verdict verdict, String by) {
+        if (!verdicts.decide(id, verdict, by)) return false;
+        String brand = verdicts.get(id).brand();
+        plugin.getLogger().info(by + (verdict == null ? " cleared the verdict on"
+                : verdict == BrandVerdicts.Verdict.ALLOW ? " allowed" : " blocked") + " client brand '" + Text.inert(brand) + "'");
+        for (Player p : plugin.getServer().getOnlinePlayers())
+            if (brand.equals(plugin.brandOf(p))) detection.checkPlayerAsync(p, false, true);
+        return true;
+    }
+
     // ------------------------------------------------------------- alerts
 
     /** Sends the alert for a player's brand once per session; false if it was suppressed. */

@@ -61,7 +61,11 @@ public class HackLangCommand implements CommandExecutor, TabCompleter {
         }
 
         Player initiator = sender instanceof Player p ? p : null;
-        plugin.module(HacksModule.class).langChecks().startCheck(target, initiator, langs);
+        // On the target's thread (Folia): the check places a sign next to that player
+        Map<String, String> asked = langs;
+        com.veneer.core.FoliaScheduler.runAtEntity(plugin, target, () -> {
+            if (target.isOnline()) plugin.module(HacksModule.class).langChecks().startCheck(target, initiator, asked);
+        });
         return true;
     }
 

@@ -44,6 +44,10 @@ public final class VeneerGui implements Listener {
     }
 
     private static final int PAGE_SIZE = 45;
+    /** Covers every slot without a button, so no menu has a hole. */
+    private static final Material FILLER = Material.LIGHT_GRAY_STAINED_GLASS_PANE;
+    /** Where a list page says that it is empty. */
+    private static final int EMPTY_SLOT = 22;
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("dd.MM HH:mm").withZone(ZoneId.systemDefault());
 
@@ -70,9 +74,39 @@ public final class VeneerGui implements Listener {
 
     public enum Page { MAIN, PLAYERS, DETECTIONS, BRANDS, GRIM, PLAYER_INFO, CHANNELS, ALERTS, BROWSERS, CONFIRM_DELETE }
 
-    record VeneerMenuHolder(Page page, int pageNum, String query) implements InventoryHolder {
-        @Override public Inventory getInventory() { return null; }
+    /** What an open menu is: its page, the page number, the player or search it is about, and whether a next page exists. */
+    static final class VeneerMenuHolder implements InventoryHolder {
+        private final Page page;
+        private final int pageNum;
+        private final String query;
+        private boolean hasNext;
+        private Inventory inventory;
+
+        VeneerMenuHolder(Page page, int pageNum, String query) {
+            this.page = page;
+            this.pageNum = pageNum;
+            this.query = query;
+        }
+
+        Page page() { return page; }
+        int pageNum() { return pageNum; }
+        String query() { return query; }
+        boolean hasNext() { return hasNext; }
+
+        @Override public Inventory getInventory() { return inventory; }
     }
+
+    /** A new menu, every slot covered by the filler; the pages put their items over it. */
+    private Inventory menu(Page page, int pageNum, String query, int size, Component title) {
+        VeneerMenuHolder holder = new VeneerMenuHolder(page, pageNum, query);
+        Inventory inv = plugin.getServer().createInventory(holder, size, title);
+        holder.inventory = inv;
+        fillGlass(inv, 0, size);
+        return inv;
+    }
+
+    /** A clicked menu item as the handlers get it, one tick after the click. */
+    private record Click(Inventory inventory, ItemStack item, ClickType type) {}
 
     private final Veneer plugin;
     /** The channel group an item of the channels page stands for, so a click can find its players. */
@@ -81,6 +115,8 @@ public final class VeneerGui implements Listener {
     private final NamespacedKey browserKey;
     /** The brand verdict an item of the brands page stands for: the list is re-sorted whenever a verdict changes. */
     private final NamespacedKey brandKey;
+    /** The player an item of a list page stands for. The display name is not asked: fillers and markers have one too. */
+    private final NamespacedKey targetKey;
     private final GrimViolationTracker grimTracker;
 
     /** How long the chat line after "search" is taken as the query. */
@@ -104,6 +140,7 @@ public final class VeneerGui implements Listener {
         channelsKey = new NamespacedKey(plugin, "channels");
         browserKey = new NamespacedKey(plugin, "browser");
         brandKey = new NamespacedKey(plugin, "brand");
+        targetKey = new NamespacedKey(plugin, "target");
     }
 
     /** The brands page lists and changes verdicts, as {@code /spoof brands} does: the same right. */
@@ -174,13 +211,8 @@ public final class VeneerGui implements Listener {
         long lastSeen  = record.get("last_seen")  instanceof Number n ? n.longValue() : 0;
         long joins     = record.get("joins")       instanceof Number n ? n.longValue() : 0;
 
-        Inventory inv = plugin.getServer().createInventory(
-                new VeneerMenuHolder(Page.PLAYER_INFO, 0, targetName), 36,
-                Component.text(targetName).color(isOnline ? NamedTextColor.GREEN : NamedTextColor.WHITE)
+        Inventory inv = menu(Page.PLAYER_INFO, 0, targetName, 36, Component.text(targetName).color(isOnline ? NamedTextColor.GREEN : NamedTextColor.WHITE)
                         .decoration(TextDecoration.ITALIC, false));
-
-        ItemStack glass = noName(Material.GRAY_STAINED_GLASS_PANE);
-        for (int i = 0; i < 36; i++) inv.setItem(i, glass);
 
         // Head
         ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
@@ -310,11 +342,7 @@ public final class VeneerGui implements Listener {
 
     private void openMainChest(Player player) {
         Messages m = plugin.messages().in(player);
-        Inventory inv = plugin.getServer().createInventory(
-                new VeneerMenuHolder(Page.MAIN, 0, null), 36, m.get("gui-chest-title"));
-
-        ItemStack glass = noName(Material.GRAY_STAINED_GLASS_PANE);
-        for (int i = 0; i < 36; i++) inv.setItem(i, glass);
+        Inventory inv = menu(Page.MAIN, 0, null, 36, m.get("gui-chest-title"));
 
         inv.setItem(SLOT_SPOOF,   moduleItem(plugin.spoof().running(),   m.get("gui-module-spoof"),   m));
         inv.setItem(SLOT_HACKS,   moduleItem(plugin.hacks().running(),   m.get("gui-module-hacks"),   m));
@@ -354,22 +382,22 @@ public final class VeneerGui implements Listener {
     // ── Web panel browsers ────────────────────────────────────────────────────
 
     private void openBrowsers(Player player, String target) {
-        FoliaScheduler.runAsync(plugin, () -> {
-            List<Map<String, Object>> rows = plugin.database().tokens().listSessions(null, target);
-            FoliaScheduler.runAtEntity(plugin, player, () -> {
-                if (player.isOnline()) showBrowsers(player, target, rows);
-            });
-        });
+        openBrowsers(player, target, 0);
     }
 
-    private void showBrowsers(Player player, String target, List<Map<String, Object>> rows) {
+    /** An account has a handful of browsers: all are read and the page is cut out of them. */
+    private void openBrowsers(Player player, String target, int pageNum) {
+        load(player, () -> plugin.database().tokens().listSessions(null, target), rows -> showBrowsers(player, target, pageNum, rows));
+    }
+
+    private void showBrowsers(Player player, String target, int pageNum, List<Map<String, Object>> all) {
         Messages m = plugin.messages().in(player);
-        Inventory inv = plugin.getServer().createInventory(
-                new VeneerMenuHolder(Page.BROWSERS, 0, target), 54, m.get("gui-page-browsers", Map.of("player", target)));
+        Inventory inv = menu(Page.BROWSERS, pageNum, target, 54, m.get("gui-page-browsers", Map.of("player", target)));
         boolean showIp = player.hasPermission("veneer.web.ips");
+        int from = Math.min(pageNum * PAGE_SIZE, all.size());
+        List<Map<String, Object>> rows = all.subList(from, Math.min(from + PAGE_SIZE, all.size()));
         int slot = 0;
         for (Map<String, Object> row : rows) {
-            if (slot >= PAGE_SIZE) break;
             ItemStack item = new ItemStack(Material.PAPER);
             ItemMeta meta = item.getItemMeta();
             String id = String.valueOf(row.get("id"));
@@ -384,8 +412,8 @@ public final class VeneerGui implements Listener {
             item.setItemMeta(meta);
             inv.setItem(slot++, item);
         }
-        fillGlass(inv, slot, PAGE_SIZE);
-        buildNavRow(inv, 0, false, false, m);
+        if (slot == 0) inv.setItem(EMPTY_SLOT, barItem(Material.STRUCTURE_VOID, m.get("gui-list-empty")));
+        buildNavRow(inv, pageNum, all.size() > from + PAGE_SIZE, false, m);
         player.openInventory(inv);
     }
 
@@ -405,9 +433,10 @@ public final class VeneerGui implements Listener {
             return;
         }
         switch (slot) {
+            case NAV_PREV   -> { if (holder.pageNum() > 0) openBrowsers(player, holder.query(), holder.pageNum() - 1); }
+            case NAV_NEXT   -> { if (holder.hasNext()) openBrowsers(player, holder.query(), holder.pageNum() + 1); }
             // Back to where the page was opened from: the player's page, or the main menu for one's own browsers
             case NAV_BACK   -> {
-                player.closeInventory();
                 if (holder.query() != null && !holder.query().equalsIgnoreCase(player.getName())) openPlayerInfo(player, holder.query());
                 else open(player);
             }
@@ -419,9 +448,7 @@ public final class VeneerGui implements Listener {
 
     private void openDeleteConfirm(Player player, String target) {
         Messages m = plugin.messages().in(player);
-        Inventory inv = plugin.getServer().createInventory(
-                new VeneerMenuHolder(Page.CONFIRM_DELETE, 0, target), 27, m.get("gui-page-delete", Map.of("player", target)));
-        fillGlass(inv, 0, 27);
+        Inventory inv = menu(Page.CONFIRM_DELETE, 0, target, 27, m.get("gui-page-delete", Map.of("player", target)));
         inv.setItem(CONFIRM_YES, navItem(Material.RED_CONCRETE, m.get("gui-delete-yes"), m.get("gui-delete-yes-lore", Map.of("player", target))));
         inv.setItem(CONFIRM_NO, navItem(Material.LIME_CONCRETE, m.get("gui-delete-no"), null));
         player.openInventory(inv);
@@ -432,7 +459,6 @@ public final class VeneerGui implements Listener {
             player.closeInventory();
             player.performCommand("veneer db delete " + holder.query());
         } else if (slot == CONFIRM_NO) {
-            player.closeInventory();
             openPlayerInfo(player, holder.query());
         }
     }
@@ -471,7 +497,7 @@ public final class VeneerGui implements Listener {
     private void openPlayers(Player player, int pageNum, String query) {
         boolean search = query != null && !query.isBlank();
         load(player, () -> search
-                        ? plugin.database().players().searchPlayers(query, PAGE_SIZE + 1)
+                        ? plugin.database().players().searchPlayers(query, PAGE_SIZE + 1, pageNum * PAGE_SIZE)
                         : plugin.database().players().listPlayers(PAGE_SIZE + 1, pageNum * PAGE_SIZE),
                 rows -> showPlayers(player, pageNum, query, rows));
     }
@@ -485,8 +511,7 @@ public final class VeneerGui implements Listener {
                 ? m.get("gui-page-players").append(Component.text(" (" + query + ")").color(NamedTextColor.GRAY))
                 : m.get("gui-page-players");
 
-        Inventory inv = plugin.getServer().createInventory(
-                new VeneerMenuHolder(Page.PLAYERS, pageNum, query), 54, title);
+        Inventory inv = menu(Page.PLAYERS, pageNum, query, 54, title);
 
         Set<String> online = new HashSet<>();
         for (Player p : plugin.getServer().getOnlinePlayers())
@@ -514,11 +539,12 @@ public final class VeneerGui implements Listener {
             if (GRIM_API && grimTracker != null && grimTracker.hasViolations(safeUuid(uuid)))
                 lore.add(m.get("gui-player-grim-flagged").decoration(TextDecoration.ITALIC, false));
             skullMeta.lore(lore);
+            skullMeta.getPersistentDataContainer().set(targetKey, PersistentDataType.STRING, name);
             skull.setItemMeta(skullMeta);
             inv.setItem(slot++, skull);
         }
 
-        fillGlass(inv, slot, PAGE_SIZE);
+        if (slot == 0) inv.setItem(EMPTY_SLOT, barItem(Material.STRUCTURE_VOID, m.get("gui-list-empty")));
         buildNavRow(inv, pageNum, mayHaveMore, true, m);
         player.openInventory(inv);
     }
@@ -539,8 +565,7 @@ public final class VeneerGui implements Listener {
                 ? m.get("gui-page-detections").append(Component.text(" (" + playerFilter + ")").color(NamedTextColor.GRAY))
                 : m.get("gui-page-detections");
 
-        Inventory inv = plugin.getServer().createInventory(
-                new VeneerMenuHolder(Page.DETECTIONS, pageNum, playerFilter), 54, title);
+        Inventory inv = menu(Page.DETECTIONS, pageNum, playerFilter, 54, title);
 
         int slot = 0;
         for (Map<String, Object> row : rows) {
@@ -570,11 +595,12 @@ public final class VeneerGui implements Listener {
                 lore.add(m.get("gui-detection-date", Map.of("date", DATE_FMT.format(Instant.ofEpochMilli(ts))))
                         .decoration(TextDecoration.ITALIC, false));
             meta.lore(lore);
+            if (pName != null) meta.getPersistentDataContainer().set(targetKey, PersistentDataType.STRING, pName);
             item.setItemMeta(meta);
             inv.setItem(slot++, item);
         }
 
-        fillGlass(inv, slot, PAGE_SIZE);
+        if (slot == 0) inv.setItem(EMPTY_SLOT, barItem(Material.STRUCTURE_VOID, m.get("gui-list-empty")));
         buildNavRow(inv, pageNum, mayHaveMore, false, m);
         player.openInventory(inv);
     }
@@ -582,6 +608,11 @@ public final class VeneerGui implements Listener {
     // ── Alerts page ───────────────────────────────────────────────────────────
 
     private void openAlerts(Player player, int pageNum, String targetPlayer) {
+        // As /veneer alerts: the history belongs to those who receive the alerts
+        if (!player.hasPermission(Alerts.PERMISSION)) {
+            player.sendMessage(plugin.messages().in(player).get("no-permission"));
+            return;
+        }
         load(player, () -> plugin.database().scans().getRecentScans(null, PAGE_SIZE + 1, pageNum * PAGE_SIZE, true, targetPlayer),
                 rows -> showAlerts(player, pageNum, targetPlayer, rows));
     }
@@ -595,8 +626,7 @@ public final class VeneerGui implements Listener {
                 ? m.get("gui-page-alerts").append(Component.text(" (" + targetPlayer + ")").color(NamedTextColor.GRAY))
                 : m.get("gui-page-alerts");
 
-        Inventory inv = plugin.getServer().createInventory(
-                new VeneerMenuHolder(Page.ALERTS, pageNum, targetPlayer), 54, title);
+        Inventory inv = menu(Page.ALERTS, pageNum, targetPlayer, 54, title);
 
         int slot = 0;
         for (Map<String, Object> row : rows) {
@@ -627,19 +657,13 @@ public final class VeneerGui implements Listener {
                 lore.add(m.get("gui-detection-date", Map.of("date", DATE_FMT.format(Instant.ofEpochMilli(ts))))
                         .decoration(TextDecoration.ITALIC, false));
             meta.lore(lore);
+            if (pName != null) meta.getPersistentDataContainer().set(targetKey, PersistentDataType.STRING, pName);
             item.setItemMeta(meta);
             inv.setItem(slot++, item);
         }
 
-        if (slot == 0) {
-            ItemStack none = noName(Material.STRUCTURE_VOID);
-            ItemMeta meta = none.getItemMeta();
-            meta.displayName(m.get("gui-alerts-empty").decoration(TextDecoration.ITALIC, false));
-            none.setItemMeta(meta);
-            inv.setItem(22, none);
-        }
+        if (slot == 0) inv.setItem(EMPTY_SLOT, barItem(Material.STRUCTURE_VOID, m.get("gui-alerts-empty")));
 
-        fillGlass(inv, slot, PAGE_SIZE);
         buildNavRow(inv, pageNum, mayHaveMore, false, m);
         player.openInventory(inv);
     }
@@ -654,14 +678,13 @@ public final class VeneerGui implements Listener {
         int from = pageNum * PAGE_SIZE, to = Math.min(from + PAGE_SIZE, all.size());
         List<BrandVerdicts.Entry> entries = from < all.size() ? all.subList(from, to) : List.of();
 
-        Inventory inv = plugin.getServer().createInventory(
-                new VeneerMenuHolder(Page.BRANDS, pageNum, null), 54, m.get("gui-page-brands"));
+        Inventory inv = menu(Page.BRANDS, pageNum, null, 54, m.get("gui-page-brands"));
 
         int slot = 0;
         for (BrandVerdicts.Entry e : entries)
             inv.setItem(slot++, buildBrandItem(e, m));
 
-        fillGlass(inv, slot, PAGE_SIZE);
+        if (slot == 0) inv.setItem(EMPTY_SLOT, barItem(Material.STRUCTURE_VOID, m.get("gui-list-empty")));
         buildNavRow(inv, pageNum, all.size() > (long)(pageNum + 1) * PAGE_SIZE, false, m);
         player.openInventory(inv);
     }
@@ -694,8 +717,7 @@ public final class VeneerGui implements Listener {
         int from = pageNum * PAGE_SIZE, to = Math.min(from + PAGE_SIZE, all.size());
         List<GrimViolationTracker.Violation> violations = from < all.size() ? all.subList(from, to) : List.of();
 
-        Inventory inv = plugin.getServer().createInventory(
-                new VeneerMenuHolder(Page.GRIM, pageNum, null), 54, m.get("gui-page-grim"));
+        Inventory inv = menu(Page.GRIM, pageNum, null, 54, m.get("gui-page-grim"));
 
         int slot = 0;
         for (GrimViolationTracker.Violation v : violations) {
@@ -709,19 +731,13 @@ public final class VeneerGui implements Listener {
             lore.add(Component.text(DATE_FMT.format(Instant.ofEpochMilli(v.time()))).color(NamedTextColor.DARK_GRAY)
                     .decoration(TextDecoration.ITALIC, false));
             meta.lore(lore);
+            meta.getPersistentDataContainer().set(targetKey, PersistentDataType.STRING, v.playerName());
             item.setItemMeta(meta);
             inv.setItem(slot++, item);
         }
 
-        if (slot == 0) {
-            ItemStack none = noName(Material.STRUCTURE_VOID);
-            ItemMeta meta = none.getItemMeta();
-            meta.displayName(m.get("gui-grim-empty").decoration(TextDecoration.ITALIC, false));
-            none.setItemMeta(meta);
-            inv.setItem(22, none);
-        }
+        if (slot == 0) inv.setItem(EMPTY_SLOT, barItem(Material.STRUCTURE_VOID, m.get("gui-grim-empty")));
 
-        fillGlass(inv, slot, PAGE_SIZE);
         buildNavRow(inv, pageNum, all.size() > (long)(pageNum + 1) * PAGE_SIZE, false, m);
         player.openInventory(inv);
     }
@@ -738,8 +754,7 @@ public final class VeneerGui implements Listener {
         boolean mayHaveMore = rows.size() > PAGE_SIZE;
         if (mayHaveMore) rows = rows.subList(0, PAGE_SIZE);
 
-        Inventory inv = plugin.getServer().createInventory(
-                new VeneerMenuHolder(Page.CHANNELS, pageNum, null), 54, m.get("gui-page-channels"));
+        Inventory inv = menu(Page.CHANNELS, pageNum, null, 54, m.get("gui-page-channels"));
 
         // Index online players by their channel set for kick support
         Map<String, List<Player>> onlineByChannels = new HashMap<>();
@@ -787,15 +802,8 @@ public final class VeneerGui implements Listener {
             inv.setItem(slot++, item);
         }
 
-        if (slot == 0) {
-            ItemStack none = noName(Material.STRUCTURE_VOID);
-            ItemMeta meta = none.getItemMeta();
-            meta.displayName(m.get("gui-channels-empty").decoration(TextDecoration.ITALIC, false));
-            none.setItemMeta(meta);
-            inv.setItem(22, none);
-        }
+        if (slot == 0) inv.setItem(EMPTY_SLOT, barItem(Material.STRUCTURE_VOID, m.get("gui-channels-empty")));
 
-        fillGlass(inv, slot, PAGE_SIZE);
         buildNavRow(inv, pageNum, mayHaveMore, false, m);
         player.openInventory(inv);
     }
@@ -803,18 +811,13 @@ public final class VeneerGui implements Listener {
     // ── Navigation row ────────────────────────────────────────────────────────
 
     private void buildNavRow(Inventory inv, int pageNum, boolean hasNext, boolean hasSearch, Messages m) {
-        ItemStack glass = noName(Material.GRAY_STAINED_GLASS_PANE);
-        for (int i = 45; i < 54; i++) inv.setItem(i, glass);
-
-        inv.setItem(NAV_PREV, pageNum > 0
-                ? barItem(Material.ARROW, m.get("gui-nav-prev"))
-                : noName(Material.GRAY_STAINED_GLASS_PANE));
+        // The click handlers ask the holder: the filler in the arrow's place must not turn the page
+        if (inv.getHolder(false) instanceof VeneerMenuHolder holder) holder.hasNext = hasNext;
+        if (pageNum > 0) inv.setItem(NAV_PREV, barItem(Material.ARROW, m.get("gui-nav-prev")));
         if (hasSearch)
             inv.setItem(NAV_SEARCH, barItem(Material.NAME_TAG, m.get("gui-nav-search")));
         inv.setItem(NAV_BACK, barItem(Material.RED_STAINED_GLASS_PANE, m.get("gui-nav-back")));
-        inv.setItem(NAV_NEXT, hasNext
-                ? barItem(Material.ARROW, m.get("gui-nav-next"))
-                : noName(Material.GRAY_STAINED_GLASS_PANE));
+        if (hasNext) inv.setItem(NAV_NEXT, barItem(Material.ARROW, m.get("gui-nav-next")));
         inv.setItem(NAV_CLOSE2, barItem(Material.BARRIER, m.get("gui-nav-close")));
     }
 
@@ -823,54 +826,70 @@ public final class VeneerGui implements Listener {
     /** Dragging would drop the player's own items into the menu, where they are lost when it closes. */
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
-        if (event.getInventory().getHolder() instanceof VeneerMenuHolder) event.setCancelled(true);
+        if (event.getInventory().getHolder(false) instanceof VeneerMenuHolder) event.setCancelled(true);
     }
+
+    /** The clicks that press a button. Number keys, Q, F, a double click's third event and the rest only get cancelled. */
+    private static final Set<ClickType> PRESSES = EnumSet.of(
+            ClickType.LEFT, ClickType.RIGHT, ClickType.SHIFT_LEFT, ClickType.SHIFT_RIGHT, ClickType.MIDDLE);
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getInventory().getHolder() instanceof VeneerMenuHolder holder)) return;
+        // getHolder(false): without it Paper copies the block state of every chest and furnace clicked on the server
+        if (!(event.getInventory().getHolder(false) instanceof VeneerMenuHolder holder)) return;
+        // Whatever the click is (shift from below, collect by double click, number key, offhand, drop, creative
+        // clone): nothing moves while a menu is open
         event.setCancelled(true);
         if (!(event.getWhoClicked() instanceof Player player)) return;
         int slot = event.getRawSlot();
         // Outside the window (-999) or in the player's own inventory below the menu: nothing to press there
-        if (slot < 0 || slot >= event.getInventory().getSize()) return;
+        if (slot < 0 || slot >= event.getInventory().getSize() || !PRESSES.contains(event.getClick())) return;
         // The right may have been taken away while the menu was open
         if (!player.hasPermission("veneer.admin")) {
-            player.closeInventory();
+            FoliaScheduler.runAtEntity(plugin, player, player::closeInventory);
             return;
         }
+        Click click = new Click(event.getInventory(), event.getCurrentItem(), event.getClick());
+        // A tick later: an inventory must not be closed or opened while its click is still being handled
+        FoliaScheduler.runAtEntity(plugin, player, () -> {
+            // Closed or replaced meanwhile (a second click in the same tick): that menu is gone
+            if (!player.isOnline() || player.getOpenInventory().getTopInventory() != click.inventory()) return;
+            press(player, holder, slot, click);
+        });
+    }
 
+    private void press(Player player, VeneerMenuHolder holder, int slot, Click click) {
         switch (holder.page()) {
-            case MAIN        -> handleMain(player, slot, event);
-            case PLAYERS     -> handlePlayers(player, holder, slot, event.getCurrentItem());
-            case DETECTIONS  -> handleDetections(player, holder, slot, event.getCurrentItem());
-            case BRANDS      -> handleBrands(player, holder, slot, event);
-            case GRIM        -> handleGrim(player, holder, slot, event.getCurrentItem());
+            case MAIN        -> handleMain(player, slot, click);
+            case PLAYERS     -> handlePlayers(player, holder, slot, click.item());
+            case DETECTIONS  -> handleDetections(player, holder, slot, click.item());
+            case BRANDS      -> handleBrands(player, holder, slot, click);
+            case GRIM        -> handleGrim(player, holder, slot, click.item());
             case PLAYER_INFO -> handlePlayerInfo(player, holder, slot);
-            case CHANNELS    -> handleChannels(player, holder, slot, event.getCurrentItem(), event.getClick());
-            case ALERTS      -> handleAlerts(player, holder, slot, event.getCurrentItem());
-            case BROWSERS    -> handleBrowsers(player, holder, slot, event.getCurrentItem(), event.getClick());
+            case CHANNELS    -> handleChannels(player, holder, slot, click.item(), click.type());
+            case ALERTS      -> handleAlerts(player, holder, slot, click.item());
+            case BROWSERS    -> handleBrowsers(player, holder, slot, click.item(), click.type());
             case CONFIRM_DELETE -> handleDeleteConfirm(player, holder, slot);
         }
     }
 
-    private void handleMain(Player player, int slot, InventoryClickEvent event) {
+    private void handleMain(Player player, int slot, Click click) {
         switch (slot) {
-            case SLOT_PLAYERS    -> { player.closeInventory(); openPlayers(player, 0, null); }
-            case SLOT_DETECTIONS -> { player.closeInventory(); openDetections(player, 0, null); }
-            case SLOT_BRANDS     -> { if (mayBrands(player)) { player.closeInventory(); openBrands(player, 0); } }
-            case SLOT_GRIM       -> { if (grimTracker != null) { player.closeInventory(); openGrim(player, 0); } }
-            case SLOT_ALERTS     -> { if (player.hasPermission(Alerts.PERMISSION)) { player.closeInventory(); openAlerts(player, 0, null); } }
-            case SLOT_CHANNELS   -> { player.closeInventory(); openChannels(player, 0); }
+            case SLOT_PLAYERS    -> { openPlayers(player, 0, null); }
+            case SLOT_DETECTIONS -> { openDetections(player, 0, null); }
+            case SLOT_BRANDS     -> { if (mayBrands(player)) { openBrands(player, 0); } }
+            case SLOT_GRIM       -> { if (grimTracker != null) { openGrim(player, 0); } }
+            case SLOT_ALERTS     -> { if (player.hasPermission(Alerts.PERMISSION)) { openAlerts(player, 0, null); } }
+            case SLOT_CHANNELS   -> { openChannels(player, 0); }
             case SLOT_EDITOR     -> { if (plugin.hacks().running() && player.hasPermission("veneer.hacks.editor")) openEditor(player); }
             case SLOT_ALERTS_TOGGLE -> {
                 if (player.hasPermission(Alerts.PERMISSION)) {
                     player.performCommand("veneer alerts toggle");
-                    event.getInventory().setItem(slot, alertsToggleItem(player, plugin.messages().in(player)));
+                    click.inventory().setItem(slot, alertsToggleItem(player, plugin.messages().in(player)));
                 }
             }
-            case SLOT_LANG       -> switchLanguage(player, event.getClick());
-            case SLOT_BROWSERS   -> { if (plugin.hacks().running() && player.hasPermission("veneer.hacks.editor")) { player.closeInventory(); openBrowsers(player, player.getName()); } }
+            case SLOT_LANG       -> switchLanguage(player, click.type());
+            case SLOT_BROWSERS   -> { if (plugin.hacks().running() && player.hasPermission("veneer.hacks.editor")) { openBrowsers(player, player.getName()); } }
             case SLOT_RELOAD     -> { player.closeInventory(); player.performCommand("veneer reload"); }
             case SLOT_VERSION    -> { player.closeInventory(); player.performCommand("veneer version"); }
             case SLOT_CLOSE      -> player.closeInventory();
@@ -879,42 +898,36 @@ public final class VeneerGui implements Listener {
 
     private void handlePlayers(Player player, VeneerMenuHolder holder, int slot, ItemStack item) {
         if (slot < PAGE_SIZE) {
-            if (item != null && item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
-                String name = plain(item.getItemMeta().displayName());
-                player.closeInventory();
-                openPlayerInfo(player, name);
-            }
+            String name = targetOf(item);
+            if (name != null) openPlayerInfo(player, name);
             return;
         }
         switch (slot) {
-            case NAV_PREV   -> { if (holder.pageNum() > 0) { player.closeInventory(); openPlayers(player, holder.pageNum() - 1, holder.query()); } }
+            case NAV_PREV   -> { if (holder.pageNum() > 0) { openPlayers(player, holder.pageNum() - 1, holder.query()); } }
             case NAV_SEARCH -> startSearch(player, Page.PLAYERS);
-            case NAV_BACK   -> { player.closeInventory(); open(player); }
-            case NAV_NEXT   -> { player.closeInventory(); openPlayers(player, holder.pageNum() + 1, holder.query()); }
+            case NAV_BACK   -> { open(player); }
+            case NAV_NEXT   -> { if (holder.hasNext()) openPlayers(player, holder.pageNum() + 1, holder.query()); }
             case NAV_CLOSE2 -> player.closeInventory();
         }
     }
 
     private void handleDetections(Player player, VeneerMenuHolder holder, int slot, ItemStack item) {
         if (slot < PAGE_SIZE) {
-            if (item != null && item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
-                String name = plain(item.getItemMeta().displayName());
-                player.closeInventory();
-                openPlayerInfo(player, name);
-            }
+            String name = targetOf(item);
+            if (name != null) openPlayerInfo(player, name);
             return;
         }
         switch (slot) {
-            case NAV_PREV   -> { if (holder.pageNum() > 0) { player.closeInventory(); openDetections(player, holder.pageNum() - 1, holder.query()); } }
-            case NAV_BACK   -> { player.closeInventory(); open(player); }
-            case NAV_NEXT   -> { player.closeInventory(); openDetections(player, holder.pageNum() + 1, holder.query()); }
+            case NAV_PREV   -> { if (holder.pageNum() > 0) { openDetections(player, holder.pageNum() - 1, holder.query()); } }
+            case NAV_BACK   -> { open(player); }
+            case NAV_NEXT   -> { if (holder.hasNext()) openDetections(player, holder.pageNum() + 1, holder.query()); }
             case NAV_CLOSE2 -> player.closeInventory();
         }
     }
 
-    private void handleBrands(Player player, VeneerMenuHolder holder, int slot, InventoryClickEvent event) {
+    private void handleBrands(Player player, VeneerMenuHolder holder, int slot, Click click) {
         if (slot < PAGE_SIZE) {
-            ItemStack item = event.getCurrentItem();
+            ItemStack item = click.item();
             if (item == null || !item.hasItemMeta() || !plugin.spoof().running()) return;
             // By the id stored on the item, not by position: a verdict moves its brand to the end of the list,
             // so after one click the positions no longer match what the page shows
@@ -926,39 +939,37 @@ public final class VeneerGui implements Listener {
                 player.sendMessage(plugin.messages().in(player).get("no-permission"));
                 return;
             }
-            ClickType ct = event.getClick();
+            ClickType ct = click.type();
             BrandVerdicts.Verdict next;
             // Shift first: a shift-click also counts as a left or right click. Middle click only reaches the server in creative.
             if (ct.isShiftClick() || ct == ClickType.MIDDLE) next = null;
             else if (ct.isLeftClick()) next = BrandVerdicts.Verdict.ALLOW;
             else if (ct.isRightClick()) next = BrandVerdicts.Verdict.BLOCK;
             else return; // drop, number keys and the like must not reset a verdict
-            plugin.spoof().verdicts().decide(e.id(), next, player.getName());
+            // As /spoof brands allow|block|forget: logged, and applied to the players online with that brand
+            plugin.spoof().decideBrand(e.id(), next, player.getName());
             Messages m = plugin.messages().in(player);
-            event.getInventory().setItem(slot, buildBrandItem(e, m));
+            click.inventory().setItem(slot, buildBrandItem(e, m));
             return;
         }
         switch (slot) {
-            case NAV_PREV   -> { if (holder.pageNum() > 0) { player.closeInventory(); openBrands(player, holder.pageNum() - 1); } }
-            case NAV_BACK   -> { player.closeInventory(); open(player); }
-            case NAV_NEXT   -> { player.closeInventory(); openBrands(player, holder.pageNum() + 1); }
+            case NAV_PREV   -> { if (holder.pageNum() > 0) { openBrands(player, holder.pageNum() - 1); } }
+            case NAV_BACK   -> { open(player); }
+            case NAV_NEXT   -> { if (holder.hasNext()) openBrands(player, holder.pageNum() + 1); }
             case NAV_CLOSE2 -> player.closeInventory();
         }
     }
 
     private void handleGrim(Player player, VeneerMenuHolder holder, int slot, ItemStack item) {
         if (slot < PAGE_SIZE) {
-            if (item != null && item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
-                String name = plain(item.getItemMeta().displayName());
-                player.closeInventory();
-                openPlayerInfo(player, name);
-            }
+            String name = targetOf(item);
+            if (name != null) openPlayerInfo(player, name);
             return;
         }
         switch (slot) {
-            case NAV_PREV   -> { if (holder.pageNum() > 0) { player.closeInventory(); openGrim(player, holder.pageNum() - 1); } }
-            case NAV_BACK   -> { player.closeInventory(); open(player); }
-            case NAV_NEXT   -> { player.closeInventory(); openGrim(player, holder.pageNum() + 1); }
+            case NAV_PREV   -> { if (holder.pageNum() > 0) { openGrim(player, holder.pageNum() - 1); } }
+            case NAV_BACK   -> { open(player); }
+            case NAV_NEXT   -> { if (holder.hasNext()) openGrim(player, holder.pageNum() + 1); }
             case NAV_CLOSE2 -> player.closeInventory();
         }
     }
@@ -967,28 +978,25 @@ public final class VeneerGui implements Listener {
         String targetName = holder.query();
         switch (slot) {
             case PI_CHECK      -> { player.closeInventory(); if (targetName != null) openCheckDialog(player, targetName); }
-            case PI_DETECTIONS -> { player.closeInventory(); if (targetName != null) openDetections(player, 0, targetName); }
-            case PI_ALERTS     -> { player.closeInventory(); if (targetName != null) openAlerts(player, 0, targetName); }
-            case PI_BROWSERS   -> { if (targetName != null && plugin.hacks().running() && player.hasPermission("veneer.hacks.editor.admin")) { player.closeInventory(); openBrowsers(player, targetName); } }
-            case PI_DELETE     -> { if (targetName != null) { player.closeInventory(); openDeleteConfirm(player, targetName); } }
-            case PI_BACK       -> { player.closeInventory(); open(player); }
+            case PI_DETECTIONS -> { if (targetName != null) openDetections(player, 0, targetName); }
+            case PI_ALERTS     -> { if (targetName != null) openAlerts(player, 0, targetName); }
+            case PI_BROWSERS   -> { if (targetName != null && plugin.hacks().running() && player.hasPermission("veneer.hacks.editor.admin")) { openBrowsers(player, targetName); } }
+            case PI_DELETE     -> { if (targetName != null) { openDeleteConfirm(player, targetName); } }
+            case PI_BACK       -> { open(player); }
             case PI_CLOSE      -> player.closeInventory();
         }
     }
 
     private void handleAlerts(Player player, VeneerMenuHolder holder, int slot, ItemStack item) {
         if (slot < PAGE_SIZE) {
-            if (item != null && item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
-                String name = plain(item.getItemMeta().displayName());
-                player.closeInventory();
-                openPlayerInfo(player, name);
-            }
+            String name = targetOf(item);
+            if (name != null) openPlayerInfo(player, name);
             return;
         }
         switch (slot) {
-            case NAV_PREV   -> { if (holder.pageNum() > 0) { player.closeInventory(); openAlerts(player, holder.pageNum() - 1, holder.query()); } }
-            case NAV_BACK   -> { player.closeInventory(); open(player); }
-            case NAV_NEXT   -> { player.closeInventory(); openAlerts(player, holder.pageNum() + 1, holder.query()); }
+            case NAV_PREV   -> { if (holder.pageNum() > 0) { openAlerts(player, holder.pageNum() - 1, holder.query()); } }
+            case NAV_BACK   -> { open(player); }
+            case NAV_NEXT   -> { if (holder.hasNext()) openAlerts(player, holder.pageNum() + 1, holder.query()); }
             case NAV_CLOSE2 -> player.closeInventory();
         }
     }
@@ -1019,9 +1027,9 @@ public final class VeneerGui implements Listener {
             return;
         }
         switch (slot) {
-            case NAV_PREV   -> { if (holder.pageNum() > 0) { player.closeInventory(); openChannels(player, holder.pageNum() - 1); } }
-            case NAV_BACK   -> { player.closeInventory(); open(player); }
-            case NAV_NEXT   -> { player.closeInventory(); openChannels(player, holder.pageNum() + 1); }
+            case NAV_PREV   -> { if (holder.pageNum() > 0) { openChannels(player, holder.pageNum() - 1); } }
+            case NAV_BACK   -> { open(player); }
+            case NAV_NEXT   -> { if (holder.hasNext()) openChannels(player, holder.pageNum() + 1); }
             case NAV_CLOSE2 -> player.closeInventory();
         }
     }
@@ -1095,8 +1103,13 @@ public final class VeneerGui implements Listener {
     }
 
     private static void fillGlass(Inventory inv, int from, int to) {
-        ItemStack glass = noName(Material.GRAY_STAINED_GLASS_PANE);
+        ItemStack glass = noName(FILLER);
         for (int i = from; i < to; i++) inv.setItem(i, glass);
+    }
+
+    private String targetOf(ItemStack item) {
+        return item == null || !item.hasItemMeta() ? null
+                : item.getItemMeta().getPersistentDataContainer().get(targetKey, PersistentDataType.STRING);
     }
 
     private static String plain(Component c) {

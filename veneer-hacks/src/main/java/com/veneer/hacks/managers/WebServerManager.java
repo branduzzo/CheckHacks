@@ -231,6 +231,18 @@ public class WebServerManager {
         });
     }
 
+    /**
+     * The owner of browsers leaves: the last moment Bukkit can still tell their rights. Without this a player who was
+     * de-opped and then left kept the panel until the offline limit.
+     */
+    public void ownerLeft(Player player) {
+        String owner = player.getUniqueId().toString(), perms = HackEditorCommand.webPerms(player);
+        boolean allowed = player.hasPermission("veneer.hacks.editor");
+        FoliaScheduler.runAsync(plugin, () -> {
+            if (plugin.database().tokens().owners().contains(owner)) applyAccess(owner, allowed, perms);
+        });
+    }
+
     private void revokeUnverified(String owner, long offlineLimit) {
         boolean banned = Bukkit.getOfflinePlayer(UUID.fromString(owner)).isBanned();
         long lastJoin = 0;
