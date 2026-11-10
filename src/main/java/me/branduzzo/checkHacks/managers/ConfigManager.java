@@ -226,6 +226,8 @@ public class ConfigManager {
 
     public boolean isJoinCheckEnabled()  { return hacksConfig.getBoolean("auto-check-on-join.enabled", false); }
     public boolean isOnlyFirstJoin()     { return hacksConfig.getBoolean("auto-check-on-join.only-first-join", false); }
+    public long getJoinCheckDelayTicks() { return Math.max(0L, hacksConfig.getLong("auto-check-on-join.delay-ticks", 60L)); }
+    public boolean isJoinCheckWaitForWorldReady() { return hacksConfig.getBoolean("auto-check-on-join.wait-for-world-ready", false); }
     public boolean isSignResponseValidationEnabled() { return masterConfig.getBoolean("sign-response-validation.enabled", false); }
     public SignPlacementSettings getSignPlacementSettings() { return signPlacementSettings; }
     public SignLayout getHackSignLayout() { return hackSignLayout; }
@@ -245,6 +247,8 @@ public class ConfigManager {
 
     public boolean isLangJoinCheckEnabled() { return langConfig.getBoolean("auto-check-on-join.enabled", false); }
     public boolean isLangOnlyFirstJoin()    { return langConfig.getBoolean("auto-check-on-join.only-first-join", false); }
+    public long getLangJoinCheckDelayTicks() { return Math.max(0L, langConfig.getLong("auto-check-on-join.delay-ticks", 80L)); }
+    public boolean isLangJoinCheckWaitForWorldReady() { return langConfig.getBoolean("auto-check-on-join.wait-for-world-ready", false); }
     public boolean isLangDiscordEnabled()   { return langConfig.getBoolean("discord.enabled", false); }
     public String  getLangWebhookUrl()      { return langConfig.getString("discord.webhook-url", ""); }
     public int     getLangEmbedColor()      { return langConfig.getInt("discord.embed-color", 5763719); }

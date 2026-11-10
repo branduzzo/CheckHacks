@@ -1,6 +1,13 @@
 auto-check-on-join:
   enabled: false
   only-first-join: false
+  # Default false preserves the original timer measured from joining the server.
+  # Set true with delay-ticks: 0 to start as soon as the client loads the world.
+  # On older servers/clients without a loading acknowledgement, true waits for movement.
+  wait-for-world-ready: false
+  # 20 ticks = 1 second. With wait-for-world-ready: true, measured after loading.
+  # 80 preserves the original 4-second delay. Runs after any active hack check.
+  delay-ticks: 80
 
 discord:
   enabled: false
