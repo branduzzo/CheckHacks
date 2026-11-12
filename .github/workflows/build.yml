@@ -30,7 +30,7 @@ jobs:
           cache: maven
 
       - name: Build
-        run: mvn -B -DskipTests clean package
+        run: mvn -B clean package
 
       - uses: actions/upload-artifact@v4
         with:

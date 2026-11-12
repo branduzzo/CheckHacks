@@ -13,6 +13,9 @@ commands:
   veneer:
     description: Veneer help, per-player report, your message language, reload, alert toggle; module commands as /veneer <command>
     usage: /veneer help
+    # Staff only: any one Veneer right opens the command (each subcommand then checks its own). A player
+    # without any of them has no /veneer at all, not even the help.
+    permission: veneer.admin;veneer.alerts;veneer.lang;veneer.spoof.use;veneer.spoof.admin;veneer.hacks.check;veneer.hacks.lang;veneer.hacks.editor;veneer.rptrack
   spoof:
     description: Inspect client brand/channels and re-run spoof checks
     usage: /spoof help
@@ -42,7 +45,7 @@ permissions:
     default: op
   veneer.lang:
     description: Choose your own message language with /veneer lang
-    default: true
+    default: op
   veneer.alerts:
     description: Receive spoof, mod scan and RPTrack alerts (toggle with /veneer alerts toggle)
     default: op

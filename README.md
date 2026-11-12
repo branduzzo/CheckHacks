@@ -59,7 +59,7 @@ Veneer places a sign next to the player with a translation or keybind key from e
 
 | Command | Permission | Description |
 |---|---|---|
-| `/veneer help` | `veneer.help` | The commands you may use, grouped by module; click one to put it in the chat box |
+| `/veneer help` | any Veneer right | The commands you may use, grouped by module; click one to put it in the chat box. `/veneer` is for staff: a player with none of Veneer's rights has no such command, not even the help (all rights default to op) |
 | `/veneer lang [<code>\|auto\|reset]` | `veneer.lang` | The language Veneer's messages and alerts reach you in: a file from `messages/`, `auto` (your game language), or `reset` (the server's `general.language`). Stored per player; the console keeps the server language |
 | `/veneer info <player>` | `veneer.admin` | One report per player: client brand and channels, spoof status, latest mod scan, RPTrack link |
 | `/veneer alerts` | `veneer.alerts` | Toggle your own staff alerts (spoof, mod scan and RPTrack share one switch) |
