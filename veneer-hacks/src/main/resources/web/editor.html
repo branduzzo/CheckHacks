@@ -1170,6 +1170,10 @@
         .node-card .alt{cursor:pointer;}.node-card .alt:hover{color:var(--accent-primary);}
         .node-card .bits{font-family:var(--font-mono);letter-spacing:1px;color:var(--text-main);font-size:11px;}
         .badge-DETECTED{background:rgba(239, 68, 68, 0.15);border:1px solid rgba(239, 68, 68, 0.4);color:var(--danger-fg);border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;}
+        .badge-DETECTED.mod-lvl-2{background:rgba(234,179,8,0.15);border-color:rgba(234,179,8,0.45);color:#eab308;}
+        .badge-DETECTED.mod-lvl-3{background:rgba(34,197,94,0.13);border-color:rgba(34,197,94,0.4);color:#22c55e;}
+        .graph-legend{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:11px;color:var(--text-muted);}
+        .graph-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-left:4px;}
         .badge-PROTECTED{background:rgba(245, 158, 11, 0.15);border:1px solid rgba(245, 158, 11, 0.4);color:var(--warning-fg);border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;}
 
     </style>
@@ -1606,6 +1610,8 @@
                 <option value="90">last 90 days</option>
               </select></label>
               <label><input type="checkbox" id="g-2d"> flat</label>
+              <label title="Only the accounts linked to the selected one, directly or through others"><input type="checkbox" id="g-grp"> only this group</label>
+              <span class="graph-legend"><i style="background:#ef4444"></i>cheats <i style="background:#eab308"></i>forbidden mods <i style="background:#f97316"></i>spoof flag <i style="background:#9ca3af"></i>banned <i style="background:#22c55e"></i>clean <i style="background:#3b82f6"></i>not scanned <b style="color:#4ade80">name</b> online</span>
               <input type="checkbox" id="g-dbg" hidden>
             </div>
             <div class="graph-box" id="graph-box" style="flex: 1; min-height: 480px; position: relative; border-radius: 8px; border: 1px solid var(--border-subtle); background: #05080d; overflow: hidden;">

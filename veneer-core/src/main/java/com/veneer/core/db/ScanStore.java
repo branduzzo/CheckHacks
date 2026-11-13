@@ -299,7 +299,7 @@ public final class ScanStore {
         return db.read("getDetectedModsOf", new ArrayList<>(), c -> {
             List<Map<String, Object>> mods = new ArrayList<>();
             try (PreparedStatement ps = c.prepareStatement("""
-                    SELECT r.hack_name, MAX(s.timestamp) AS ts
+                    SELECT r.hack_name, MAX(s.timestamp) AS ts, r.hack_id
                     FROM scans s JOIN hack_results r ON r.scan_id = s.id
                     WHERE s.target_uuid = ? AND r.result = 'DETECTED'
                     GROUP BY r.hack_id ORDER BY ts DESC""")) {
@@ -309,6 +309,7 @@ public final class ScanStore {
                         Map<String, Object> m = new LinkedHashMap<>();
                         m.put("name", rs.getString(1));
                         m.put("last_seen", rs.getLong(2));
+                        m.put("id", rs.getString(3));
                         mods.add(m);
                     }
                 }
@@ -317,16 +318,23 @@ public final class ScanStore {
         });
     }
 
-    /** Accounts whose latest mod scan found something. */
-    java.util.Set<String> detectedAccounts(Connection c) throws SQLException {
-        java.util.Set<String> detected = new java.util.HashSet<>();
+    /**
+     * Every account with a mod scan, mapped to the ids of the mods its latest scan found (empty when that scan
+     * was clean). Accounts never scanned are not in the map.
+     */
+    Map<String, List<String>> latestScanMods(Connection c) throws SQLException {
+        Map<String, List<String>> out = new java.util.HashMap<>();
         try (Statement st = c.createStatement(); ResultSet rs = st.executeQuery("""
-                SELECT target_uuid FROM scans
-                WHERE id IN (SELECT MAX(id) FROM scans WHERE type = 'hack' GROUP BY target_uuid)
-                  AND has_detected = 1""")) {
-            while (rs.next()) detected.add(rs.getString(1));
+                SELECT s.target_uuid, r.hack_id FROM scans s
+                LEFT JOIN hack_results r ON r.scan_id = s.id AND r.result = 'DETECTED'
+                WHERE s.id IN (SELECT MAX(id) FROM scans WHERE type = 'hack' GROUP BY target_uuid)""")) {
+            while (rs.next()) {
+                List<String> mods = out.computeIfAbsent(rs.getString(1), k -> new ArrayList<>());
+                String id = rs.getString(2);
+                if (id != null) mods.add(id);
+            }
         }
-        return detected;
+        return out;
     }
 
     /** Deletes up to {@code limit} of the oldest scans before {@code before} (with their results, ON DELETE CASCADE); how many went. */

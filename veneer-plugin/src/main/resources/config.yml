@@ -556,6 +556,9 @@ hacks:
     #   display-name: shown in alerts / web editor / discord
     #   key: translation or keybind key registered by the mod
     #   mode: METEOR | TRANSLATE | KEYBIND
+    #   level: how serious the mod is, shown as its colour in the web panel (mod badges, graph heads):
+    #          1 = cheat (red), 2 = forbidden mod (yellow), 3 = tolerated (green, counted as clean).
+    #          A mod without a level takes the bundled level when it is one of the mods below, otherwise 1.
     #   channels (optional): regexes matched against the player's registered plugin channels. A hit upgrades
     #     an otherwise clean or PROTECTED result to SUSPECTED: a protection mod that lets built-in Minecraft
     #     keybinds resolve normally (so it never trips the usual ExploitPreventer marker on the control probe)
@@ -568,16 +571,19 @@ hacks:
         display-name: "Meteor Client"
         key: "key.meteor-client.open-gui"
         mode: METEOR
+        level: 1
 
       liquidbounce:
         display-name: "LiquidBounce"
         key: "liquidbounce.module.killaura.name"
         mode: TRANSLATE
+        level: 1
 
       freecam:
         display-name: "Freecam"
         key: "key.freecam.toggle"
         mode: KEYBIND
+        level: 2
         channels:
           - "^freecam(:.*)?$"
 
@@ -585,61 +591,73 @@ hacks:
         display-name: "Wurst"
         key: "key.wurst.zoom"
         mode: KEYBIND
+        level: 1
 
       xray-fabric:
         display-name: "XRay"
         key: "xray.config.toggle"
         mode: KEYBIND
+        level: 1
 
       chestesp:
         display-name: "ChestESP"
         key: "key.chestesp.toggle"
         mode: KEYBIND
+        level: 1
 
       killaura-fabric:
         display-name: "KillAura"
         key: "key.killaura"
         mode: KEYBIND
+        level: 1
 
       autofish:
         display-name: "AutoFish"
         key: "key.autofish.open_gui"
         mode: KEYBIND
+        level: 2
 
       lumina:
         display-name: "Lumina"
         key: "key.lumina.open_click_gui"
         mode: KEYBIND
+        level: 1
 
       autoswitch:
         display-name: "AutoSwitch"
         key: "key.autoswitch.toggle"
         mode: KEYBIND
+        level: 2
 
       bleachhack:
         display-name: "BleachHack"
         key: "bleachhack.module.killaura"
         mode: TRANSLATE
+        level: 1
 
       aristois:
         display-name: "Aristois"
         key: "emc.module.killaura.name"
         mode: TRANSLATE
+        level: 1
 
       coffee:
         display-name: "Coffee Client"
         key: "coffee.module.killaura.name"
         mode: TRANSLATE
+        level: 1
 
       accurate-block-placement:
         display-name: "Accurate Block Placement"
         key: "net.clayborn.accurateblockplacement.modplacementmodemessage"
         mode: TRANSLATE
+        level: 2
 
       world-downloader:
         display-name: "World Downloader"
         key: "key.wdl.startStop"
         mode: TRANSLATE
+        level: 2
         # Same channel names as blocked-channels above (1.13+ and legacy forms)
         channels:
           - "^wdl:(init|control|request)$"
@@ -649,56 +667,67 @@ hacks:
         display-name: "AutoClicker"
         key: "autoclicker-fabric.hud.holding"
         mode: TRANSLATE
+        level: 1
 
       antiafk:
         display-name: "AntiAFK"
         key: "key.antiafk.toggle"
         mode: TRANSLATE
+        level: 2
 
       auto-clicker-mc:
         display-name: "Auto Clicker MC"
         key: "key.auto-clicker_.toggle"
         mode: KEYBIND
+        level: 1
 
       trouser-streak:
         display-name: "Trouser Streak"
         key: "addon.trouser-streak.name"
         mode: TRANSLATE
+        level: 1
 
       ui-utils:
         display-name: "UI Utils"
         key: "key.ui-utils.restore_screen"
         mode: TRANSLATE
+        level: 1
 
       seeedcrackerx:
         display-name: "SeedCrackerX"
         key: "cracker.already"
         mode: TRANSLATE
+        level: 1
 
       simple-world-downloader:
         display-name: "Simple World Downloader"
         key: "swd.screen.config.title"
         mode: TRANSLATE
+        level: 2
 
       trouser-streak-newchunks:
         display-name: "Trouser Streak: NewChunks"
         key: "module.trouser-streak.NewerNewChunks.description"
         mode: TRANSLATE
+        level: 1
 
       trouser-streak-anhero:
         display-name: "Trouser Streak: AnHero"
         key: "module.trouser-streak.AnHero.description"
         mode: TRANSLATE
+        level: 1
 
       glazed:
         display-name: "Glazed"
         key: "addon.glazed.name"
         mode: TRANSLATE
+        level: 1
 
       litematica:
         display-name: "Litematica"
         key: "litematica.hotkey.name.openmainmenuscreen"
         mode: TRANSLATE
+        level: 3
         channels:
           - "^litematica:.*$"
           - "^servux:litematics$"
@@ -707,11 +736,13 @@ hacks:
         display-name: "Item Scroller"
         key: "itemscroller.hotkey.name.openconfigscreen"
         mode: TRANSLATE
+        level: 3
 
       xaeros-minimap:
         display-name: "Xaero's Minimap"
         key: "gui.xaero_minimap"
         mode: TRANSLATE
+        level: 3
         channels:
           - "^xaerominimap:.*$"
 
@@ -719,6 +750,7 @@ hacks:
         display-name: "Xaero's World Map"
         key: "gui.xaero_world_map"
         mode: TRANSLATE
+        level: 3
         channels:
           - "^xaeroworldmap:.*$"
 
@@ -726,6 +758,7 @@ hacks:
         display-name: "Tweakeroo"
         key: "tweakeroo.gui.title.configs"
         mode: TRANSLATE
+        level: 2
         channels:
           - "^tweakeroo:.*$"
           - "^servux:tweaks$"
@@ -734,6 +767,7 @@ hacks:
         display-name: "MiniHUD"
         key: "minihud.gui.title.configs"
         mode: TRANSLATE
+        level: 3
         channels:
           - "^minihud:.*$"
           - "^servux:structures$"
@@ -742,6 +776,7 @@ hacks:
         display-name: "Baritone"
         key: "baritone.setting.allowBreak"
         mode: TRANSLATE
+        level: 2
         channels:
           - "^baritone:.*$"
 

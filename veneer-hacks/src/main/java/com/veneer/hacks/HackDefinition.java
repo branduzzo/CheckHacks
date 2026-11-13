@@ -15,9 +15,14 @@ public class HackDefinition {
     private final String lowerKey;
     private final String lowerFallback;
     private final List<Pattern> channels;
+    private final int level;
 
     public HackDefinition(String id, String displayName, String key, DetectionMode mode) {
-        this(id, displayName, key, mode, List.of());
+        this(id, displayName, key, mode, List.of(), 1);
+    }
+
+    public HackDefinition(String id, String displayName, String key, DetectionMode mode, List<String> channels) {
+        this(id, displayName, key, mode, channels, 1);
     }
 
     /**
@@ -25,9 +30,11 @@ public class HackDefinition {
      *                  clean or protected translation result raises it to {@link HackResult#SUSPECTED}: channel
      *                  registration happens at login handshake, before client-side logic can selectively hide it,
      *                  so it survives a translation/keybind exploit-preventer that the sign check alone misses.
+     * @param level    how serious the mod is: 1 = cheat, 2 = forbidden mod, 3 = tolerated (see config.yml)
      */
-    public HackDefinition(String id, String displayName, String key, DetectionMode mode, List<String> channels) {
+    public HackDefinition(String id, String displayName, String key, DetectionMode mode, List<String> channels, int level) {
         this.id            = id;
+        this.level         = Math.max(1, Math.min(3, level));
         this.displayName   = displayName;
         this.key           = key;
         this.mode          = mode;
@@ -47,6 +54,8 @@ public class HackDefinition {
     public String getFallback()     { return fallback; }
     public String getLowerKey()     { return lowerKey; }
     public String getLowerFallback(){ return lowerFallback; }
+    /** 1 = cheat, 2 = forbidden mod, 3 = tolerated. */
+    public int getLevel()           { return level; }
 
     /** Whether any of this hack's known channels is among the player's registered plugin channels. */
     public boolean matchesAnyChannel(java.util.Collection<String> playerChannels) {

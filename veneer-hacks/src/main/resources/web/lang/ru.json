@@ -204,5 +204,19 @@
   "Browser linked successfully": "Браузер успешно связан",
   "You can close this window. To open the panel, run <b>/hackeditor</b> in Minecraft.": "Это окно можно закрыть. Чтобы открыть панель, введите <b>/hackeditor</b> в Minecraft.",
   "You are not authenticated": "Вы не авторизованы",
-  "Run <b>/hackeditor new</b> in Minecraft and open the link in this browser.": "Введите <b>/hackeditor new</b> в Minecraft и откройте ссылку в этом браузере."
+  "Run <b>/hackeditor new</b> in Minecraft and open the link in this browser.": "Введите <b>/hackeditor new</b> в Minecraft и откройте ссылку в этом браузере.",
+  "online": "в сети",
+  "banned": "забанен",
+  "spoof flag": "флаг спуфа",
+  "name": "ник",
+  "only this group": "только эта группа",
+  "Only the accounts linked to the selected one, directly or through others": "Только аккаунты, связанные с выбранным напрямую или через других",
+  "cheats": "читы",
+  "forbidden mods": "запрещённые моды",
+  "clean": "чистый",
+  "not scanned": "не проверен",
+  "cheat": "чит",
+  "forbidden mod": "запрещённый мод",
+  "tolerated mod": "разрешённый мод",
+  "Pick an account first": "Сначала выберите аккаунт"
 }

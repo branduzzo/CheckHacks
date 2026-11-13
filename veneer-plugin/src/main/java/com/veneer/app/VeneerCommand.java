@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public final class VeneerCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS = List.of(
-            "help", "info", "player", "find", "check", "brands", "channels", "alerts", "lang", "reload", "version", "db");
+            "help", "info", "player", "find", "check", "brands", "channels", "alerts", "lang", "reload", "version", "db", "forget");
     /** {@code /veneer <name> ...} runs the plugin.yml command it maps to, with its own permission check. */
     private static final Map<String, String> PASSTHROUGH = Map.of(
             "spoof", "spoof", "hackcheck", "hackcheck", "scan", "hackcheck", "hacklang", "hacklang",
@@ -86,6 +86,13 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
         switch (sub) {
             case "reload" -> reload(sender);
             case "db" -> database(sender, args);
+            // Same as /veneer db delete <player>
+            case "forget" -> {
+                String[] dbArgs = new String[args.length + 1];
+                dbArgs[0] = "db"; dbArgs[1] = "delete";
+                System.arraycopy(args, 1, dbArgs, 2, args.length - 1);
+                database(sender, dbArgs);
+            }
             case "alerts" -> alertsPage(sender, args);
             case "lang", "language" -> lang(sender, args);
             case "info" -> info(sender, label, args);
@@ -184,7 +191,7 @@ public final class VeneerCommand implements CommandExecutor, TabCompleter {
             Map.entry("check", "veneer.hacks.check;veneer.hacks.lang;veneer.rptrack"),
             Map.entry("brands", "veneer.spoof.admin"), Map.entry("channels", "veneer.admin"),
             Map.entry("alerts", Alerts.PERMISSION), Map.entry("lang", "veneer.lang"), Map.entry("reload", "veneer.admin"),
-            Map.entry("version", "veneer.admin"), Map.entry("db", "veneer.admin"));
+            Map.entry("version", "veneer.admin"), Map.entry("db", "veneer.admin"), Map.entry("forget", "veneer.admin"));
 
     /** The commands the sender can use, grouped by module, each clickable to put it into the chat box. */
     private void help(CommandSender sender) {

@@ -699,6 +699,30 @@
       // ============================================================================
       // 4. APPLICATION STATE & HELPERS
       // ============================================================================
+      // How serious a mod is: 1 cheat (red), 2 forbidden (yellow), 3 tolerated (green). Filled from /api/validate.
+      let MOD_LEVELS = {};
+      function modLevel(m) {
+        if (m && m.level) return m.level;
+        const key = String((m && (m.id || m.name)) || m || '').toLowerCase();
+        return MOD_LEVELS[key] || (m && m.name && MOD_LEVELS[m.name.toLowerCase()]) || 2;
+      }
+      const LEVEL_NAMES = {1: 'cheat', 2: 'forbidden mod', 3: 'tolerated mod'};
+      function modBadge(m, title) {
+        const lvl = modLevel(m);
+        return '<span class="badge-DETECTED mod-lvl-' + lvl + '" title="' + escapeHtml(t(LEVEL_NAMES[lvl]) + (title ? ' — ' + title : '')) + '">' + escapeHtml(m.name) + '</span>';
+      }
+      // Graph heads: the most serious state wins
+      const NODE_STATES = [
+        ['banned', 0x9ca3af, n => n.banned],
+        ['cheats', 0xef4444, n => n.level === 1],
+        ['forbidden mods', 0xeab308, n => n.level === 2],
+        ['spoof flag', 0xf97316, n => n.spoof],
+        ['clean', 0x22c55e, n => n.scanned],
+        ['not scanned', 0x3b82f6, () => true],
+      ];
+      function nodeState(n) { return NODE_STATES.find(s => s[2](n)); }
+      function nodeColour(n) { return nodeState(n)[1]; }
+
       const STATE = {
         activeView: 'overview',
         selectedPlayerName: '',
@@ -1129,7 +1153,7 @@
             (item) =>
               '<tr>' +
               '<td style="font-weight: 600;">' +
-              escapeHtml(item.name) +
+              (item.status === 'DETECTED' ? modBadge(item) : escapeHtml(item.name)) +
               '</td>' +
               '<td class="mono" style="color: var(--text-secondary); font-size: 11px;">' +
               escapeHtml(item.line) +
@@ -1366,7 +1390,7 @@
 
       function skinCube(n, size) {
         if (typeof THREE === 'undefined') return null;
-        const edge = size, colour = n.detected ? 0xf85149 : 0x4493f8;
+        const edge = size, colour = nodeColour(n);
         const group = new THREE.Group();
         const canvases = FACES.map(() => { const c = document.createElement('canvas'); c.width = c.height = 8; return c; });
         const mats = canvases.map(c => {
@@ -1379,7 +1403,7 @@
           // A plain head with its face on the front only (index 4 is +z), not on all six sides
           canvases.forEach((c, i) => {
             const g = c.getContext('2d');
-            g.fillStyle = n.detected ? '#ef4444' : '#3b82f6';
+            g.fillStyle = '#' + nodeColour(n).toString(16).padStart(6, '0');
             g.fillRect(0, 0, 8, 8);
             if (i === 4) {
               g.fillStyle = '#1e293b';
@@ -1418,7 +1442,7 @@
           new THREE.MeshBasicMaterial({color: colour, side: THREE.BackSide}));
         frame.raycast = () => {};
         group.add(frame);
-        const label = textSprite(n.name, 6.5, 0xc9d1d9);
+        const label = textSprite(n.name, 6.5, n.online ? 0x4ade80 : 0xc9d1d9);
         label.center.set(0.5, 1 + edge * 0.866 / 6.5);
         group.add(label);
         n._cube = cube; n._frame = frame; n._label = label;
@@ -1488,6 +1512,11 @@
         const card = document.createElement('div'); card.className = 'node-card'; card.style.display = 'none';
         const info = document.createElement('div'); info.className = 'graph-info';
 
+        // "Only this group": the accounts reachable from this one; opened from a player page it starts on
+        let groupRoot = focus || null;
+        const gGrpEarly = document.getElementById('g-grp');
+        if (gGrpEarly) gGrpEarly.checked = !!focus;
+
         const build = () => {
           const gIp = document.getElementById('g-ip');
           const gRp = document.getElementById('g-rp');
@@ -1524,7 +1553,18 @@
           const links = [...pairs.values()].map(l => ({...l, pct: 1 - l.miss})).filter(l => l.pct >= minPct);
           const deg = {};
           links.forEach(l => { deg[l.source] = (deg[l.source]||0) + 1; deg[l.target] = (deg[l.target]||0) + 1; });
-          const nodes = data.nodes.filter(n => deg[n.id] || recent.has(n.id)).map(n => ({...n, links: deg[n.id] || 0}));
+          let nodes = data.nodes.filter(n => deg[n.id] || recent.has(n.id)).map(n => ({...n, links: deg[n.id] || 0}));
+          const gGrp = document.getElementById('g-grp');
+          const root = gGrp && gGrp.checked && groupRoot ? nodes.find(n => n.id === groupRoot || n.name === groupRoot) : null;
+          if (root) {
+            const next = {};
+            links.forEach(l => { (next[l.source] = next[l.source] || []).push(l.target); (next[l.target] = next[l.target] || []).push(l.source); });
+            const keep = new Set([root.id]), queue = [root.id];
+            while (queue.length) (next[queue.shift()] || []).forEach(o => { if (!keep.has(o)) { keep.add(o); queue.push(o); } });
+            nodes = nodes.filter(n => keep.has(n.id));
+            for (let i = links.length - 1; i >= 0; i--) if (!keep.has(links[i].source)) links.splice(i, 1);
+            focus = root.id;
+          } else if (gGrp && gGrp.checked) gGrp.checked = false;
 
           stopGraph();
           box.innerHTML = '';
@@ -1544,7 +1584,7 @@
             .showNavInfo(false)
             .numDimensions(g2d && g2d.checked ? 2 : 3)
             .nodeThreeObject(n => skinCube(n, 9 + Math.min(n.links, 8) * 1.5))
-            .nodeLabel(n => escapeHtml(n.name) + ' (' + (n.links === 1 ? '1 link' : n.links + ' links') + ')')
+            .nodeLabel(n => escapeHtml(n.name) + ' (' + (n.links === 1 ? '1 link' : n.links + ' links') + ') — ' + escapeHtml(t(nodeState(n)[0])) + (n.online ? ', ' + escapeHtml(t('online')) : ''))
             .linkColor(l => l.types.has('rptrack') || l.types.has('fingerprint') ? '#3fb950' : l.types.has('email') ? '#f59e0b' : l.types.has('ip') ? '#8b949e' : l.types.has('batch') ? '#f472b6' : l.types.has('name') ? '#c084fc' : '#2dd4bf')
             .linkOpacity(0.7)
             .linkWidth(l => 0.4 + l.pct * 2.2)
@@ -1614,6 +1654,7 @@
           const select = async n => {
             if (n && n === selected) n = null;
             selected = n;
+            if (n) groupRoot = n.id;
             if (!n) { card.style.display = 'none'; fit(700, 'back to overview'); return; }
             const d = n.x === undefined ? null : n;
             if (d) moveCamera(g2d && g2d.checked ? {x: n.x, y: n.y, z: 95} : {x: n.x + 50, y: n.y + 30, z: (n.z || 0) + 75}, {x: n.x, y: n.y, z: n.z || 0}, 700, 'zoom to ' + n.name);
@@ -1633,11 +1674,15 @@
             const fp = det ? det.fingerprint : null;
             const cheats = (det && det.mods ? det.mods.slice() : []);
             if (fp && fp.liquidbounce && !cheats.some(m => m.name.toLowerCase() === 'liquidbounce'))
-              cheats.push({name: 'LiquidBounce', last_seen: fp.last_seen, via: t('resource-pack fingerprint')});
+              cheats.push({name: 'LiquidBounce', level: 1, last_seen: fp.last_seen, via: t('resource-pack fingerprint')});
+            cheats.sort((a, b) => modLevel(a) - modLevel(b));
+            const serious = cheats.some(m => modLevel(m) < 3);
+            const states = [n.banned && t('banned'), n.spoof && t('spoof flag'), n.online && t('online')].filter(Boolean);
             card.innerHTML =
               '<h3>' + escapeHtml(n.name) + '<button title="Close" id="closeNodeCardBtn">&times;</button></h3>' +
-              '<div style="color:var(--text-secondary);font-size:11.5px;">' + (cheats.length ? '<span style="color:var(--danger-fg);font-weight:600;">' + t('mods detected') + '</span>' : t('no mods detected')) + '</div>' +
-              (cheats.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">' + cheats.map(m => '<span class="badge-DETECTED" title="Last detected: ' + new Date(Number(m.last_seen)).toLocaleString() + '">' + escapeHtml(m.name) + '</span>').join('') + '</div>' : '') +
+              '<div style="color:var(--text-secondary);font-size:11.5px;">' + (serious ? '<span style="color:var(--danger-fg);font-weight:600;">' + t('mods detected') + '</span>' : t('no mods detected')) +
+              (states.length ? ' · ' + states.map(escapeHtml).join(', ') : '') + '</div>' +
+              (cheats.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">' + cheats.map(m => modBadge(m, new Date(Number(m.last_seen)).toLocaleString())).join('') + '</div>' : '') +
               '<h4>' + t('Addresses') + '</h4>' +
               ((det && det.ips && det.ips.length) ? det.ips.map(r => '<div class="row"><span>' + escapeHtml(r.ip) + '</span><span>' + escapeHtml(provider(r) || '') + '</span></div>').join('') : '<div style="color:var(--text-muted);font-size:11px;">' + t('None captured') + '</div>') +
               (fp ? '<h4>' + t('RPTrack') + '</h4><div class="row"><span>' + t('Seen') + '</span><span>' + timeAgo(fp.last_seen) + '</span></div>' +
@@ -1730,7 +1775,7 @@
                 }
               }
               if (n._frame && n._cube) n._frame.quaternion.copy(n._cube.quaternion);
-              if (n._frame) n._frame.material.color.set(hit ? 0xd29922 : (n.detected ? 0xef4444 : 0x3b82f6));
+              if (n._frame) n._frame.material.color.set(hit ? 0xfacc15 : nodeColour(n));
             });
 
             const cp = graph3d.camera().position;
@@ -1756,6 +1801,13 @@
         const gSearch = document.getElementById('g-search');
 
         [gIp, gRp, gCl, gEm, gNm, gDays, g2d].forEach(el => { if (el) el.onchange = build; });
+        const gGrp = document.getElementById('g-grp');
+        if (gGrp) gGrp.onchange = () => {
+          // Narrows around the selected account; with none picked yet there is no group to show
+          if (gGrp.checked) groupRoot = selected ? selected.id : groupRoot;
+          if (gGrp.checked && !groupRoot) { gGrp.checked = false; showStatusBanner(t('Pick an account first')); return; }
+          build();
+        };
         if (gMin) {
           gMin.oninput = () => { document.getElementById('g-min-v').textContent = gMin.value + '%'; };
           gMin.onchange = build;
@@ -2089,6 +2141,7 @@
         ]);
 
         if (authInfo) {
+          if (authInfo.mod_levels) MOD_LEVELS = authInfo.mod_levels;
           if (authInfo.player_name) {
             document.getElementById('operatorNameLabel').textContent = authInfo.player_name;
           }

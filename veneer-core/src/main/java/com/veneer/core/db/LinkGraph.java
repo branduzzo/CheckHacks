@@ -43,7 +43,7 @@ public final class LinkGraph {
         this.fingerprints = fingerprints;
     }
 
-    private record Rows3(List<String[]> joins, List<String[]> clients, List<String[]> authMe, List<String[]> seen, Set<String> detected) {}
+    private record Rows3(List<String[]> joins, List<String[]> clients, List<String[]> authMe, List<String[]> seen, Map<String, List<String>> scanMods) {}
 
     /**
      * Graph of linked accounts: {@code nodes} (id, name, detected, links, skin) and {@code edges} (source, target,
@@ -68,7 +68,7 @@ public final class LinkGraph {
 
     /** As above, with the chances and name rules of the server's configuration. */
     public Map<String, Object> getLinkGraph(int maxPerIp, int minMatch, int maxPerClient, int minChannels, int maxUnlinked, Rules rules) {
-        Rows3 rows = db.read("getLinkGraph", new Rows3(List.of(), List.of(), List.of(), List.of(), Set.of()), c -> {
+        Rows3 rows = db.read("getLinkGraph", new Rows3(List.of(), List.of(), List.of(), List.of(), Map.of()), c -> {
             List<String[]> joinRows = new ArrayList<>(), clientRows = new ArrayList<>(), authMeRows = new ArrayList<>(), seenRows = new ArrayList<>();
             try (Statement st = c.createStatement()) {
                 try (ResultSet rs = st.executeQuery("SELECT uuid, name, ip, last_seen FROM joins ORDER BY last_seen DESC")) {
@@ -87,7 +87,7 @@ public final class LinkGraph {
                  ResultSet rs = st.executeQuery("SELECT uuid, name, reg_ip, last_ip, last_login, email_hash FROM authme_accounts")) {
                 while (rs.next()) authMeRows.add(new String[]{rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getString(6)});
             }
-            return new Rows3(joinRows, clientRows, authMeRows, seenRows, scans.detectedAccounts(c));
+            return new Rows3(joinRows, clientRows, authMeRows, seenRows, scans.latestScanMods(c));
         });
         List<FingerprintStore.Fingerprint> tracks = fingerprints.masks();
 
@@ -187,7 +187,10 @@ public final class LinkGraph {
             Map<String, Object> n = new LinkedHashMap<>();
             n.put("id", d.getKey());
             n.put("name", names.getOrDefault(d.getKey(), d.getKey()));
-            n.put("detected", rows.detected().contains(d.getKey()));
+            List<String> mods = rows.scanMods().get(d.getKey());
+            n.put("detected", mods != null && !mods.isEmpty());
+            n.put("scanned", mods != null);
+            n.put("mod_ids", mods != null ? mods : List.of());
             n.put("links", d.getValue());
             n.put("skin", skins.get(d.getKey()));
             n.put("last_seen", lastSeen.get(d.getKey()));

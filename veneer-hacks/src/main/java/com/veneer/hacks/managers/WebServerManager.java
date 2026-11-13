@@ -125,9 +125,55 @@ public class WebServerManager {
             m.put("uuid", p.getUniqueId().toString());
             m.put("ping", p.getPing());
             m.put("locale", p.getLocale());
+            var profile = plugin.profiles().get(p.getUniqueId());
+            m.put("spoof", profile != null && profile.isBrandAlerted());
             list.add(m);
         }
         cachedPlayers = list;
+        // The ban list is read from disk by some servers: once a minute is enough for the graph
+        if (++cacheTicks % 12 == 1) {
+            Set<String> banned = new HashSet<>();
+            for (var op : Bukkit.getBannedPlayers()) banned.add(op.getUniqueId().toString());
+            bannedUuids = banned;
+        }
+    }
+
+    private int cacheTicks;
+    private volatile Set<String> bannedUuids = Set.of();
+
+    /**
+     * What the graph shows on each account, refreshed on every request (the graph itself is cached): the most
+     * serious mod level its latest scan found (0 = none, tolerated mods count as clean), online, banned, spoof flag.
+     */
+    private void markNodeStates(Map<String, Object> graph) {
+        ConfigManager config = settings();
+        Map<String, Boolean> online = new HashMap<>();
+        for (Map<String, Object> p : cachedPlayers) online.put((String) p.get("uuid"), Boolean.TRUE.equals(p.get("spoof")));
+        Set<String> banned = bannedUuids;
+        for (Object o : (List<?>) graph.get("nodes")) {
+            @SuppressWarnings("unchecked") Map<String, Object> node = (Map<String, Object>) o;
+            String id = (String) node.get("id");
+            int level = 0;
+            Object ids = node.get("mod_ids");
+            if (ids instanceof List<?> list)
+                for (Object mod : list) {
+                    int l = config.levelOf(String.valueOf(mod));
+                    if (level == 0 || l < level) level = l;
+                }
+            node.put("level", level);
+            node.put("detected", level == 1 || level == 2);
+            node.put("online", online.containsKey(id));
+            node.put("spoof", Boolean.TRUE.equals(online.get(id)));
+            node.put("banned", banned.contains(id));
+        }
+    }
+
+    /** Each mod with its level (1 = cheat, 2 = forbidden, 3 = tolerated), the most serious first. */
+    private List<Map<String, Object>> withLevels(List<Map<String, Object>> mods) {
+        ConfigManager config = settings();
+        for (Map<String, Object> m : mods) if (m.get("id") != null) m.put("level", config.levelOf((String) m.get("id")));
+        mods.sort(java.util.Comparator.comparingInt(m -> ((Number) m.getOrDefault("level", 2)).intValue()));
+        return mods;
     }
 
     private ConfigManager settings() { return plugin.module(HacksModule.class).config(); }
@@ -447,6 +493,13 @@ public class WebServerManager {
         if (path.equals("/api/validate")) {
             Map<String, Object> info = new LinkedHashMap<>(playerInfo);
             info.put("exposed", settings().isPanelExposed());
+            // Mod colours in the panel: by id and by display name (scan results carry only the name)
+            Map<String, Integer> levels = new HashMap<>();
+            for (HackDefinition h : settings().getHacks().values()) {
+                levels.put(h.getId().toLowerCase(Locale.ROOT), h.getLevel());
+                levels.put(h.getDisplayName().toLowerCase(Locale.ROOT), h.getLevel());
+            }
+            info.put("mod_levels", levels);
             sendJson(ex, 200, info);
             return;
         }
@@ -471,7 +524,7 @@ public class WebServerManager {
         }
 
         if (path.equals("/api/mods")) {
-            sendJson(ex, 200, plugin.database().scans().getDetectedMods());
+            sendJson(ex, 200, withLevels(plugin.database().scans().getDetectedMods()));
             return;
         }
 
@@ -484,6 +537,8 @@ public class WebServerManager {
             // getPath() is already decoded
             Map<String, Object> details = plugin.database().links().getLinkDetails(path.substring("/api/links/".length()));
             if (!can(playerInfo, "ips")) details.put("ips", List.of());
+            @SuppressWarnings("unchecked") List<Map<String, Object>> cardMods = (List<Map<String, Object>>) details.get("mods");
+            withLevels(cardMods);
             for (Object r : (List<?>) details.get("ips")) {
                 @SuppressWarnings("unchecked") Map<String, Object> row = (Map<String, Object>) r;
                 describeIp((String) row.get("ip"), row);
@@ -630,7 +685,8 @@ public class WebServerManager {
             result.put("client",     online ? liveClient(uuid) : record.get("client"));
             if (!uuid.isEmpty()) {
                 Map<String, Object> details = plugin.database().links().getLinkDetails(uuid);
-                result.put("mods", details.get("mods"));
+                @SuppressWarnings("unchecked") List<Map<String, Object>> playerMods = (List<Map<String, Object>>) details.get("mods");
+                result.put("mods", withLevels(playerMods));
                 result.put("fingerprint", details.get("fingerprint"));
                 if (can(playerInfo, "ips")) {
                     for (Object r : (List<?>) details.get("ips")) {
@@ -657,9 +713,16 @@ public class WebServerManager {
         boolean ips = can(playerInfo, "ips");
         // The player page asks for it on every refresh (every 2.5 s while a scan runs): build it at most every 15 s
         CachedGraph cached = graphCache.get(ips);
-        if (cached != null && System.currentTimeMillis() - cached.built() < GRAPH_TTL_MS) return cached.graph();
-        Map<String, Object> graph = buildLinkGraph(ips);
-        graphCache.put(ips, new CachedGraph(graph, System.currentTimeMillis()));
+        Map<String, Object> graph;
+        if (cached != null && System.currentTimeMillis() - cached.built() < GRAPH_TTL_MS) graph = cached.graph();
+        else {
+            graph = buildLinkGraph(ips);
+            // Marked before it is shared, so later marks only overwrite keys and never resize a map being written out
+            markNodeStates(graph);
+            graphCache.put(ips, new CachedGraph(graph, System.currentTimeMillis()));
+            return graph;
+        }
+        synchronized (graph) { markNodeStates(graph); }
         return graph;
     }
 

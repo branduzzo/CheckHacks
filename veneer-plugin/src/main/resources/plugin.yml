@@ -90,6 +90,11 @@ permissions:
   veneer.hacks.editor.admin:
     description: List and disconnect the web panel browsers of other players
     default: op
+  veneer.web.use:
+    description: Open the web panel (/hackeditor); grants veneer.hacks.editor, so the GUI button and help follow it
+    default: op
+    children:
+      veneer.hacks.editor: true
   veneer.web.scan:
     description: Run scans from the web panel
     default: op
@@ -106,6 +111,7 @@ permissions:
     description: All web panel rights
     default: false
     children:
+      veneer.web.use: true
       veneer.web.scan: true
       veneer.web.delete: true
       veneer.web.links: true

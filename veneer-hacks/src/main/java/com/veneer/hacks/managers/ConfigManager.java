@@ -18,6 +18,8 @@ public class ConfigManager {
     private final Map<String, HackDefinition> hacks = new LinkedHashMap<>();
     private final Map<String, CommandRule> commandRules = new LinkedHashMap<>();
     private final Map<String, List<CommandRule>> rulesByHack = new HashMap<>();
+    /** Levels of the bundled mods, read once from the jar. */
+    private Map<String, Integer> bundledLevels;
 
     private long timeoutTicks;
     private long betweenSignTicks;
@@ -50,7 +52,35 @@ public class ConfigManager {
         cacheSettings();
     }
 
+    /**
+     * Levels of the bundled mods. The hack list is the admin's and is never filled in from the defaults, so a
+     * config from before levels existed gets them from here; a mod of the admin's own without one is a cheat.
+     */
+    private Map<String, Integer> readBundledLevels() {
+        Map<String, Integer> out = new HashMap<>();
+        try (var in = plugin.getResource("config.yml")) {
+            if (in == null) return out;
+            var defaults = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                    new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+            ConfigurationSection s = defaults.getConfigurationSection("hacks.detection.hacks");
+            if (s != null) for (String id : s.getKeys(false)) if (s.contains(id + ".level")) out.put(id, s.getInt(id + ".level"));
+        } catch (java.io.IOException ignored) {}
+        return out;
+    }
+
+    /**
+     * Level of a mod by id (1 = cheat, 2 = forbidden, 3 = tolerated). Old scan results keep the id of a mod the admin
+     * has since removed or renamed: such an id takes its bundled level, or 2 when it was the admin's own.
+     */
+    public int levelOf(String id) {
+        HackDefinition h = hacks.get(id);
+        if (h != null) return h.getLevel();
+        Map<String, Integer> bundled = bundledLevels;
+        return bundled == null ? 2 : bundled.getOrDefault(id, 2);
+    }
+
     private void loadHacks() {
+        if (bundledLevels == null) bundledLevels = readBundledLevels();
         hacks.clear();
         ConfigurationSection section = hacksConfig.getConfigurationSection("hacks");
         if (section == null) return;
@@ -66,7 +96,8 @@ public class ConfigManager {
                 mode = DetectionMode.TRANSLATE;
             }
             List<String> channels = section.getStringList(id + ".channels");
-            hacks.put(id, new HackDefinition(id, displayName, key, mode, channels));
+            int level = section.getInt(id + ".level", bundledLevels.getOrDefault(id, 1));
+            hacks.put(id, new HackDefinition(id, displayName, key, mode, channels, level));
         }
         plugin.getLogger().info("Loaded " + hacks.size() + " hacks.");
     }
