@@ -14,8 +14,32 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  test:
+    name: Test on JDK ${{ matrix.java }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['21', '25']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+      - name: Build and test
+        run: mvn -B clean verify
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +54,10 @@ jobs:
           cache: maven
 
       - name: Build
-        run: mvn -B clean package
+        run: mvn -B clean package -DskipTests
+
+      - name: Checksums
+        run: cd veneer-plugin/target && sha256sum veneer-*.jar > SHA256SUMS.txt && cat SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
@@ -94,6 +121,12 @@ jobs:
           echo "tag_name=$TAG_NAME"           >> $GITHUB_OUTPUT
           echo "release_title=$RELEASE_TITLE" >> $GITHUB_OUTPUT
 
+      - name: Replace the previous rolling build
+        if: steps.channel.outputs.do_release == 'true' && steps.channel.outputs.is_prerelease == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete "${{ steps.channel.outputs.tag_name }}" --cleanup-tag --yes || true
+
       - name: Publish release
         if: steps.channel.outputs.do_release == 'true'
         uses: softprops/action-gh-release@v2
@@ -103,5 +136,7 @@ jobs:
           name:            ${{ steps.channel.outputs.release_title }}
           prerelease:      ${{ steps.channel.outputs.is_prerelease == 'true' }}
           make_latest:     ${{ steps.channel.outputs.is_latest == 'true' }}
-          files:           veneer-plugin/target/veneer-*.jar
+          files: |
+            veneer-plugin/target/veneer-*.jar
+            veneer-plugin/target/SHA256SUMS.txt
           generate_release_notes: true

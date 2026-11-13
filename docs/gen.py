@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 """Renders the README diagrams: SVG frames -> PNG (rsvg-convert) -> animated WebP (magick)."""
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 from html import escape
 
-OUT = sys.argv[1]
+# Usage: python3 docs/gen.py [output dir]   (default: the docs/ folder next to this script)
+OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(os.path.abspath(__file__))
+_missing = [tool for tool in ("rsvg-convert", "magick") if shutil.which(tool) is None]
+if _missing:
+    sys.exit(f"gen.py needs {' and '.join(_missing)} on PATH (packages librsvg and ImageMagick 7)")
+os.makedirs(OUT, exist_ok=True)
 W, H = 960, 440
 SCALE = 1.5
 

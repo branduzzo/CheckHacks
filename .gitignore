@@ -29,5 +29,5 @@ cache/
 libraries/
 versions/
 run-server/
-test-bot/
+tools/test-bot/node_modules/
 node_modules/

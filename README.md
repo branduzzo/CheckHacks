@@ -158,6 +158,8 @@ Everything is kept in one SQLite file, `plugins/Veneer/data.db`, behind `Storage
 
 `mvn test` runs the unit tests (`StorageTest`, `ClientInputTest`, `SelfSignedTlsTest`); CI runs them on every push.
 
+`tools/run-test.sh` builds the plugin, starts a local server from `run-server/` (put a Paper or Folia jar there as `paper.jar`) and connects the Mineflayer bot from `tools/test-bot`; bot options such as `--brand fabric` are passed through. `python3 docs/gen.py` redraws the README diagrams (needs `rsvg-convert` and ImageMagick).
+
 ## Notes
 
 - The web panel (`/hackeditor`) listens on `127.0.0.1` by default; set `hacks.web-editor.bind` to `0.0.0.0` to reach it from elsewhere, and either set `https: true` (the panel serves HTTPS with a self-signed certificate; check its SHA-256 in the console) or put it behind an HTTPS proxy and set `host` to the proxy's address. A browser is connected with the one-time link from `/hackeditor new` (`link-expire-minutes`, 5; anyone with the link can use it until then, so don't share it) and stays logged in for `session-expire-days` (30) without use. Scan starts and deletions from the panel are logged in the server console. Join addresses and skins are kept for `hacks.web-editor.links.retention-days` (90) after the player was last seen, scans for `hacks.web-editor.history.retention-days` (180).
