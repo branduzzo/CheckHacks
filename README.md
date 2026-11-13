@@ -50,10 +50,10 @@ Veneer places a sign next to the player with a translation or keybind key from e
 ## Install
 | Full | Lite |
 |---|---|
-| Download Java 21+ | Download Java 21+
-| Put plugin in /plugins folder | Put plugin in /plugins folder |
-| Install other plugins if needed | Download PacketEvents, add other plugins in needed |
-| Run server | Run server |
+| Java 21+ | Java 21+ |
+| Put the jar in `plugins/` | Put the jar in `plugins/` |
+| Optional integrations (LuckPerms, PlaceholderAPI, ...) | [PacketEvents](https://modrinth.com/plugin/packetevents), plus optional integrations |
+| Start the server | Start the server |
 
 ## Commands
 
@@ -69,12 +69,12 @@ Veneer places a sign next to the player with a translation or keybind key from e
 | `/spoof` | `veneer.spoof.use` | Inspect client brand and channels, re-run spoof checks (`check`, `runcheck`, `channels`, `brand`); `brands` (needs `veneer.spoof.admin`) lists unknown brands and allows or blocks them |
 | `/hackcheck <player> [hacks]` | `veneer.hacks.check` | Scan a player for mods (`/hackcheck <player> lang` needs `veneer.hacks.lang` instead) |
 | `/hacklang <player>` | `veneer.hacks.lang` | Check a player's client language |
-| `/hackeditor` | `veneer.hacks.editor` | Link to the web panel: scan history and manual scans |
+| `/hackeditor [new\|links [player]\|unauth <player> [id]\|block <player> <id>\|unblock <ip>]` | `veneer.hacks.editor` | Web panel: `new` gives a one-time login link for this browser, `links` lists connected browsers, `unauth` disconnects them, `block`/`unblock` ban a browser's address |
 | `/rptrack <player>` | `veneer.rptrack` | Show a player's cache fingerprint and linked accounts |
 
 Other permissions: `veneer.spoof.admin`. Bypass (all default `false`, not in `veneer.*`): `veneer.bypass` (everything), `veneer.bypass.<spoof|hacks|rptrack>` (that module, join and later), `veneer.bypass.<type>.join` (join-time check only). The most specific bypass that is set wins, so `veneer.bypass` true with `veneer.bypass.hacks` false still scans mods, and nodes set on the player come before group ones (a player's own `veneer.bypass` beats a group's `veneer.bypass.hacks` false); `/veneer info <player>` shows the bypasses in effect and the node that grants each; `veneer.*`, `*` and other wildcards above `veneer.bypass` never grant a bypass, also with LuckPerms (read through its API when installed). Manual scans (`/hackcheck`, `/hacklang`, web panel) ignore bypasses. Wildcards: `veneer.spoof.*`, `veneer.hacks.*`, `veneer.web.*`, `veneer.*`.
 
-Web panel rights (default op) are taken from the player when `/hackeditor` issues the token: `veneer.web.scan` (run scans), `veneer.web.delete` (delete scans), `veneer.web.links` (account graph), `veneer.web.ips` (see IP addresses; without it the graph hides them). Without any of them the token still shows the scan history.
+Web panel rights (default op) are taken from the player when `/hackeditor new` connects a browser (and re-read while the session lives): `veneer.web.scan` (run scans), `veneer.web.delete` (delete scans), `veneer.web.links` (account graph), `veneer.web.ips` (see IP addresses; without it the graph hides them). Without any of them the panel still shows the scan history.
 
 ## Configuration
 
@@ -156,14 +156,14 @@ A module reaches another one through `plugin.module(SpoofModule.class)`; core ne
 
 Everything is kept in one SQLite file, `plugins/Veneer/data.db`, behind `Storage` (`plugin.database()`), split into `scans()`, `players()`, `fingerprints()`, `tokens()`, `settings()` and `links()`. Writes go through one connection, one at a time; reads use a pool of four read-only connections (WAL mode), so a heavy web panel request never holds up a scan or join being saved, and no query runs on the main thread. The first start of a new version upgrades an older file in place (new indexes, the `accounts` table behind the player list).
 
-`mvn test` includes `StorageLoadTest`, which saves scans while four threads read like a busy web panel; `-Dveneer.load.accounts=20000` runs it on more data.
+`mvn test` runs the unit tests (`StorageTest`, `ClientInputTest`, `SelfSignedTlsTest`); CI runs them on every push.
 
 ## Notes
 
-- The web panel (`/hackeditor`) listens on `127.0.0.1` by default; set `hacks.web-editor.bind` to `0.0.0.0` (and put it behind HTTPS) to reach it from elsewhere. Access needs the short-lived token from the command (10 minutes by default; anyone with the link can use it until then, so don't share it). Scan starts and deletions from the panel are logged in the server console. Join addresses and skins are kept for `hacks.web-editor.links.retention-days` (90) after the player was last seen, scans for `hacks.web-editor.history.retention-days` (180).
+- The web panel (`/hackeditor`) listens on `127.0.0.1` by default; set `hacks.web-editor.bind` to `0.0.0.0` to reach it from elsewhere, and either set `https: true` (the panel serves HTTPS with a self-signed certificate; check its SHA-256 in the console) or put it behind an HTTPS proxy and set `host` to the proxy's address. A browser is connected with the one-time link from `/hackeditor new` (`link-expire-minutes`, 5; anyone with the link can use it until then, so don't share it) and stays logged in for `session-expire-days` (30) without use. Scan starts and deletions from the panel are logged in the server console. Join addresses and skins are kept for `hacks.web-editor.links.retention-days` (90) after the player was last seen, scans for `hacks.web-editor.history.retention-days` (180).
 - The provider and country data (about 50 MB) is downloaded to `plugins/Veneer/geo/` through jsDelivr and refreshed weekly (`hacks.web-editor.links.ip-database`, on by default; the plugin works without it). The country is where the network is registered, not a precise location. Which providers count as weak is set by `weak-provider-asns` and `weak-provider-keywords`, the weight factor by `weak-provider-factor` (0.3). Client links need the spoof module and are recorded when a player leaves.
 - To translate the panel, add `veneer-hacks/src/main/resources/web/lang/<language>.json` (English text as keys, see `ru.json`).
-- Version `0.9.7` is independent of the originals (AntiSpoof 1.2.7, CheckHacks 1.3.1).
+- Veneer's version numbers are independent of the originals (AntiSpoof 1.2.7, CheckHacks 1.3.1).
 - **Folia:** every task goes through `FoliaScheduler` (global, per-entity and async schedulers; Bukkit's scheduler is no longer used anywhere), and punishments run as console commands on the global region. Tested on Folia 1.21.11 (mod scan, language check, web panel scans, death, world change and quitting mid-scan). A probe sign Folia does not let the plugin remove on shutdown is removed on the next start.
 - Compiled against Paper API 1.21.4, `api-version: 1.21`. Legacy 1.8.x servers are untested.
 

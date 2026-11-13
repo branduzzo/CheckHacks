@@ -23,3 +23,11 @@ run/
 *.log
 
 CHANGES.txt
+
+# local test servers and bots
+cache/
+libraries/
+versions/
+run-server/
+test-bot/
+node_modules/
