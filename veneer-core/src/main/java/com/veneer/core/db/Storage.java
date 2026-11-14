@@ -12,6 +12,7 @@ import java.util.logging.Logger;
  *   <li>{@link #fingerprints()} RPTrack cache fingerprints</li>
  *   <li>{@link #tokens()} web panel log-in tokens</li>
  *   <li>{@link #settings()} brand verdicts and message language choices</li>
+ *   <li>{@link #manualLinks()} account links marked by hand</li>
  *   <li>{@link #links()} the account link graph built from the above</li>
  * </ul>
  * Every method may be called from any thread, but they do I/O: call them off the main thread.
@@ -24,6 +25,7 @@ public final class Storage implements AutoCloseable {
     private final FingerprintStore fingerprints;
     private final TokenStore tokens;
     private final SettingsStore settings;
+    private final ManualLinkStore manualLinks;
     private final LinkGraph links;
 
     public Storage(File file, Logger log) {
@@ -33,7 +35,8 @@ public final class Storage implements AutoCloseable {
         fingerprints = new FingerprintStore(db);
         tokens = new TokenStore(db);
         settings = new SettingsStore(db);
-        links = new LinkGraph(db, scans, players, fingerprints);
+        manualLinks = new ManualLinkStore(db);
+        links = new LinkGraph(db, scans, players, fingerprints, manualLinks);
     }
 
     public ScanStore scans() { return scans; }
@@ -41,6 +44,7 @@ public final class Storage implements AutoCloseable {
     public FingerprintStore fingerprints() { return fingerprints; }
     public TokenStore tokens() { return tokens; }
     public SettingsStore settings() { return settings; }
+    public ManualLinkStore manualLinks() { return manualLinks; }
     public LinkGraph links() { return links; }
 
     public boolean available() { return db.available(); }

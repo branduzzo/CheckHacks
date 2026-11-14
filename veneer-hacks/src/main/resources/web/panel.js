@@ -1223,6 +1223,13 @@
               '<button type="button" class="btn btn-secondary" style="padding: 3px 8px; font-size: 10.5px;" data-select-player="' +
               escapeHtml(alt.name) +
               '">Inspect</button>' +
+              ((alt.types || []).includes('manual')
+                ? ' <button type="button" class="btn btn-danger-ghost" style="padding: 3px 8px; font-size: 10.5px;" data-unlink-alt="' +
+                  escapeHtml(alt.uuid) +
+                  '" data-unlink-with="' +
+                  escapeHtml(player.uuid) +
+                  '">Unlink</button>'
+                : '') +
               '</td>' +
               '</tr>'
             );
@@ -1459,6 +1466,7 @@
         if (e.type === 'email') return t('same e-mail (AuthMe)');
         if (e.type === 'name') return t('similar name {0}', e.label);
         if (e.type === 'batch') return t('bot batch {0}', e.label);
+        if (e.type === 'manual') return t('manual link');
         let s = t('address {0}', e.label === '(hidden)' ? t('(hidden)') : (e.label || 'shared IP'));
         if (e.org !== undefined || e.provider !== undefined) s += ' (' + provider(e) + ')';
         if (e.weak) s += ' — ' + t('VPN / hosting, counts less');
@@ -1523,6 +1531,7 @@
           const gCl = document.getElementById('g-cl');
           const gEm = document.getElementById('g-em');
           const gNm = document.getElementById('g-nm');
+          const gMan = document.getElementById('g-manual');
           const gMin = document.getElementById('g-min');
           const gDays = document.getElementById('g-days');
           const g2d = document.getElementById('g-2d');
@@ -1534,7 +1543,8 @@
             client: gCl ? gCl.checked : true,
             email: gEm ? gEm.checked : true,
             name: gNm ? gNm.checked : true,
-            batch: gNm ? gNm.checked : true
+            batch: gNm ? gNm.checked : true,
+            manual: gMan ? gMan.checked : true
           };
           const minPct = gMin ? +gMin.value / 100 : 0;
           const days = gDays ? +gDays.value : 0;
@@ -1585,7 +1595,7 @@
             .numDimensions(g2d && g2d.checked ? 2 : 3)
             .nodeThreeObject(n => skinCube(n, 9 + Math.min(n.links, 8) * 1.5))
             .nodeLabel(n => escapeHtml(n.name) + ' (' + (n.links === 1 ? '1 link' : n.links + ' links') + ') — ' + escapeHtml(t(nodeState(n)[0])) + (n.online ? ', ' + escapeHtml(t('online')) : ''))
-            .linkColor(l => l.types.has('rptrack') || l.types.has('fingerprint') ? '#3fb950' : l.types.has('email') ? '#f59e0b' : l.types.has('ip') ? '#8b949e' : l.types.has('batch') ? '#f472b6' : l.types.has('name') ? '#c084fc' : '#2dd4bf')
+            .linkColor(l => l.types.has('manual') ? '#f85149' : l.types.has('rptrack') || l.types.has('fingerprint') ? '#3fb950' : l.types.has('email') ? '#f59e0b' : l.types.has('ip') ? '#8b949e' : l.types.has('batch') ? '#f472b6' : l.types.has('name') ? '#c084fc' : '#2dd4bf')
             .linkOpacity(0.7)
             .linkWidth(l => 0.4 + l.pct * 2.2)
             .linkLabel(l => Math.round(l.pct * 100) + '% — ' + l.why.map(escapeHtml).join(', '))
@@ -1644,7 +1654,7 @@
             controls.update();
           }, {passive: false});
           info.innerHTML = '<span>' + escapeHtml(t('{0} accounts, {1} links', nodes.length, links.length)) + '</span><span class="legend">' +
-            [['#3fb950', 'same fingerprint'], ['#f59e0b', 'same e-mail'], ['#8b949e', 'same address'], ['#2dd4bf', 'same client'], ['#c084fc', 'similar name'], ['#f472b6', 'bot batch']]
+            [['#3fb950', 'same fingerprint'], ['#f59e0b', 'same e-mail'], ['#8b949e', 'same address'], ['#2dd4bf', 'same client'], ['#c084fc', 'similar name'], ['#f472b6', 'bot batch'], ['#f85149', 'manual link']]
               .map(([c, s]) => '<span style="color:' + c + '">&#9632;</span> ' + escapeHtml(t(s))).join(' &nbsp;') + '</span>';
           // The graph takes over the box's content, so the overlays go back on top of it
           box.appendChild(card);
@@ -1669,7 +1679,7 @@
             }
             if (selected !== n) return;
             const alts = links.filter(l => (l.source.id || l.source) === n.id || (l.target.id || l.target) === n.id)
-              .map(l => ({o: (l.source.id || l.source) === n.id ? l.target : l.source, pct: l.pct, why: l.why}))
+              .map(l => ({o: (l.source.id || l.source) === n.id ? l.target : l.source, pct: l.pct, why: l.why, types: l.types}))
               .sort((a, b) => b.pct - a.pct || b.why.length - a.why.length || (a.o.name || '').localeCompare(b.o.name || ''));
             const fp = det ? det.fingerprint : null;
             const cheats = (det && det.mods ? det.mods.slice() : []);
@@ -1688,7 +1698,7 @@
               (fp ? '<h4>' + t('RPTrack') + '</h4><div class="row"><span>' + t('Seen') + '</span><span>' + timeAgo(fp.last_seen) + '</span></div>' +
                 (fp.mask !== undefined ? '<div class="row"><span>' + t('Bitmask') + '</span><span class="bits">' + (Number(fp.mask).toString(2).padStart(16, '0')) + '</span></div>' : '') : '') +
               '<h4>' + t('Linked Accounts ({0})', alts.length) + '</h4>' +
-              (alts.length ? alts.map(a => '<div class="row alt" data-focus="' + escapeHtml(a.o.id || a.o.name) + '"><span style="font-weight:600;">' + escapeHtml(a.o.name || a.o.id) + '</span><span>' + Math.round(a.pct * 100) + '%</span></div><div style="color:var(--text-muted);font-size:10px;padding-bottom:3px;">' + a.why.map(escapeHtml).join(', ') + '</div>').join('') : '<div style="color:var(--text-muted);font-size:11px;">' + t('No other accounts') + '</div>') +
+              (alts.length ? alts.map(a => '<div class="row alt" data-focus="' + escapeHtml(a.o.id || a.o.name) + '"><span style="font-weight:600;">' + escapeHtml(a.o.name || a.o.id) + '</span><span>' + Math.round(a.pct * 100) + '%</span>' + (a.types && a.types.has('manual') ? '<button type="button" class="btn btn-danger-ghost" data-unlink="' + escapeHtml(a.o.id || a.o.name) + '" style="padding:1px 6px;font-size:10px;margin-left:6px;" title="' + escapeHtml(t('Remove the manual link')) + '">&times;</button>' : '') + '</div><div style="color:var(--text-muted);font-size:10px;padding-bottom:3px;">' + a.why.map(escapeHtml).join(', ') + '</div>').join('') : '<div style="color:var(--text-muted);font-size:11px;">' + t('No other accounts') + '</div>') +
               '<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(33,44,61,0.5);"><button type="button" class="btn btn-primary" style="width:100%;justify-content:center;" id="cardOpenDossierBtn">' + t('Open Security Dossier') + '</button></div>';
 
             card.querySelector('#closeNodeCardBtn').onclick = () => select(null);
@@ -1697,6 +1707,22 @@
                 const fId = el.getAttribute('data-focus');
                 const targetNode = nodes.find(x => x.id === fId || x.name === fId);
                 if (targetNode) select(targetNode);
+              };
+            });
+            card.querySelectorAll('[data-unlink]').forEach(el => {
+              el.onclick = async ev => {
+                ev.stopPropagation();
+                const other = el.getAttribute('data-unlink');
+                try {
+                  await apiRequest('/api/link?a=' + encodeURIComponent(n.id) + '&b=' + encodeURIComponent(other), { method: 'DELETE' });
+                  // Drop the pair locally rather than re-reading the whole graph
+                  data.edges = (data.edges || []).filter(e => !(e.type === 'manual' &&
+                    ((e.source === n.id && e.target === other) || (e.target === n.id && e.source === other))));
+                  showStatusBanner(t('Manual link removed.'));
+                  build();
+                } catch (err) {
+                  showStatusBanner(t('Could not remove the link: {0}', err.message || 'Error'), 'danger');
+                }
               };
             });
             const dossierBtn = card.querySelector('#cardOpenDossierBtn');
@@ -1795,12 +1821,13 @@
         const gCl = document.getElementById('g-cl');
         const gEm = document.getElementById('g-em');
         const gNm = document.getElementById('g-nm');
+        const gMan = document.getElementById('g-manual');
         const gDays = document.getElementById('g-days');
         const g2d = document.getElementById('g-2d');
         const gMin = document.getElementById('g-min');
         const gSearch = document.getElementById('g-search');
 
-        [gIp, gRp, gCl, gEm, gNm, gDays, g2d].forEach(el => { if (el) el.onchange = build; });
+        [gIp, gRp, gCl, gEm, gNm, gMan, gDays, g2d].forEach(el => { if (el) el.onchange = build; });
         const gGrp = document.getElementById('g-grp');
         if (gGrp) gGrp.onchange = () => {
           // Narrows around the selected account; with none picked yet there is no group to show
@@ -1970,6 +1997,41 @@
         }
       }
 
+      // The alts panel: a typed name links an account to the one on the page, Unlink removes a manual link
+      async function linkAccount() {
+        const input = document.getElementById('linkAccountInput');
+        const me = STATE.currentPlayer;
+        if (!input || !me) return;
+        const other = input.value.trim();
+        if (!other) return;
+        const btn = document.getElementById('linkAccountBtn');
+        if (btn) btn.disabled = true;
+        try {
+          await apiRequest('/api/link', { method: 'POST', body: JSON.stringify({ a: me.uuid || me.name, b: other }) });
+          input.value = '';
+          await Promise.all([loadPlayerDossier(me.name, false), refreshStatsAndOnline()]);
+          showStatusBanner('Manual link saved.');
+        } catch (err) {
+          showStatusBanner('Could not link the accounts: ' + (err.message || 'Error'), 'danger');
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
+      async function unlinkAlt(me, other) {
+        if (!me || !other) return;
+        try {
+          await apiRequest('/api/link?a=' + encodeURIComponent(me) + '&b=' + encodeURIComponent(other), { method: 'DELETE' });
+          await Promise.all([
+            STATE.selectedPlayerName ? loadPlayerDossier(STATE.selectedPlayerName, false) : null,
+            refreshStatsAndOnline(),
+          ]);
+          showStatusBanner('Manual link removed.');
+        } catch (err) {
+          showStatusBanner('Could not remove the link: ' + (err.message || 'Error'), 'danger');
+        }
+      }
+
       // ============================================================================
       // 8. INITIALIZATION & EVENT LISTENERS
       // ============================================================================
@@ -2007,6 +2069,13 @@
         document.getElementById('runVersionCheckBtn').addEventListener('click', () => triggerPlayerScan('version'));
         document.getElementById('runAllCheckBtn').addEventListener('click', () => triggerPlayerScan('all'));
         document.getElementById('deletePlayerBtn').addEventListener('click', deleteCurrentPlayer);
+        const linkAccountBtn = document.getElementById('linkAccountBtn');
+        if (linkAccountBtn) {
+          linkAccountBtn.addEventListener('click', linkAccount);
+          document.getElementById('linkAccountInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); linkAccount(); }
+          });
+        }
         document.getElementById('historyMoreBtn').addEventListener('click', () => {
           STATE.historyLimit = Math.min(500, STATE.historyLimit + 50);
           refreshHistoryScans().catch(() => {});
@@ -2054,6 +2123,15 @@
           if (deleteScanBtn) {
             const scanId = Number(deleteScanBtn.getAttribute('data-delete-scan'));
             if (scanId) deleteScanById(scanId);
+            return;
+          }
+
+          const unlinkAltBtn = e.target.closest('[data-unlink-alt]');
+          if (unlinkAltBtn) {
+            unlinkAlt(
+              unlinkAltBtn.getAttribute('data-unlink-with'),
+              unlinkAltBtn.getAttribute('data-unlink-alt')
+            );
             return;
           }
 

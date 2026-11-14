@@ -35,19 +35,21 @@ public final class LinkGraph {
     private final ScanStore scans;
     private final PlayerStore players;
     private final FingerprintStore fingerprints;
+    private final ManualLinkStore manualLinks;
 
-    LinkGraph(Database db, ScanStore scans, PlayerStore players, FingerprintStore fingerprints) {
+    LinkGraph(Database db, ScanStore scans, PlayerStore players, FingerprintStore fingerprints, ManualLinkStore manualLinks) {
         this.db = db;
         this.scans = scans;
         this.players = players;
         this.fingerprints = fingerprints;
+        this.manualLinks = manualLinks;
     }
 
     private record Rows3(List<String[]> joins, List<String[]> clients, List<String[]> authMe, List<String[]> seen, Map<String, List<String>> scanMods) {}
 
     /**
      * Graph of linked accounts: {@code nodes} (id, name, detected, links, skin) and {@code edges} (source, target,
-     * type "ip", "rptrack", "client", "email", "name" or "batch", label, p = how likely the two accounts are one person, 0 to 1). An address
+     * type "ip", "rptrack", "client", "email", "name", "batch" or "manual", label, p = how likely the two accounts are one person, 0 to 1). An address
      * shared by more than {@code maxPerIp} accounts is skipped (shared networks); fingerprints link when they overlap
      * by at least {@code minMatch} packs. A client link is the same brand with the same set of at least
      * {@code minChannels} plugin channels, shared by no more than {@code maxPerClient} accounts: a common client
@@ -95,6 +97,12 @@ public final class LinkGraph {
         Map<String, String> names = new LinkedHashMap<>();
         Map<String, List<String>> byIp = new LinkedHashMap<>(), ipsOf = new HashMap<>();
         Map<String, Long> lastSeen = new HashMap<>();
+        // A manual link is one person by staff's word: it counts fully and keeps its accounts in the graph
+        for (String[] m : manualLinks.links()) {
+            names.putIfAbsent(m[0], m[2] != null ? m[2] : m[0]);
+            names.putIfAbsent(m[1], m[3] != null ? m[3] : m[1]);
+            edges.add(edge(m[0], m[1], "manual", "manual link", 1.0));
+        }
         for (String[] r : rows.joins()) {
             names.putIfAbsent(r[0], r[1]);
             byIp.computeIfAbsent(r[2], k -> new ArrayList<>()).add(r[0]);

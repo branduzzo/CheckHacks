@@ -237,6 +237,7 @@ veneer-cmd-hackcheck: "check a player: all, version, language or mods"
 veneer-cmd-hacklang: "find out a player's game language"
 veneer-cmd-hackeditor: "link to the web panel"
 veneer-cmd-rptrack: "resource-pack fingerprint and linked accounts"
+veneer-cmd-accountlink: "mark two accounts as one person by hand (unlink removes it)"
 veneer-cmd-player: "player info page"
 veneer-cmd-find: "search a player and open their info"
 veneer-cmd-check: "check dialog for a player"
@@ -385,6 +386,10 @@ rptrack-report: "{prefix}<gray>[RPTrack]</gray> <white>{player}</white><gray>:</
 rptrack-text-liquidbounce: "LiquidBounce local HTTP server (port 15000) reachable"
 rptrack-text-same-cache: "same client cache as: {players}"
 rptrack-text-probably-same: "probably the same client (one pack missing) as: {players}"
+accountlink-usage: "{prefix}<red>Usage: /{label} \\<player1> \\<player2> or /{label} unlink \\<player1> \\<player2></red>"
+accountlink-self: "{prefix}<red>An account cannot be linked to itself.</red>"
+accountlink-linked: "{prefix}<gray>Manually linked</gray> <white>{first}</white> <gray>and</gray> <white>{second}</white><gray>.</gray>"
+accountlink-unlinked: "{prefix}<gray>Removed the manual link between</gray> <white>{first}</white> <gray>and</gray> <white>{second}</white><gray>.</gray>"
 
 # ======================================================================
 # STARTUP BANNER  (console, shown inside the frame)

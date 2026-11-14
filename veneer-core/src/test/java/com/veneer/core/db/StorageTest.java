@@ -350,6 +350,28 @@ class StorageTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void manualLinksShowInTheGraphWithFullChanceAndCanBeRemoved() {
+        storage.players().recordJoin("u-a", "Alice", "9.9.9.1");
+        storage.players().recordJoin("u-b", "Bob", "9.9.9.2");
+        storage.manualLinks().link("u-b", "u-a"); // either order: the same pair
+        storage.manualLinks().link("u-a", "u-b");
+
+        List<Map<String, Object>> edges = (List<Map<String, Object>>) storage.links().getLinkGraph(8, 5, 5, 3).get("edges");
+        assertEquals(1, edges.size());
+        assertEquals("manual", edges.get(0).get("type"));
+        assertEquals(1.0, edges.get(0).get("p"));
+        // Both accounts stay in the graph by their manual link alone
+        assertEquals(2, ((List<?>) storage.links().getLinkGraph(8, 5, 5, 3).get("nodes")).size());
+
+        storage.manualLinks().unlink("u-b", "u-a");
+        assertTrue(((List<?>) storage.links().getLinkGraph(8, 5, 5, 3).get("edges")).isEmpty());
+        storage.manualLinks().link("u-a", "u-b");
+        storage.players().deletePlayers(List.of("u-a"));
+        assertTrue(((List<?>) storage.links().getLinkGraph(8, 5, 5, 3).get("edges")).isEmpty(), "deleting an account removes its links");
+    }
+
+    @Test
     void readsDoNotWaitForAWrite() throws Exception {
         storage.players().recordJoin("u-a", "Alice", "1.1.1.1");
         CountDownLatch writing = new CountDownLatch(1), release = new CountDownLatch(1);

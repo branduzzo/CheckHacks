@@ -159,6 +159,14 @@ final class Schema {
             s.execute("CREATE INDEX IF NOT EXISTS idx_clients_updated ON clients(updated)");
             // Channel groups page: groups in index order instead of sorting the whole table
             s.execute("CREATE INDEX IF NOT EXISTS idx_clients_channels ON clients(channels, uuid, updated)");
+            // Manual account links (/accountlink, the web panel): a pair of uuids staff marked as one person
+            s.execute("""
+                CREATE TABLE IF NOT EXISTS manual_links (
+                    uuid_a TEXT NOT NULL,
+                    uuid_b TEXT NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    PRIMARY KEY (uuid_a, uuid_b)
+                )""");
             s.execute("CREATE INDEX IF NOT EXISTS idx_tokens_player ON editor_tokens(player_uuid)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_accounts_last ON accounts(last_seen)");
         }

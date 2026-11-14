@@ -42,6 +42,12 @@ public final class Veneer extends VeneerPlugin {
             veneer.setExecutor(executor);
             veneer.setTabCompleter(executor);
         }
+        PluginCommand accountlink = getCommand("accountlink");
+        if (accountlink != null) {
+            AccountLinkCommand executor = new AccountLinkCommand(this);
+            accountlink.setExecutor(executor);
+            accountlink.setTabCompleter(executor);
+        }
     }
 
     public SpoofModule spoof() { return spoof; }

@@ -15,7 +15,7 @@ commands:
     usage: /veneer help
     # Staff only: any one Veneer right opens the command (each subcommand then checks its own). A player
     # without any of them has no /veneer at all, not even the help.
-    permission: veneer.admin;veneer.alerts;veneer.lang;veneer.spoof.use;veneer.spoof.admin;veneer.hacks.check;veneer.hacks.lang;veneer.hacks.editor;veneer.rptrack
+    permission: veneer.admin;veneer.alerts;veneer.lang;veneer.spoof.use;veneer.spoof.admin;veneer.hacks.check;veneer.hacks.lang;veneer.hacks.editor;veneer.rptrack;veneer.web.links
   spoof:
     description: Inspect client brand/channels and re-run spoof checks
     usage: /spoof help
@@ -38,6 +38,10 @@ commands:
     description: Show a player's resource-pack cache fingerprint and linked accounts
     usage: /rptrack <player>
     permission: veneer.rptrack
+  accountlink:
+    description: Mark two accounts as one person by hand, or remove the link
+    usage: /accountlink <player1> <player2> | /accountlink unlink <player1> <player2>
+    permission: veneer.web.links
 
 permissions:
   veneer.admin:
@@ -102,7 +106,7 @@ permissions:
     description: Delete scans from the web panel
     default: op
   veneer.web.links:
-    description: See the account graph in the web panel
+    description: See the account graph in the web panel and link or unlink accounts by hand (/accountlink)
     default: op
   veneer.web.ips:
     description: See players' IP addresses in the web panel

@@ -552,6 +552,45 @@ public class WebServerManager {
             return;
         }
 
+        // Manual account links: POST {a, b} adds one, DELETE ?a&b removes it; a and b are uuids or names
+        if (path.equals("/api/link") && ("POST".equals(method) || "DELETE".equals(method))) {
+            if (!can(playerInfo, "links")) {
+                sendJson(ex, 403, Map.of("error", "no permission: veneer.web.links"));
+                return;
+            }
+            String a, b;
+            if ("POST".equals(method)) {
+                byte[] raw = ex.getRequestBody().readNBytes(MAX_BODY + 1);
+                if (raw.length > MAX_BODY) {
+                    sendJson(ex, 413, Map.of("error", "request too large"));
+                    return;
+                }
+                Map<?, ?> req = gson.fromJson(new String(raw, StandardCharsets.UTF_8), Map.class);
+                a = req != null ? (String) req.get("a") : null;
+                b = req != null ? (String) req.get("b") : null;
+            } else {
+                a = params.get("a");
+                b = params.get("b");
+            }
+            String uuidA = a == null || a.isBlank() ? "" : linkTarget(a);
+            String uuidB = b == null || b.isBlank() ? "" : linkTarget(b);
+            if (uuidA.isEmpty() || uuidB.isEmpty()) {
+                sendJson(ex, 404, Map.of("error", "player not found"));
+                return;
+            }
+            if (uuidA.equals(uuidB)) {
+                sendJson(ex, 400, Map.of("error", "an account cannot be linked to itself"));
+                return;
+            }
+            if ("POST".equals(method)) plugin.database().manualLinks().link(uuidA, uuidB);
+            else                        plugin.database().manualLinks().unlink(uuidA, uuidB);
+            graphCache.clear();
+            plugin.getLogger().info("[Hacks] Web panel: " + playerInfo.get("player_name")
+                    + ("POST".equals(method) ? " linked " : " unlinked ") + uuidA + " and " + uuidB);
+            sendJson(ex, 200, Map.of("success", true));
+            return;
+        }
+
         if (path.equals("/api/scans")) {
             String type  = params.get("type");
             // Clamped: limit=-1 means "no limit" to SQLite and would read the whole history under the DB lock
@@ -884,6 +923,12 @@ public class WebServerManager {
     /** Whether the token was issued to a player with {@code veneer.web.<perm>} (rights are fixed at issue time). */
     private static boolean can(Map<String, String> playerInfo, String perm) {
         return Arrays.asList(playerInfo.getOrDefault("perms", "").split(",")).contains(perm);
+    }
+
+    /** A manual-link target: a uuid as it is, or the uuid of the account the name refers to; empty when unknown. */
+    private String linkTarget(String arg) {
+        if (arg.length() == 36) return arg;
+        return (String) plugin.database().players().getPlayerRecord(arg).getOrDefault("uuid", "");
     }
 
     /**

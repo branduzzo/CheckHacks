@@ -1476,7 +1476,11 @@
                     </svg>
                     <h2 class="panel-title" data-i18n="panel.alts">Alts &amp; Linked Accounts</h2>
                   </div>
-                  <span class="panel-subtitle mono" id="altsCountLabel">2 linked accounts</span>
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <input id="linkAccountInput" placeholder="Link account by name..." style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:6px;color:var(--text-main);padding:5px 9px;font-size:12px;width:150px;">
+                    <button type="button" class="btn btn-teal" id="linkAccountBtn" style="padding:5px 10px;">Link</button>
+                    <span class="panel-subtitle mono" id="altsCountLabel">2 linked accounts</span>
+                  </div>
                 </div>
                 <div class="table-wrap">
                   <table class="data-table" aria-label="Alts and Linked Accounts">
@@ -1601,6 +1605,7 @@
               <label><input type="checkbox" id="g-cl" checked> same client</label>
               <label><input type="checkbox" id="g-em" checked> same e-mail</label>
               <label><input type="checkbox" id="g-nm" checked> similar name</label>
+              <label><input type="checkbox" id="g-manual" checked> manual link</label>
               <label>at least <input type="range" id="g-min" min="0" max="90" step="5" value="0" style="width:90px;padding:0"> <span id="g-min-v">0%</span></label>
               <label>seen <select id="g-days">
                 <option value="0">any time</option>

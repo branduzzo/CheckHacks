@@ -150,6 +150,8 @@ public final class PlayerStore {
             Rows.updateIn(c, "DELETE FROM lang_results WHERE scan_id IN (SELECT id FROM scans WHERE target_uuid IN (%s))", uuids);
             Rows.updateIn(c, "DELETE FROM scans WHERE target_uuid IN (%s)", uuids);
             int removed = Rows.updateIn(c, "DELETE FROM joins WHERE uuid IN (%s)", uuids);
+            Rows.updateIn(c, "DELETE FROM manual_links WHERE uuid_a IN (%s)", uuids);
+            Rows.updateIn(c, "DELETE FROM manual_links WHERE uuid_b IN (%s)", uuids);
             for (String table : List.of("skins", "clients", "rptrack", "player_language", "authme_accounts", "accounts"))
                 Rows.updateIn(c, "DELETE FROM " + table + " WHERE uuid IN (%s)", uuids);
             return removed;
