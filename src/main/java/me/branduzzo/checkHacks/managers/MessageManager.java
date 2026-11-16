@@ -1,5 +1,6 @@
 package me.branduzzo.checkHacks.managers;
 
+import me.branduzzo.checkHacks.AlertMode;
 import me.branduzzo.checkHacks.CheckHacksPlugin;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -42,9 +43,9 @@ public class MessageManager {
     }
 
     private void ensureFile(String name) {
-        File f = new File(plugin.getDataFolder(), name);
-        if (!f.exists()) {
-            f.getParentFile().mkdirs();
+        File file = new File(plugin.getDataFolder(), name);
+        if (!file.exists()) {
+            file.getParentFile().mkdirs();
             plugin.saveResource(name, false);
         }
     }
@@ -56,9 +57,10 @@ public class MessageManager {
     public Component get(String key, Map<String, String> placeholders) {
         String prefix = plugin.getConfigManager().getPrefix();
         String raw = getRaw(key).replace("{prefix}", prefix);
-        for (Map.Entry<String, String> e : placeholders.entrySet())
-            raw = raw.replace("{" + e.getKey() + "}", e.getValue());
-        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) raw = applyPapi(null, raw);
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            raw = raw.replace("{" + entry.getKey() + "}", entry.getValue());
+        }
+        if (raw.indexOf('%') >= 0 && Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) raw = applyPapi(raw);
         return MM.deserialize(raw);
     }
 
@@ -67,17 +69,23 @@ public class MessageManager {
     }
 
     public void broadcastAlerts(Component msg) {
-        for (Player p : Bukkit.getOnlinePlayers())
-            if (p.hasPermission("checkhacks.alerts") && plugin.hasAlertsEnabled(p.getUniqueId()))
-                p.sendMessage(msg);
+        broadcastAlerts(msg, false);
+    }
+
+    public void broadcastAlerts(Component msg, boolean flagged) {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!player.hasPermission("checkhacks.alerts")) continue;
+            AlertMode mode = plugin.getAlertMode(player.getUniqueId());
+            if (mode.wants(flagged)) player.sendMessage(msg);
+        }
         Bukkit.getConsoleSender().sendMessage(msg);
     }
 
-    private String applyPapi(Player player, String text) {
+    private String applyPapi(String text) {
         try {
             Class<?> papi = Class.forName("me.clip.placeholderapi.PlaceholderAPI");
             return (String) papi.getMethod("setPlaceholders", Player.class, String.class)
-                    .invoke(null, player, text);
+                    .invoke(null, null, text);
         } catch (Exception e) {
             return text;
         }

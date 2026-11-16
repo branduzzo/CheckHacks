@@ -18,4 +18,5 @@ public class CommandRule {
     public String getMod()         { return mod; }
     public HackResult getResult()  { return result; }
     public String getCommand()     { return command; }
+    public boolean matchesResult(HackResult value) { return result == null || result == value; }
 }

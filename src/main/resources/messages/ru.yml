@@ -26,3 +26,8 @@ update-complete: "{prefix}<green>Загрузка завершена! <gray>Фа
 update-restart-required: "{prefix}<yellow>Перезапустите сервер, чтобы применить обновление."
 update-failed: "{prefix}<red>Ошибка обновления: <white>{error}"
 update-no-update: "{prefix}<gray>Обновлений нет. У вас последняя версия."
+
+alerts-mode-all: "{prefix}<green>Alerts: <white>all results."
+alerts-mode-only-detected: "{prefix}<yellow>Alerts: <white>only DETECTED and PROTECTED players."
+alerts-mode-off: "{prefix}<red>Alerts: <white>off."
+alerts-usage: "{prefix}<red>Usage: /chalerts [all|only-detected|off]"

@@ -1,421 +1,683 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CheckHacks | Editor</title>
-    <style>
-        *{box-sizing:border-box;margin:0;padding:0}
-        :root{
-          --bg:#0d1117;--surface:#161b22;--surface2:#21262d;--border:#30363d;
-          --blue:#4493f8;--blue-dim:#1f3a5c;--text:#e6edf3;--text2:#8b949e;
-          --green:#3fb950;--red:#f85149;--yellow:#d29922;--gray:#484f58;
-          --radius:8px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif
-        }
-        body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
-        header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;gap:16px;flex-shrink:0}
-        .logo{font-weight:700;font-size:16px;color:var(--text)}
-        .logo span{color:var(--blue)}
-        .header-spacer{flex:1}
-        .home-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:6px 12px;border-radius:var(--radius);cursor:pointer;font-size:13px;font-family:var(--font);transition:all .15s}
-        .home-btn:hover{border-color:var(--blue);color:var(--text)}
-        .player-badge{display:flex;align-items:center;gap:8px;color:var(--text2);font-size:13px;margin-left:8px}
-        .player-badge img{border-radius:4px;image-rendering:pixelated;width:24px;height:24px}
-        .layout{display:grid;grid-template-columns:240px 1fr 260px;flex:1;overflow:hidden}
-        .panel{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-        .panel-right{border-right:none;border-left:1px solid var(--border)}
-        .panel-title{padding:12px 16px 10px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);flex-shrink:0}
-        .search-wrap{padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
-        .search-wrap input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font);outline:none;transition:border-color .15s}
-        .search-wrap input:focus{border-color:var(--blue)}
-        .search-wrap input::placeholder{color:var(--text2)}
-        .search-wrap button{width:100%;margin-top:6px;background:var(--blue-dim);border:1px solid var(--blue);color:var(--blue);border-radius:var(--radius);padding:7px;cursor:pointer;font-size:13px;font-family:var(--font);transition:all .15s}
-        .search-wrap button:hover{background:var(--blue);color:#fff}
-        .panel-scroll{flex:1;overflow-y:auto;padding:6px}
-        .panel-scroll::-webkit-scrollbar{width:4px}
-        .panel-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-        .player-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--radius);cursor:pointer;transition:background .12s;border:1px solid transparent}
-        .player-item:hover{background:var(--surface2);border-color:var(--border)}
-        .player-item img{border-radius:3px;image-rendering:pixelated;flex-shrink:0;width:28px;height:28px;background:var(--surface2)}
-        .player-item-name{font-size:13px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .online-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
-        .scan-item{padding:9px 10px;border-radius:var(--radius);cursor:pointer;border:1px solid var(--border);margin-bottom:5px;background:var(--bg);transition:border-color .12s}
-        .scan-item:hover{border-color:var(--blue)}
-        .scan-item-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
-        .scan-item-name{font-weight:600;font-size:12px;color:var(--text)}
-        .scan-item-time{font-size:11px;color:var(--text2)}
-        .scan-item-meta{font-size:11px;color:var(--text2)}
-        main{overflow-y:auto;padding:20px;background:var(--bg)}
-        main::-webkit-scrollbar{width:5px}
-        main::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-        .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
-        .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
-        .stat-card-num{font-size:26px;font-weight:700;color:var(--text);line-height:1}
-        .stat-card-label{font-size:11px;color:var(--text2);margin-top:3px}
-        .section-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
-        .player-header{display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
-        .player-header img{border-radius:6px;image-rendering:pixelated;width:64px;height:64px;background:var(--surface2)}
-        .player-header-info h2{font-size:20px;font-weight:700;color:var(--text)}
-        .player-header-info p{font-size:11px;color:var(--text2);margin-top:2px;font-family:monospace}
-        .online-badge{display:inline-flex;align-items:center;gap:4px;background:#1a2e1a;border:1px solid #2d5a2d;color:var(--green);border-radius:20px;padding:2px 9px;font-size:11px;margin-top:5px}
-        .offline-badge{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:20px;padding:2px 9px;font-size:11px;margin-top:5px}
-        .scan-cards{display:flex;flex-direction:column;gap:8px}
-        .scan-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color .15s}
-        .scan-card:hover{border-color:var(--blue)}
-        .scan-card-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-        .scan-card-meta{font-size:11px;color:var(--text2);padding:6px 14px;border-bottom:1px solid var(--border)}
-        .scan-card-type{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--blue)}
-        .scan-card-time{font-size:11px;color:var(--text2)}
-        .results-table{width:100%;border-collapse:collapse}
-        .results-table th{text-align:left;padding:8px 14px;font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
-        .results-table td{padding:8px 14px;border-bottom:1px solid var(--border);font-size:13px}
-        .results-table tr:last-child td{border-bottom:none}
-        .badge{display:inline-flex;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600}
-        .badge-DETECTED{background:#3d1a1a;border:1px solid #7c2020;color:var(--red)}
-        .badge-NOT_DETECTED{background:#1a2e1a;border:1px solid #2d5a2d;color:var(--green)}
-        .badge-PROTECTED{background:#2e2410;border:1px solid #5a3d10;color:var(--yellow)}
-        .badge-SKIPPED{background:var(--surface2);border:1px solid var(--border);color:var(--gray)}
-        .badge-lang{background:var(--blue-dim);border:1px solid var(--blue);color:var(--blue)}
-        .empty-state{text-align:center;padding:40px 20px;color:var(--text2)}
-        .loading{text-align:center;padding:28px;color:var(--text2);font-size:13px}
-        .back-btn{background:none;border:1px solid var(--border);color:var(--text2);border-radius:var(--radius);padding:6px 12px;cursor:pointer;font-size:13px;font-family:var(--font);margin-bottom:14px;display:inline-flex;align-items:center;gap:5px;transition:all .15s}
-        .back-btn:hover{border-color:var(--blue);color:var(--text)}
-        .run-btn{background:var(--blue-dim);border:1px solid var(--blue);color:var(--blue);border-radius:var(--radius);padding:7px 14px;cursor:pointer;font-size:13px;font-family:var(--font);transition:all .15s;margin-bottom:14px;margin-right:8px}
-        .run-btn:hover{background:var(--blue);color:#fff}
-        .run-btn:disabled{opacity:.4;cursor:not-allowed}
-        .toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--green);color:var(--green);padding:10px 16px;border-radius:var(--radius);font-size:13px;z-index:999;opacity:0;transition:opacity .2s;pointer-events:none}
-        .toast.show{opacity:1}
-        .error-msg{color:var(--red);font-size:12px;padding:8px 0}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CheckHacks | Editor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  color-scheme:dark;
+  --primary:#f4d35e;--on-primary:#3a3000;--primary-container:#5a4a00;--on-primary-container:#ffeb99;
+  --secondary-container:#2f4f3a;--on-secondary-container:#c6f0cf;
+  --tertiary:#9fd6a8;--tertiary-container:#1f4d2e;--on-tertiary-container:#c6f0cf;
+  --error:#f2b8b5;--error-container:#8c1d18;--on-error-container:#f9dedc;
+  --success:#b8e6c1;--success-container:#1f4d2e;
+  --surface:#14150f;--surface-container-lowest:#0e0f0a;--surface-container:#1f2118;
+  --surface-container-high:#292c20;--surface-container-highest:#343829;
+  --on-surface:#e7e6d8;--on-surface-variant:#c9c8b4;--outline:#93927e;--outline-variant:#494a3c;
+  --shadow:0 1px 3px rgba(0,0,0,.35),0 4px 12px rgba(0,0,0,.22);
+  --radius-xs:4px;--radius-s:8px;--radius-m:12px;--radius-l:16px;--radius-xl:28px;
+  --font:Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;--mono:ui-monospace,SFMono-Regular,Consolas,monospace;
+}
+html[data-theme="light"]{
+  color-scheme:light;
+  --primary:#6b5a00;--on-primary:#fff;--primary-container:#f6e7a8;--on-primary-container:#3b3000;
+  --secondary-container:#c8ecd1;--on-secondary-container:#123d24;
+  --tertiary:#2f6b45;--tertiary-container:#d7f2df;--on-tertiary-container:#0b2e1a;
+  --error:#b3261e;--error-container:#f9dedc;--on-error-container:#410e0b;
+  --success:#2e6b45;--success-container:#d7f2df;
+  --surface:#fbfaf2;--surface-container-lowest:#fff;--surface-container:#f2f0e4;
+  --surface-container-high:#eae7d8;--surface-container-highest:#e2dfcf;
+  --on-surface:#1d1c14;--on-surface-variant:#4b4a3d;--outline:#797866;--outline-variant:#cac8b8;
+  --shadow:0 1px 2px rgba(0,0,0,.12),0 2px 8px rgba(0,0,0,.08);
+}
+body{background:var(--surface);color:var(--on-surface);font-family:var(--font);font-size:14px;line-height:1.45;min-height:100vh}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+a{color:var(--primary)}
+.top-bar{position:sticky;top:0;z-index:20;height:64px;display:flex;align-items:center;gap:16px;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--outline-variant)}
+.brand{color:var(--success);font-size:20px;font-weight:500;letter-spacing:.1px;white-space:nowrap}
+.brand b{color:var(--primary);font-weight:700}
+.spacer{flex:1}
+.icon-button{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:var(--on-surface-variant);transition:background .15s}
+.icon-button:hover{background:var(--surface-container-high)}
+.icon-button svg{width:22px;height:22px;fill:currentColor}
+.user-chip{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px 0 6px;border-radius:20px;background:var(--surface-container);color:var(--on-surface-variant);font-size:13px;max-width:230px}
+.user-chip img{width:24px;height:24px;border-radius:50%;background:var(--surface-container-high);image-rendering:pixelated}
+.user-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shell{display:grid;grid-template-columns:88px minmax(0,1fr);min-height:calc(100vh - 64px)}
+.nav-rail{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0;background:var(--surface);border-right:1px solid var(--outline-variant)}
+.nav-item{width:72px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0 4px;color:var(--on-surface-variant);border-radius:16px}
+.nav-pill{width:56px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.nav-item svg{width:22px;height:22px;fill:currentColor}
+.nav-item span{font-size:11px;font-weight:500}
+.nav-item:hover .nav-pill{background:var(--surface-container-high)}
+.nav-item.active{color:var(--on-secondary-container)}
+.nav-item.active .nav-pill{background:var(--secondary-container)}
+main{padding:24px 28px 56px;max-width:1180px;width:100%;margin:0 auto}
+.page-title{font-size:28px;font-weight:400;letter-spacing:0;margin-bottom:4px}
+.page-sub{color:var(--on-surface-variant);font-size:14px;margin-bottom:24px}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.grid{display:grid;gap:12px}
+.stats{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:24px}
+.card{background:var(--surface-container);border-radius:var(--radius-m);padding:18px;box-shadow:var(--shadow)}
+.card.outlined{background:transparent;border:1px solid var(--outline-variant);box-shadow:none}
+.stat-label{font-size:12px;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:.7px}
+.stat-value{font-size:32px;line-height:1.2;margin-top:6px;font-weight:500}
+.stat-value.error{color:var(--error)}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:24px 0 12px}
+.section-title{font-size:16px;font-weight:500}
+.section-hint{font-size:12px;color:var(--on-surface-variant)}
+.filled-button,.tonal-button,.outlined-button,.text-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 24px;border-radius:20px;font-size:14px;font-weight:500;white-space:nowrap;transition:filter .15s,background .15s}
+.filled-button{background:var(--primary);color:var(--on-primary)}
+.tonal-button{background:var(--secondary-container);color:var(--on-secondary-container)}
+.outlined-button{border:1px solid var(--outline);color:var(--primary)}
+.text-button{color:var(--primary);padding:0 12px}
+.filled-button:hover,.tonal-button:hover{filter:brightness(1.08)}
+.text-button:hover{background:var(--surface-container-high)}
+.small-button{height:32px;padding:0 16px;font-size:13px;border-radius:16px}
+.list{display:flex;flex-direction:column;gap:8px}
+.list-item{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface-container);border-radius:var(--radius-m);min-width:0}
+.list-item:hover{background:var(--surface-container-high)}
+.list-item.clickable{cursor:pointer}
+.list-main{flex:1;min-width:0}
+.list-title{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-meta{font-size:12px;color:var(--on-surface-variant);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--surface-container-high);image-rendering:pixelated;flex:none}
+.avatar.lg{width:72px;height:72px;border-radius:24px}
+.badge{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:11px;font-size:11px;font-weight:600;letter-spacing:.3px;white-space:nowrap}
+.badge.detected{background:var(--error-container);color:var(--on-error-container)}
+.badge.protected{background:var(--tertiary-container);color:var(--on-tertiary-container)}
+.badge.clean{background:var(--success-container);color:var(--success)}
+.badge.skipped,.badge.muted{background:var(--surface-container-highest);color:var(--on-surface-variant)}
+.badge.lang{background:var(--primary-container);color:var(--on-primary-container)}
+.chip{display:inline-flex;align-items:center;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--outline);color:var(--on-surface-variant);font-size:13px;background:transparent}
+.chip.active{background:var(--secondary-container);color:var(--on-secondary-container);border-color:transparent}
+.chip:hover{background:var(--surface-container-high)}
+.search-bar{display:flex;gap:8px;align-items:center;background:var(--surface-container);border-radius:28px;padding:4px 6px 4px 18px;margin-bottom:20px}
+.search-bar input{flex:1;background:none;border:none;outline:none;height:40px;color:var(--on-surface)}
+.search-bar input::placeholder{color:var(--on-surface-variant)}
+.text-field{position:relative;display:block;margin-bottom:16px}
+.text-field input,.text-field textarea,.text-field select{width:100%;background:transparent;border:1px solid var(--outline);border-radius:var(--radius-xs);padding:20px 14px 8px;outline:none;transition:border-color .15s}
+.text-field textarea{min-height:88px;resize:vertical}
+.text-field input:focus,.text-field textarea:focus,.text-field select:focus{border-color:var(--primary);border-width:2px;padding:19px 13px 7px}
+.text-field span{position:absolute;left:11px;top:-8px;padding:0 4px;background:var(--surface);font-size:12px;color:var(--on-surface-variant)}
+.select-field{display:block;margin-bottom:16px}
+.select-field label{display:block;font-size:12px;color:var(--on-surface-variant);margin-bottom:6px}
+.select-field select{width:100%;height:48px;border:1px solid var(--outline);border-radius:var(--radius-xs);background:var(--surface-container);padding:0 12px;outline:none}
+.switch-row{display:flex;align-items:center;gap:14px;padding:10px 0;min-height:44px}
+.switch-row .label{flex:1}
+.switch-row .hint{font-size:12px;color:var(--on-surface-variant)}
+.switch{position:relative;width:52px;height:32px;flex:none}
+.switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2}
+.switch .track{position:absolute;inset:4px 0;border-radius:16px;background:var(--surface-container-highest);border:2px solid var(--outline);transition:background .15s,border-color .15s}
+.switch .thumb{position:absolute;top:8px;left:6px;width:16px;height:16px;border-radius:50%;background:var(--outline);transition:transform .15s,width .15s,height .15s,top .15s,left .15s,background .15s}
+.switch input:checked+.track{background:var(--primary);border-color:var(--primary)}
+.switch input:checked~.thumb{transform:translateX(20px);width:24px;height:24px;top:4px;left:4px;background:var(--on-primary)}
+.table{width:100%;border-collapse:collapse}
+.table th{text-align:left;font-size:12px;font-weight:500;color:var(--on-surface-variant);padding:10px 14px;border-bottom:1px solid var(--outline-variant)}
+.table td{padding:12px 14px;border-bottom:1px solid var(--outline-variant);vertical-align:top}
+.table tr:last-child td{border-bottom:none}
+.mono{font-family:var(--mono);font-size:12px;color:var(--on-surface-variant);word-break:break-word}
+.dialog{border:none;border-radius:var(--radius-xl);background:var(--surface-container-high);color:var(--on-surface);padding:0;width:min(560px,calc(100vw - 32px));box-shadow:0 12px 40px rgba(0,0,0,.45)}
+.dialog::backdrop{background:rgba(0,0,0,.5)}
+.dialog form{padding:24px}
+.dialog h2{font-size:24px;font-weight:400;margin-bottom:20px}
+.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.snackbar{position:fixed;left:50%;bottom:24px;transform:translate(-50%,80px);background:var(--surface-container-highest);color:var(--on-surface);padding:14px 18px;border-radius:var(--radius-s);box-shadow:var(--shadow);opacity:0;transition:transform .25s,opacity .25s;z-index:60;max-width:90vw}
+.snackbar.show{transform:translate(-50%,0);opacity:1}
+.empty{padding:40px 20px;text-align:center;color:var(--on-surface-variant)}
+.loading{padding:28px;text-align:center;color:var(--on-surface-variant)}
+.error-text{color:var(--error)}
+.scan-results{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px 16px}
+.player-header{display:flex;align-items:center;gap:18px;padding:20px;background:var(--surface-container);border-radius:var(--radius-l);margin-bottom:20px;flex-wrap:wrap}
+.player-header h2{font-size:24px;font-weight:500}
+.player-header .uuid{font-family:var(--mono);font-size:11px;color:var(--on-surface-variant)}
+.detail{background:var(--surface-container);border-radius:var(--radius-l);overflow:hidden;margin-bottom:16px}
+.detail-head{padding:18px 20px;border-bottom:1px solid var(--outline-variant)}
+.detail-foot{padding:14px 20px;display:flex;gap:8px;flex-wrap:wrap}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.settings-grid .card{display:flex;flex-direction:column}
+.card-title{font-size:16px;font-weight:500;margin-bottom:6px}
+.card-hint{font-size:12px;color:var(--on-surface-variant);margin-bottom:12px}
+.code{font-family:var(--mono);background:var(--surface-container-high);padding:2px 6px;border-radius:4px;font-size:12px}
+@media (max-width:820px){
+  .shell{grid-template-columns:1fr;padding-bottom:72px}
+  .nav-rail{position:fixed;left:0;right:0;bottom:0;top:auto;flex-direction:row;justify-content:space-around;border-right:none;border-top:1px solid var(--outline-variant);z-index:30;padding:6px 0}
+  .nav-item{width:auto;flex:1}
+  main{padding:18px 16px 40px}
+  .brand{font-size:17px}
+  .top-bar{padding:0 12px;gap:8px}
+  .user-chip span{display:none}
+}
+</style>
 </head>
 <body>
-<header>
-    <span class="logo">Check<span>Hacks</span> Editor</span>
-    <div class="header-spacer"></div>
-    <div class="player-badge" id="player-badge"></div>
-    <button class="home-btn" onclick="showHome()">⌂ Home</button>
+<header class="top-bar">
+  <div class="brand">Check<b>Hacks</b></div>
+  <div class="spacer"></div>
+  <div class="user-chip" id="user-chip"></div>
+  <button class="icon-button" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme"></button>
 </header>
-<div class="layout">
-    <aside class="panel">
-        <div class="panel-title">Players</div>
-        <div class="search-wrap">
-            <input type="text" id="search-input" placeholder="Search player..." onkeydown="if(event.key==='Enter')searchPlayer()">
-            <button onclick="searchPlayer()">Search</button>
-        </div>
-        <div class="panel-scroll" id="offline-history"></div>
-    </aside>
-    <main id="main-content">
-        <div class="loading">Loading...</div>
-    </main>
-    <aside class="panel panel-right">
-        <div class="panel-title">Recent Scans</div>
-        <div class="panel-scroll" id="recent-scans"></div>
-        <div class="panel-title" style="border-top:1px solid var(--border)">Online Players</div>
-        <div style="height:220px;overflow-y:auto;padding:6px;flex-shrink:0" id="online-players"></div>
-    </aside>
+<div class="shell">
+  <nav class="nav-rail" id="nav-rail"></nav>
+  <main id="main"><div class="loading">Loading...</div></main>
 </div>
-<div class="toast" id="toast"></div>
+<dialog class="dialog" id="rule-dialog">
+  <form id="rule-form">
+    <h2 id="rule-dialog-title">New rule</h2>
+    <label class="text-field"><input id="rule-name" placeholder=" " autocomplete="off"><span>Name (optional)</span></label>
+    <label class="text-field"><input id="rule-mod" list="mod-list" placeholder=" " required autocomplete="off"><span>Mod id</span></label>
+    <datalist id="mod-list"></datalist>
+    <div class="select-field">
+      <label for="rule-result">Result</label>
+      <select id="rule-result">
+        <option value="ANY">Any result</option>
+        <option value="DETECTED">Detected</option>
+        <option value="PROTECTED">Protected</option>
+        <option value="NOT_DETECTED">Not detected</option>
+        <option value="SKIPPED">Skipped</option>
+      </select>
+    </div>
+    <label class="text-field"><textarea id="rule-command" placeholder=" " required></textarea><span>Command</span></label>
+    <div class="dialog-actions">
+      <button type="button" class="text-button" id="rule-cancel">Cancel</button>
+      <button type="submit" class="filled-button">Save rule</button>
+    </div>
+  </form>
+</dialog>
+<div class="snackbar" id="snackbar"></div>
 <script>
-    const token = new URLSearchParams(location.search).get('token');
+const token = new URLSearchParams(location.search).get('token');
+const $ = (id) => document.getElementById(id);
+const state = { page: 'overview', hacks: [], rules: [], settings: {}, scans: [], online: [], editingRule: null };
+let history = [];
+try { history = JSON.parse(localStorage.getItem('ch_history') || '[]'); } catch (e) { history = []; }
 
-    function apiUrl(path) {
-      const sep = path.includes('?') ? '&' : '?';
-      return '/api/' + path + sep + 'token=' + encodeURIComponent(token);
-    }
+const icons = {
+  overview: '<path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm9 0h6v-9h-6v9Zm0-16v5h6V4h-6Z"/>',
+  players: '<path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3Zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3Zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13Zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5Z"/>',
+  scans: '<path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Zm-7 14H7v-2h5v2Zm5-4H7v-2h10v2Zm0-4H7V7h10v2Z"/>',
+  rules: '<path d="M3 17h6v-2H3v2Zm0-6h9v-2H3v2Zm0-8v2h18V3H3Zm14 12.6 2.6-2.6 1.4 1.4-4 4-2.6-2.6 1.4-1.4 1.2 1.2Z"/>',
+  settings: '<path d="M19.43 12.98c.04-.32.07-.65.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.37-.3-.6-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.58-1.69.98l-2.49-1c-.23-.08-.48 0-.6.22l-2 3.46c-.12.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.37.3.6.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.58 1.69-.98l2.49 1c.23.08.48 0 .6-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65ZM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Z"/>',
+  sun: '<path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0-5h0v3h0V2Zm0 17v3h0v-3Zm10-2v-.01h-3V12h3Zm-17 0H2v-.01h3V12H2Zm15.36-8.24 2.12-2.12-1.41-1.41-2.12 2.12 1.41 1.41ZM6.34 17.66l-2.12 2.12 1.41 1.41 2.12-2.12-1.41-1.41Zm12.73 2.12 1.41-1.41-2.12-2.12-1.41 1.41 2.12 2.12ZM6.34 6.34 4.93 4.93 2.81 7.05l1.41 1.41 2.12-2.12Z"/>',
+  moon: '<path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36A5.39 5.39 0 0 1 12 3Z"/>',
+  plus: '<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2Z"/>',
+  refresh: '<path d="M17.65 6.35A8 8 0 1 0 20 12h-2a6 6 0 1 1-1.76-4.24L13 11h7V4l-2.35 2.35Z"/>',
+  edit: '<path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25ZM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"/>',
+  trash: '<path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12ZM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4Z"/>',
+  search: '<path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5Z"/>',
+  play: '<path d="M8 5v14l11-7L8 5Z"/>'
+};
 
-    async function apiFetch(path, opts) {
-      const r = await fetch(apiUrl(path), opts || {});
-      const text = await r.text();
-      let json;
-      try { json = JSON.parse(text); } catch(e) { throw new Error('Invalid JSON: ' + text.slice(0,100)); }
-      if (!r.ok) throw new Error(json.error || r.status);
-      return json;
-    }
+function icon(name, size) {
+  return '<svg viewBox="0 0 24 24" width="' + (size || 22) + '" height="' + (size || 22) + '" aria-hidden="true">' + icons[name] + '</svg>';
+}
 
-    async function apiPost(path, body) {
-      return apiFetch(path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-    }
+function esc(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 
-    let offlineHistory = [];
-    try { offlineHistory = JSON.parse(localStorage.getItem('ch_history') || '[]'); } catch(e) {}
+function apiUrl(path) {
+  const sep = path.includes('?') ? '&' : '?';
+  return '/api/' + path + sep + 'token=' + encodeURIComponent(token);
+}
 
-    function showToast(msg) {
-      const el = document.getElementById('toast');
-      el.textContent = msg;
-      el.classList.add('show');
-      setTimeout(() => el.classList.remove('show'), 2500);
-    }
+async function api(path, options) {
+  const response = await fetch(apiUrl(path), options || {});
+  const text = await response.text();
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch (e) { throw new Error('Invalid JSON: ' + text.slice(0, 120)); }
+  if (!response.ok) throw new Error((json && json.error) || ('HTTP ' + response.status));
+  return json;
+}
 
-    function esc(s) {
-      return String(s == null ? '' : s)
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
+function apiPost(path, body) {
+  return api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+}
 
-    function timeAgo(ts) {
-      const d = Date.now() - Number(ts);
-      if (d < 60000) return 'just now';
-      if (d < 3600000) return Math.floor(d/60000) + 'm ago';
-      if (d < 86400000) return Math.floor(d/3600000) + 'h ago';
-      return new Date(Number(ts)).toLocaleDateString();
-    }
+function headUrl(id) {
+  return 'https://mc-heads.net/avatar/' + encodeURIComponent(id || 'steve') + '/64';
+}
 
-    function headUrl(id) {
-      return 'https://mc-heads.net/avatar/' + encodeURIComponent(id) + '/32';
-    }
+function rawHead(id) {
+  return 'https://mc-heads.net/avatar/' + encodeURIComponent(id || 'steve') + '/32';
+}
 
-    function badge(result) {
-      const r = String(result || 'SKIPPED').toUpperCase();
-      return '<span class="badge badge-' + r + '">' + r + '</span>';
-    }
+function timeAgo(timestamp) {
+  const delta = Date.now() - Number(timestamp);
+  if (delta < 60000) return 'just now';
+  if (delta < 3600000) return Math.floor(delta / 60000) + 'm ago';
+  if (delta < 86400000) return Math.floor(delta / 3600000) + 'h ago';
+  return new Date(Number(timestamp)).toLocaleDateString();
+}
 
-    async function init() {
-      try {
-        const info = await apiFetch('validate');
-        document.getElementById('player-badge').innerHTML =
-          '<img src="' + headUrl(info.player_uuid) + '" onerror="this.style.visibility=\'hidden\'" alt=""> ' + esc(info.player_name);
-      } catch(e) {
-        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#8b949e;font-size:14px">Session expired. Run /cheditor in Minecraft.</div>';
-        return;
-      }
-      showHome();
-      loadOnlinePlayers();
-      loadRecentScans();
-      renderOfflineHistory();
-      setInterval(loadOnlinePlayers, 10000);
-      setInterval(loadRecentScans, 15000);
-    }
+function badge(result) {
+  const value = String(result || 'SKIPPED').toUpperCase();
+  const cls = value === 'DETECTED' ? 'detected' : value === 'PROTECTED' ? 'protected' : value === 'NOT_DETECTED' ? 'clean' : 'skipped';
+  return '<span class="badge ' + cls + '">' + esc(value.replace('_', ' ')) + '</span>';
+}
 
-    async function showHome() {
-      const main = document.getElementById('main-content');
-      main.innerHTML = '<div class="loading">Loading...</div>';
-      try {
-        const [hackScans, langScans] = await Promise.all([
-          apiFetch('scans?type=hack&limit=200'),
-          apiFetch('scans?type=lang&limit=200')
-        ]);
-        const detected = hackScans.filter(s => s.has_detected == 1 || s.has_detected === true).length;
-        const recent = [...hackScans, ...langScans].sort((a,b) => Number(b.timestamp) - Number(a.timestamp)).slice(0, 15);
+function toast(message) {
+  const el = $('snackbar');
+  el.textContent = message;
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), 3000);
+}
 
-        let cards = '';
-        for (const s of recent) {
-          cards += buildScanCard(s);
-        }
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('ch_theme', theme);
+  $('theme-toggle').innerHTML = icon(theme === 'dark' ? 'sun' : 'moon');
+}
 
-        main.innerHTML =
-          '<div class="section-title">Overview</div>' +
-          '<div class="stat-row">' +
-            '<div class="stat-card"><div class="stat-card-num">' + hackScans.length + '</div><div class="stat-card-label">Hack Scans</div></div>' +
-            '<div class="stat-card"><div class="stat-card-num">' + langScans.length + '</div><div class="stat-card-label">Lang Checks</div></div>' +
-            '<div class="stat-card"><div class="stat-card-num" style="color:var(--red)">' + detected + '</div><div class="stat-card-label">Detections</div></div>' +
-          '</div>' +
-          '<div class="section-title">Recent Activity</div>' +
-          '<div class="scan-cards">' + (cards || '<div class="empty-state"><p>No scans yet.</p></div>') + '</div>';
-      } catch(e) {
-        main.innerHTML = '<div class="empty-state"><p>Error: ' + esc(e.message) + '</p></div>';
-      }
-    }
+function initTheme() {
+  const saved = localStorage.getItem('ch_theme');
+  setTheme(saved || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+  $('theme-toggle').onclick = () => setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
 
-    function buildScanCard(s) {
-      const results = s.results || [];
-      let preview = '';
-      if (s.type === 'hack') {
-        preview = results.slice(0, 6).map(r => badge(r.result)).join(' ');
-      } else {
-        const r = results[0];
-        preview = r ? '<span class="badge badge-lang">' + esc(r.language || 'Unknown') + '</span>' : '';
-      }
-      return '<div class="scan-card" onclick="showScan(' + s.id + ')">' +
-        '<div class="scan-card-header">' +
-          '<span class="scan-card-type">' + (s.type === 'hack' ? 'Hack Check' : 'Lang Check') + ' — ' + esc(s.target_name) + '</span>' +
-          '<span class="scan-card-time">' + timeAgo(s.timestamp) + '</span>' +
+function initNav() {
+  const items = [
+    ['overview', 'Overview'], ['players', 'Players'], ['scans', 'Scans'], ['rules', 'Rules'], ['settings', 'Settings']
+  ];
+  $('nav-rail').innerHTML = items.map(([page, label]) =>
+    '<button class="nav-item" data-page="' + page + '" onclick="navigate(\'' + page + '\')">' +
+      '<span class="nav-pill">' + icon(page) + '</span><span>' + label + '</span></button>'
+  ).join('');
+}
+
+function setActive(page) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.page === page));
+}
+
+async function navigate(page) {
+  state.page = page;
+  setActive(page);
+  if (page === 'overview') return renderOverview();
+  if (page === 'players') return renderPlayers();
+  if (page === 'scans') return renderScans();
+  if (page === 'rules') return renderRules();
+  if (page === 'settings') return renderSettings();
+}
+
+async function init() {
+  initTheme();
+  initNav();
+  setActive('overview');
+  try {
+    const info = await api('validate');
+    $('user-chip').innerHTML = '<img src="' + rawHead(info.player_uuid) + '" alt=""> <span>' + esc(info.player_name) + '</span>';
+  } catch (e) {
+    document.body.innerHTML = '<div class="empty" style="padding-top:20vh">Session expired. Run /cheditor in Minecraft.</div>';
+    return;
+  }
+  try { state.hacks = await api('hacks'); } catch (e) { state.hacks = []; }
+  $('mod-list').innerHTML = state.hacks.map(h => '<option value="' + esc(h.id) + '">' + esc(h.name) + '</option>').join('');
+  await loadOnline();
+  navigate('overview');
+  setInterval(loadOnline, 10000);
+}
+
+async function loadOnline() {
+  try { state.online = await api('players/online'); } catch (e) { state.online = []; }
+  if (state.page === 'players' && document.activeElement.id !== 'player-search') renderPlayers();
+}
+
+function statCard(label, value, cls) {
+  return '<div class="card"><div class="stat-label">' + label + '</div><div class="stat-value ' + (cls || '') + '">' + value + '</div></div>';
+}
+
+async function renderOverview() {
+  const main = $('main');
+  main.innerHTML = '<div class="loading">Loading overview...</div>';
+  try {
+    const [hackScans, langScans] = await Promise.all([
+      api('scans?type=hack&limit=200'),
+      api('scans?type=lang&limit=200')
+    ]);
+    state.scans = [...hackScans, ...langScans].sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
+    const detected = hackScans.filter(scan => scan.has_detected == 1 || scan.has_detected === true).length;
+    const recent = state.scans.slice(0, 12);
+    main.innerHTML =
+      '<h1 class="page-title">Overview</h1>' +
+      '<p class="page-sub">Scan history, detections and the current server state.</p>' +
+      '<div class="grid stats">' +
+        statCard('Hack scans', hackScans.length) +
+        statCard('Language checks', langScans.length) +
+        statCard('Detections', detected, 'error') +
+        statCard('Online players', state.online.length) +
+      '</div>' +
+      '<div class="section-head"><span class="section-title">Recent activity</span>' +
+        '<button class="text-button small-button" onclick="navigate(\'scans\')">View all</button></div>' +
+      '<div class="list">' + (recent.length ? recent.map(scanRow).join('') : '<div class="empty">No scans yet.</div>') + '</div>';
+  } catch (e) {
+    main.innerHTML = '<div class="empty error-text">Failed to load: ' + esc(e.message) + '</div>';
+  }
+}
+
+function scanRow(scan) {
+  const results = scan.results || [];
+  const preview = scan.type === 'hack'
+    ? results.slice(0, 5).map(r => badge(r.result)).join(' ')
+    : (results[0] ? '<span class="badge lang">' + esc(results[0].language || 'Unknown') + '</span>' : '');
+  return '<div class="list-item clickable" onclick="showScan(' + scan.id + ')">' +
+    '<div class="list-main">' +
+      '<div class="list-title">' + esc(scan.target_name) + ' <span class="section-hint">' + (scan.type === 'hack' ? 'hack check' : 'language check') + '</span></div>' +
+      '<div class="list-meta">by ' + esc(scan.checker_name) + ' · ' + timeAgo(scan.timestamp) + '</div>' +
+      (preview ? '<div class="scan-results" style="padding:8px 0 0">' + preview + '</div>' : '') +
+    '</div>' +
+    '<span class="section-hint">' + new Date(Number(scan.timestamp)).toLocaleString() + '</span>' +
+  '</div>';
+}
+
+async function renderPlayers() {
+  const main = $('main');
+  const online = state.online.map(player =>
+    '<div class="list-item clickable" onclick="showPlayer(\'' + encodeURIComponent(player.name) + '\')">' +
+      '<img class="avatar" src="' + rawHead(player.uuid) + '" alt="">' +
+      '<div class="list-main"><div class="list-title">' + esc(player.name) + '</div><div class="list-meta">Online now</div></div>' +
+      '<span class="badge clean">ONLINE</span>' +
+    '</div>'
+  ).join('');
+  const recent = history.map(name =>
+    '<div class="list-item clickable" onclick="showPlayer(\'' + encodeURIComponent(name) + '\')">' +
+      '<img class="avatar" src="' + rawHead(name) + '" alt="">' +
+      '<div class="list-main"><div class="list-title">' + esc(name) + '</div><div class="list-meta">Recent lookup</div></div>' +
+    '</div>'
+  ).join('');
+  main.innerHTML =
+    '<h1 class="page-title">Players</h1>' +
+    '<p class="page-sub">Look up a player, browse their scan history or start a new check.</p>' +
+    '<div class="search-bar">' + icon('search', 20) +
+      '<input id="player-search" placeholder="Search player..." onkeydown="if(event.key===\'Enter\')searchPlayer()">' +
+      '<button class="filled-button small-button" onclick="searchPlayer()">Search</button>' +
+    '</div>' +
+    '<div class="section-head"><span class="section-title">Online players</span><span class="section-hint">' + state.online.length + ' online</span></div>' +
+    '<div class="list">' + (online || '<div class="empty">No players online.</div>') + '</div>' +
+    '<div class="section-head"><span class="section-title">Recent lookups</span></div>' +
+    '<div class="list">' + (recent || '<div class="empty">Search a player above.</div>') + '</div>';
+}
+
+function searchPlayer() {
+  const value = $('player-search').value.trim();
+  if (value) showPlayer(encodeURIComponent(value));
+}
+
+async function showPlayer(encodedName) {
+  const name = decodeURIComponent(encodedName);
+  state.page = 'players';
+  setActive('players');
+  history = [name, ...history.filter(entry => entry.toLowerCase() !== name.toLowerCase())].slice(0, 20);
+  localStorage.setItem('ch_history', JSON.stringify(history));
+  const main = $('main');
+  main.innerHTML = '<div class="loading">Loading ' + esc(name) + '...</div>';
+  try {
+    const data = await api('player/' + encodeURIComponent(name));
+    const scans = data.scans || [];
+    const uuid = data.uuid || name;
+    const actions = data.online
+      ? '<button class="filled-button" onclick="runScan(\'' + encodeURIComponent(name) + '\',\'hack\',this)">' + icon('play', 18) + ' Hack check</button>' +
+        '<button class="tonal-button" onclick="runScan(\'' + encodeURIComponent(name) + '\',\'lang\',this)">Language check</button>'
+      : '<span class="section-hint">The player must be online to start a check.</span>';
+    main.innerHTML =
+      '<button class="text-button" onclick="navigate(\'players\')">Back to players</button>' +
+      '<div class="player-header">' +
+        '<img class="avatar lg" src="' + headUrl(uuid) + '" alt="">' +
+        '<div><h2>' + esc(name) + '</h2><div class="uuid">' + esc(uuid) + '</div>' +
+          '<div style="margin-top:6px">' + (data.online ? '<span class="badge clean">ONLINE</span>' : '<span class="badge muted">OFFLINE</span>') + '</div>' +
         '</div>' +
-        '<div class="scan-card-meta">by ' + esc(s.checker_name) + ' &nbsp;·&nbsp; ' + new Date(Number(s.timestamp)).toLocaleString() + '</div>' +
-        (preview ? '<div style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:4px">' + preview + '</div>' : '') +
+      '</div>' +
+      '<div class="row" style="margin-bottom:20px">' + actions + '</div>' +
+      '<div class="section-head"><span class="section-title">' + scans.length + ' scan' + (scans.length === 1 ? '' : 's') + '</span></div>' +
+      '<div class="list">' + (scans.length ? scans.map(scanRow).join('') : '<div class="empty">No scans for this player yet.</div>') + '</div>';
+  } catch (e) {
+    main.innerHTML = '<div class="empty error-text">Failed to load player: ' + esc(e.message) + '</div>';
+  }
+}
+
+async function renderScans() {
+  const main = $('main');
+  main.innerHTML = '<div class="loading">Loading scans...</div>';
+  try {
+    const scans = await api('scans?limit=200');
+    state.scans = scans;
+    main.innerHTML =
+      '<h1 class="page-title">Scans</h1>' +
+      '<p class="page-sub">Every hack and language result saved in SQLite.</p>' +
+      '<div class="row" style="margin-bottom:16px">' +
+        '<button class="chip active" onclick="filterScans(\'all\',this)">All</button>' +
+        '<button class="chip" onclick="filterScans(\'hack\',this)">Hack checks</button>' +
+        '<button class="chip" onclick="filterScans(\'lang\',this)">Language</button>' +
+        '<button class="icon-button" style="margin-left:auto" onclick="renderScans()" title="Refresh">' + icon('refresh') + '</button>' +
+      '</div>' +
+      '<div class="list" id="scan-list">' + (scans.length ? scans.map(scanRow).join('') : '<div class="empty">No scans yet.</div>') + '</div>';
+  } catch (e) {
+    main.innerHTML = '<div class="empty error-text">Failed to load scans: ' + esc(e.message) + '</div>';
+  }
+}
+
+function filterScans(type, button) {
+  document.querySelectorAll('.chip').forEach(chip => chip.classList.remove('active'));
+  button.classList.add('active');
+  const filtered = type === 'all' ? state.scans : state.scans.filter(scan => scan.type === type);
+  $('scan-list').innerHTML = filtered.length ? filtered.map(scanRow).join('') : '<div class="empty">No scans for this filter.</div>';
+}
+
+async function showScan(id) {
+  const main = $('main');
+  main.innerHTML = '<div class="loading">Loading scan #' + id + '...</div>';
+  try {
+    const scan = await api('scan/' + id);
+    const results = scan.results || [];
+    let body = '';
+    if (scan.type === 'hack') {
+      body = results.length
+        ? '<table class="table"><thead><tr><th>Mod</th><th>Result</th></tr></thead><tbody>' +
+          results.map(result => '<tr><td>' + esc(result.hack_name) + '</td><td>' + badge(result.result) + '</td></tr>').join('') +
+          '</tbody></table>'
+        : '<div class="empty">No results saved.</div>';
+    } else {
+      const result = results[0];
+      body = result
+        ? '<table class="table"><thead><tr><th>Language</th><th>Raw response</th></tr></thead><tbody>' +
+          '<tr><td><span class="badge lang">' + esc(result.language || 'Unknown') + '</span></td><td class="mono">' + esc(result.response || '') + '</td></tr>' +
+          '</tbody></table>'
+        : '<div class="empty">No results saved.</div>';
+    }
+    main.innerHTML =
+      '<button class="text-button" onclick="showPlayer(\'' + encodeURIComponent(scan.target_name) + '\')">Back to ' + esc(scan.target_name) + '</button>' +
+      '<div class="detail">' +
+        '<div class="detail-head">' +
+          '<div class="spread"><span class="section-title">' + (scan.type === 'hack' ? 'Hack check' : 'Language check') + '</span>' +
+            '<span class="section-hint">#' + scan.id + '</span></div>' +
+          '<div class="section-hint" style="margin-top:6px">' + esc(scan.target_name) + ' · by ' + esc(scan.checker_name) + ' · ' + new Date(Number(scan.timestamp)).toLocaleString() + '</div>' +
+          (scan.reason ? '<div class="section-hint">Reason: ' + esc(scan.reason) + '</div>' : '') +
+        '</div>' + body +
+        '<div class="detail-foot"><button class="outlined-button small-button" onclick="deleteScan(' + scan.id + ')">Delete scan</button></div>' +
       '</div>';
-    }
+  } catch (e) {
+    main.innerHTML = '<div class="empty error-text">Failed to load scan: ' + esc(e.message) + '</div>';
+  }
+}
 
-    async function showScan(id) {
-      const main = document.getElementById('main-content');
-      main.innerHTML = '<div class="loading">Loading scan #' + id + '...</div>';
-      try {
-        const scan = await apiFetch('scan/' + id);
-        const results = scan.results || [];
+async function deleteScan(id) {
+  if (!confirm('Delete scan #' + id + '?')) return;
+  try {
+    await api('scan/' + id, { method: 'DELETE' });
+    toast('Scan deleted');
+    navigate('scans');
+  } catch (e) {
+    toast('Delete failed: ' + e.message);
+  }
+}
 
-        let body = '';
-        if (scan.type === 'hack') {
-          if (results.length === 0) {
-            body = '<div class="empty-state"><p>No results saved for this scan.</p></div>';
-          } else {
-            let rows = '';
-            for (const r of results) {
-              rows += '<tr><td>' + esc(r.hack_name) + '</td><td>' + badge(r.result) + '</td></tr>';
-            }
-            body = '<table class="results-table"><thead><tr><th>Mod</th><th>Result</th></tr></thead><tbody>' + rows + '</tbody></table>';
-          }
-        } else {
-          const r = results[0];
-          if (r) {
-            body = '<table class="results-table"><thead><tr><th>Language</th><th>Raw Response</th></tr></thead><tbody>' +
-              '<tr><td><span class="badge badge-lang">' + esc(r.language || 'Unknown') + '</span></td><td>' + esc(r.response || '') + '</td></tr>' +
-              '</tbody></table>';
-          } else {
-            body = '<div class="empty-state"><p>No results saved for this scan.</p></div>';
-          }
-        }
+async function runScan(encodedName, type, button) {
+  const name = decodeURIComponent(encodedName);
+  if (button) button.disabled = true;
+  try {
+    await apiPost('scan/run', { player: name, type });
+    toast((type === 'hack' ? 'Hack check' : 'Language check') + ' started on ' + name);
+    setTimeout(() => showPlayer(encodedName), 5000);
+  } catch (e) {
+    toast('Failed: ' + e.message);
+    if (button) button.disabled = false;
+  }
+}
 
-        const backTarget = scan.target_name;
-        main.innerHTML =
-          '<button class="back-btn" onclick="showPlayer(\'' + esc(backTarget) + '\')">← ' + esc(backTarget) + '</button>' +
-          '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">' +
-            '<div style="padding:14px 16px;border-bottom:1px solid var(--border)">' +
-              '<div style="font-size:16px;font-weight:700;margin-bottom:4px">' +
-                (scan.type === 'hack' ? 'Hack Check' : 'Lang Check') + ' — ' + esc(scan.target_name) +
+async function renderRules() {
+  const main = $('main');
+  main.innerHTML = '<div class="loading">Loading rules...</div>';
+  try {
+    state.rules = await api('rules');
+    const rules = state.rules;
+    main.innerHTML =
+      '<div class="spread" style="margin-bottom:4px"><h1 class="page-title">Rules</h1>' +
+        '<button class="filled-button" onclick="openRuleDialog()">' + icon('plus', 18) + ' New rule</button></div>' +
+      '<p class="page-sub">Run a command when a specific mod returns a specific result. Stored in checkhacks.yml.</p>' +
+      (rules.length
+        ? '<div class="list">' + rules.map(rule =>
+            '<div class="list-item">' +
+              '<div class="list-main">' +
+                '<div class="list-title">' + esc(rule.name) + ' <span class="badge ' + (rule.result === 'DETECTED' ? 'detected' : rule.result === 'PROTECTED' ? 'protected' : 'muted') + '">' + esc(rule.result) + '</span></div>' +
+                '<div class="list-meta">mod <span class="code">' + esc(rule.mod) + '</span></div>' +
+                '<div class="mono" style="margin-top:6px">' + esc(rule.command) + '</div>' +
               '</div>' +
-              '<div style="font-size:12px;color:var(--text2)">by ' + esc(scan.checker_name) + ' · ' + new Date(Number(scan.timestamp)).toLocaleString() + '</div>' +
-              (scan.reason ? '<div style="font-size:12px;color:var(--text2);margin-top:2px">Reason: ' + esc(scan.reason) + '</div>' : '') +
-            '</div>' +
-            body +
-          '</div>';
-      } catch(e) {
-        main.innerHTML = '<div class="empty-state"><p>Failed to load scan #' + id + '</p><p class="error-msg">' + esc(e.message) + '</p></div>';
-      }
-    }
+              '<button class="icon-button" title="Edit" onclick="openRuleDialog(\'' + esc(rule.name) + '\')">' + icon('edit', 20) + '</button>' +
+              '<button class="icon-button" title="Delete" onclick="deleteRule(\'' + esc(rule.name) + '\')">' + icon('trash', 20) + '</button>' +
+            '</div>').join('') + '</div>'
+        : '<div class="empty">No rules yet. Create one and it runs automatically at the end of every scan.</div>');
+  } catch (e) {
+    main.innerHTML = '<div class="empty error-text">Failed to load rules: ' + esc(e.message) + '</div>';
+  }
+}
 
-    async function showPlayer(name) {
-      addHistory(name);
-      const main = document.getElementById('main-content');
-      main.innerHTML = '<div class="loading">Loading ' + esc(name) + '...</div>';
-      try {
-        const data = await apiFetch('player/' + encodeURIComponent(name));
-        const scans = data.scans || [];
-        const uuid = data.uuid || name;
+function openRuleDialog(name) {
+  state.editingRule = name || null;
+  const rule = name ? state.rules.find(item => item.name === name) : null;
+  $('rule-dialog-title').textContent = rule ? 'Edit rule' : 'New rule';
+  $('rule-name').value = rule ? rule.name : '';
+  $('rule-name').disabled = !!rule;
+  $('rule-mod').value = rule ? rule.mod : '';
+  $('rule-result').value = rule ? rule.result : 'DETECTED';
+  $('rule-command').value = rule ? rule.command : '';
+  $('rule-dialog').showModal();
+}
 
-        const onlineBadge = data.online
-          ? '<span class="online-badge"><span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block"></span> Online</span>'
-          : '<span class="offline-badge">Offline</span>';
+function closeRuleDialog() {
+  $('rule-dialog').close();
+}
 
-        let runButtons = '';
-        if (data.online) {
-          runButtons =
-            '<button class="run-btn" id="btn-hack" onclick="runScan(\'' + esc(name) + '\',\'hack\')">Run Hack Check</button>' +
-            '<button class="run-btn" id="btn-lang" onclick="runScan(\'' + esc(name) + '\',\'lang\')">Run Lang Check</button>';
-        }
+function submitRule(event) {
+  event.preventDefault();
+  const payload = {
+    name: $('rule-name').value.trim(),
+    mod: $('rule-mod').value.trim(),
+    result: $('rule-result').value,
+    command: $('rule-command').value.trim()
+  };
+  apiPost('rules', payload).then(() => {
+    closeRuleDialog();
+    toast('Rule saved');
+    renderRules();
+  }).catch(error => toast('Save failed: ' + error.message));
+}
 
-        let cards = '';
-        for (const s of scans) cards += buildScanCard(s);
+async function deleteRule(name) {
+  if (!confirm('Delete rule ' + name + '?')) return;
+  try {
+    await api('rules/' + encodeURIComponent(name), { method: 'DELETE' });
+    toast('Rule deleted');
+    renderRules();
+  } catch (e) {
+    toast('Delete failed: ' + e.message);
+  }
+}
 
-        main.innerHTML =
-          '<button class="back-btn" onclick="showHome()">← Home</button>' +
-          '<div class="player-header">' +
-            '<img src="' + headUrl(uuid) + '" onerror="this.src=\'' + headUrl(name) + '\'" width="64" height="64" alt="">' +
-            '<div class="player-header-info"><h2>' + esc(name) + '</h2><p>' + esc(uuid) + '</p>' + onlineBadge + '</div>' +
-          '</div>' +
-          runButtons +
-          '<div class="section-title">' + scans.length + ' Scan' + (scans.length !== 1 ? 's' : '') + '</div>' +
-          '<div class="scan-cards">' + (cards || '<div class="empty-state"><p>No scans for this player yet.</p></div>') + '</div>';
-      } catch(e) {
-        main.innerHTML = '<div class="empty-state"><p>Failed to load player.</p><p class="error-msg">' + esc(e.message) + '</p></div>';
-      }
-    }
+function switchRow(label, key, hint) {
+  return '<label class="switch-row"><span class="label">' + label + (hint ? '<div class="hint">' + hint + '</div>' : '') + '</span>' +
+    '<span class="switch"><input type="checkbox" data-setting="' + key + '"><span class="track"></span><span class="thumb"></span></span></label>';
+}
 
-    async function runScan(name, type) {
-      const btn = document.getElementById(type === 'hack' ? 'btn-hack' : 'btn-lang');
-      if (btn) btn.disabled = true;
-      try {
-        await apiPost('scan/run', { player: name, type: type });
-        showToast((type === 'hack' ? 'Hack check' : 'Lang check') + ' started on ' + name);
-        setTimeout(() => showPlayer(name), 4000);
-      } catch(e) {
-        main.innerHTML = '<div class="empty-state"><p>Failed to run scan: ' + esc(e.message) + '</p></div>';
-        if (btn) btn.disabled = false;
-      }
-    }
+function fieldRow(label, key, type, hint) {
+  return '<label class="text-field"><input type="' + type + '" data-setting="' + key + '" placeholder=" ">' +
+    '<span>' + label + '</span></label>' + (hint ? '<div class="section-hint" style="margin:-10px 0 14px">' + hint + '</div>' : '');
+}
 
-    async function loadRecentScans() {
-      try {
-        const scans = await apiFetch('scans?limit=30');
-        const container = document.getElementById('recent-scans');
-        if (!container) return;
-        if (!scans || scans.length === 0) {
-          container.innerHTML = '<div style="padding:10px;color:var(--text2);font-size:12px;text-align:center">No scans yet</div>';
-          return;
-        }
-        container.innerHTML = '';
-        for (const s of scans) {
-          const el = document.createElement('div');
-          el.className = 'scan-item';
-          el.onclick = () => showScan(s.id);
-          el.innerHTML =
-            '<div class="scan-item-top">' +
-              '<span class="scan-item-name">' + esc(s.target_name) + '</span>' +
-              '<span class="scan-item-time">' + timeAgo(s.timestamp) + '</span>' +
-            '</div>' +
-            '<div class="scan-item-meta">' + (s.type === 'hack' ? 'Hack' : 'Lang') + ' · by ' + esc(s.checker_name) + '</div>';
-          container.appendChild(el);
-        }
-      } catch(e) {}
-    }
+async function renderSettings() {
+  const main = $('main');
+  main.innerHTML = '<div class="loading">Loading settings...</div>';
+  try {
+    const settings = await api('settings');
+    state.settings = settings;
+    main.innerHTML =
+      '<div class="spread" style="margin-bottom:4px"><h1 class="page-title">Settings</h1>' +
+        '<button class="filled-button" onclick="saveSettings(this)">Save changes</button></div>' +
+      '<p class="page-sub">These values are written to config.yml and checkhacks.yml, then reloaded.</p>' +
+      '<div class="settings-grid">' +
+        '<div class="card"><div class="card-title">Alerts</div><div class="card-hint">Default mode for /chalerts. Only detected hides clean results.</div>' +
+          '<div class="select-field"><label for="setting-alerts">Default mode</label><select id="setting-alerts" data-setting="alerts.default-mode">' +
+            '<option value="all">All results</option><option value="only-detected">Only detected</option><option value="off">Off</option>' +
+          '</select></div>' +
+        '</div>' +
+        '<div class="card"><div class="card-title">Detection</div><div class="card-hint">Virtual sign probe, closed in the same tick.</div>' +
+          switchRow('DoubleCheck', 'doublecheck', 'Repeat DETECTED and PROTECTED results once.') +
+          fieldRow('Timeout (ticks)', 'timeout-ticks', 'number') +
+          fieldRow('Delay between signs (ticks)', 'between-sign-ticks', 'number') +
+        '</div>' +
+        '<div class="card"><div class="card-title">Join checks</div><div class="card-hint">Automatic checks when a player joins.</div>' +
+          switchRow('Auto check on join', 'auto-check-on-join.enabled') +
+        '</div>' +
+        '<div class="card"><div class="card-title">Discord</div><div class="card-hint">Webhook for hack results.</div>' +
+          switchRow('Enabled', 'discord.enabled') +
+          switchRow('Components V2', 'discord.use-components-v2', 'Uses the with_components query parameter automatically.') +
+          fieldRow('Webhook URL', 'discord.webhook-url', 'text') +
+          fieldRow('Accent color', 'discord.embed-color', 'number', 'Decimal RGB value.') +
+          '<label class="text-field"><textarea data-setting="discord.message" placeholder=" "></textarea><span>Message template</span></label>' +
+          '<div class="section-hint">Placeholders: &amp;name&amp; &amp;checker&amp; &amp;reason&amp; &amp;hacks&amp; &amp;results&amp;</div>' +
+        '</div>' +
+      '</div>';
+    fillSettings(settings);
+  } catch (e) {
+    main.innerHTML = '<div class="empty error-text">Failed to load settings: ' + esc(e.message) + '</div>';
+  }
+}
 
-    async function loadOnlinePlayers() {
-      try {
-        const players = await apiFetch('players/online');
-        const container = document.getElementById('online-players');
-        if (!container) return;
-        if (!players || players.length === 0) {
-          container.innerHTML = '<div style="padding:10px;color:var(--text2);font-size:12px;text-align:center">No players online</div>';
-          return;
-        }
-        container.innerHTML = '';
-        for (const p of players) {
-          const el = document.createElement('div');
-          el.className = 'player-item';
-          el.onclick = () => showPlayer(p.name);
-          el.innerHTML =
-            '<img src="' + headUrl(p.uuid) + '" onerror="this.src=\'' + headUrl(p.name) + '\'" alt="" width="28" height="28">' +
-            '<span class="player-item-name">' + esc(p.name) + '</span>' +
-            '<div class="online-dot"></div>';
-          container.appendChild(el);
-        }
-      } catch(e) {}
-    }
+function fillSettings(settings) {
+  document.querySelectorAll('[data-setting]').forEach(element => {
+    const key = element.dataset.setting;
+    if (!(key in settings)) return;
+    if (element.type === 'checkbox') element.checked = settings[key] === true || settings[key] === 'true';
+    else element.value = settings[key] == null ? '' : settings[key];
+  });
+}
 
-    function addHistory(name) {
-      offlineHistory = [name, ...offlineHistory.filter(n => n !== name)].slice(0, 20);
-      try { localStorage.setItem('ch_history', JSON.stringify(offlineHistory)); } catch(e) {}
-      renderOfflineHistory();
-    }
+async function saveSettings(button) {
+  const values = {};
+  document.querySelectorAll('[data-setting]').forEach(element => {
+    values[element.dataset.setting] = element.type === 'checkbox' ? String(element.checked) : element.value;
+  });
+  if (button) button.disabled = true;
+  try {
+    const updated = await apiPost('settings', values);
+    state.settings = updated;
+    fillSettings(updated);
+    toast('Settings saved and reloaded');
+  } catch (e) {
+    toast('Save failed: ' + e.message);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
 
-    function renderOfflineHistory() {
-      const container = document.getElementById('offline-history');
-      if (!container) return;
-      if (offlineHistory.length === 0) {
-        container.innerHTML = '<div style="padding:10px;color:var(--text2);font-size:12px;text-align:center">Search a player above</div>';
-        return;
-      }
-      container.innerHTML = '';
-      for (const name of offlineHistory) {
-        const el = document.createElement('div');
-        el.className = 'player-item';
-        el.onclick = () => showPlayer(name);
-        el.innerHTML =
-          '<img src="' + headUrl(name) + '" onerror="this.style.visibility=\'hidden\'" alt="" width="28" height="28">' +
-          '<span class="player-item-name">' + esc(name) + '</span>';
-        container.appendChild(el);
-      }
-    }
-
-    function searchPlayer() {
-      const name = document.getElementById('search-input').value.trim();
-      if (!name) return;
-      document.getElementById('search-input').value = '';
-      showPlayer(name);
-    }
-
-    init();
+$('rule-cancel').onclick = closeRuleDialog;
+$('rule-form').addEventListener('submit', submitRule);
+init();
 </script>
 </body>
 </html>

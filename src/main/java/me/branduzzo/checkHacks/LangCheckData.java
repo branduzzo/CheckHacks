@@ -2,10 +2,10 @@ package me.branduzzo.checkHacks;
 
 import me.branduzzo.checkHacks.utils.WrappedTask;
 import org.bukkit.Location;
-import org.bukkit.block.BlockState;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class LangCheckData {
 
@@ -13,10 +13,8 @@ public class LangCheckData {
     private final UUID initiatorUUID;
     private final Map<String, String> languages;
 
-    private Location signLocation;
-    private BlockState originalState;
-    private boolean barrierPlaced;
-    private Location barrierLocation;
+    private volatile Location signLocation;
+    private final AtomicBoolean awaitingResponse = new AtomicBoolean(false);
     private WrappedTask timeoutTask;
 
     public LangCheckData(UUID targetUUID, UUID initiatorUUID, Map<String, String> languages) {
@@ -30,12 +28,9 @@ public class LangCheckData {
     public Map<String, String> getLanguages()  { return languages; }
     public Location getSignLocation()          { return signLocation; }
     public void setSignLocation(Location l)    { this.signLocation = l; }
-    public BlockState getOriginalState()       { return originalState; }
-    public void setOriginalState(BlockState s) { this.originalState = s; }
-    public boolean isBarrierPlaced()           { return barrierPlaced; }
-    public void setBarrierPlaced(boolean b)    { this.barrierPlaced = b; }
-    public Location getBarrierLocation()       { return barrierLocation; }
-    public void setBarrierLocation(Location l) { this.barrierLocation = l; }
+    public boolean isAwaitingResponse()           { return awaitingResponse.get(); }
+    public void setAwaitingResponse(boolean value) { awaitingResponse.set(value); }
+    public boolean beginResponse()                { return awaitingResponse.compareAndSet(true, false); }
     public WrappedTask getTimeoutTask()         { return timeoutTask; }
     public void setTimeoutTask(WrappedTask t)   { this.timeoutTask = t; }
 }

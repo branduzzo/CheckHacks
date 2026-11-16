@@ -1,5 +1,6 @@
 package me.branduzzo.checkHacks.commands;
 
+import me.branduzzo.checkHacks.AlertMode;
 import me.branduzzo.checkHacks.CheckHacksPlugin;
 import me.branduzzo.checkHacks.utils.MessageUtil;
 import org.bukkit.command.Command;
@@ -28,8 +29,25 @@ public class AlertsCommand implements CommandExecutor {
             player.sendMessage(MessageUtil.parse(plugin, "no-permission", Map.of()));
             return true;
         }
-        plugin.toggleAlerts(player.getUniqueId());
-        String key = plugin.hasAlertsEnabled(player.getUniqueId()) ? "alerts-enabled" : "alerts-disabled";
+
+        AlertMode current = plugin.getAlertMode(player.getUniqueId());
+        AlertMode next;
+        if (args.length == 0) {
+            next = current.next();
+        } else {
+            next = AlertMode.parse(args[0], null);
+            if (next == null) {
+                player.sendMessage(MessageUtil.parse(plugin, "alerts-usage", Map.of()));
+                return true;
+            }
+        }
+        plugin.setAlertMode(player.getUniqueId(), next);
+
+        String key = switch (next) {
+            case ALL -> "alerts-mode-all";
+            case ONLY_DETECTED -> "alerts-mode-only-detected";
+            case OFF -> "alerts-mode-off";
+        };
         player.sendMessage(MessageUtil.parse(plugin, key, Map.of()));
         return true;
     }

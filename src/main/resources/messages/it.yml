@@ -26,3 +26,8 @@ update-complete: "{prefix}<green>Download completato! <gray>File salvato."
 update-restart-required: "{prefix}<yellow>Riavvia il server per applicare l'aggiornamento."
 update-failed: "{prefix}<red>Aggiornamento fallito: <white>{error}"
 update-no-update: "{prefix}<gray>Nessun aggiornamento disponibile. Hai già l'ultima versione."
+
+alerts-mode-all: "{prefix}<green>Avvisi: <white>tutti i risultati."
+alerts-mode-only-detected: "{prefix}<yellow>Avvisi: <white>solo giocatori DETECTED e PROTECTED."
+alerts-mode-off: "{prefix}<red>Avvisi: <white>disattivati."
+alerts-usage: "{prefix}<red>Uso: /chalerts [all|only-detected|off]"

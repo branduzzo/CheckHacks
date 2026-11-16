@@ -1,5 +1,6 @@
 package me.branduzzo.checkHacks.managers;
 
+import me.branduzzo.checkHacks.AlertMode;
 import me.branduzzo.checkHacks.CheckHacksPlugin;
 import me.branduzzo.checkHacks.CommandRule;
 import me.branduzzo.checkHacks.DetectionMode;
@@ -10,17 +11,22 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class ConfigManager {
 
     private final CheckHacksPlugin plugin;
+    private final ConfigMerger merger;
     private FileConfiguration masterConfig;
     private FileConfiguration hacksConfig;
     private FileConfiguration langConfig;
-    private final Map<String, HackDefinition> hacks = new LinkedHashMap<>();
-    private final Map<String, CommandRule> commandRules = new LinkedHashMap<>();
-    private final Map<String, List<CommandRule>> rulesByHack = new HashMap<>();
+    private volatile Map<String, HackDefinition> hacks = Map.of();
+    private volatile Map<String, CommandRule> commandRules = Map.of();
+    private volatile Map<String, List<CommandRule>> rulesByHack = Map.of();
 
     private String prefix;
     private long timeoutTicks;
@@ -32,19 +38,21 @@ public class ConfigManager {
     private String protectedCommand;
     private boolean commandIfCleanEnabled;
     private String cleanCommand;
+    private AlertMode alertDefaultMode;
 
     public ConfigManager(CheckHacksPlugin plugin) {
         this.plugin = plugin;
+        this.merger = new ConfigMerger(plugin);
         reload();
     }
 
     public void reload() {
+        int merged = merger.mergeAll();
+        if (merged > 0) plugin.getLogger().info("Config merger added " + merged + " missing keys.");
         plugin.reloadConfig();
         masterConfig = plugin.getConfig();
-
         hacksConfig = loadFile("checkhacks.yml");
-        langConfig  = loadFile("checklang.yml");
-
+        langConfig = loadFile("checklang.yml");
         loadHacks();
         loadCommandRules();
         cacheSettings();
@@ -52,105 +60,102 @@ public class ConfigManager {
 
     private FileConfiguration loadFile(String name) {
         File file = new File(plugin.getDataFolder(), name);
-        if (!file.exists()) {
-            plugin.saveResource(name, false);
-        } else if ("checkhacks.yml".equals(name)) {
-            upgradeHacksConfig(file);
-        }
+        if (!file.exists()) plugin.saveResource(name, false);
         return YamlConfiguration.loadConfiguration(file);
     }
 
-    private void upgradeHacksConfig(File file) {
-        try {
-            FileConfiguration cfg = YamlConfiguration.loadConfiguration(file);
-            boolean changed = false;
-            if (!cfg.contains("doublecheck")) {
-                cfg.set("doublecheck", true);
-                changed = true;
-            }
-            if (!cfg.contains("command-rules")) {
-                cfg.set("command-rules.meteorclient1.mod", "meteorclient");
-                cfg.set("command-rules.meteorclient1.result", "DETECTED");
-                cfg.set("command-rules.meteorclient1.command", "tempban %player% 31d Meteor Client");
-                changed = true;
-            }
-            if (changed) cfg.save(file);
-        } catch (Exception e) {
-            plugin.getLogger().warning("[CheckHacks] Failed to upgrade checkhacks.yml: " + e.getMessage());
-        }
-    }
-
     private void loadHacks() {
-        hacks.clear();
+        Map<String, HackDefinition> loaded = new LinkedHashMap<>();
         ConfigurationSection section = hacksConfig.getConfigurationSection("hacks");
-        if (section == null) return;
-        for (String id : section.getKeys(false)) {
-            String displayName = section.getString(id + ".display-name", id);
-            String key = section.getString(id + ".key", "");
-            if (key.isBlank()) continue;
-            DetectionMode mode;
-            try {
-                mode = DetectionMode.valueOf(
-                        section.getString(id + ".mode", "TRANSLATE").toUpperCase());
-            } catch (IllegalArgumentException e) {
-                mode = DetectionMode.TRANSLATE;
+        if (section != null) {
+            for (String id : section.getKeys(false)) {
+                String displayName = section.getString(id + ".display-name", id);
+                String key = section.getString(id + ".key", "");
+                DetectionMode mode;
+                try {
+                    mode = DetectionMode.valueOf(section.getString(id + ".mode", "TRANSLATE").toUpperCase(Locale.ROOT));
+                } catch (IllegalArgumentException e) {
+                    mode = DetectionMode.TRANSLATE;
+                }
+                if (key.isBlank()) continue;
+                loaded.put(id, new HackDefinition(id, displayName, key, mode));
             }
-            hacks.put(id, new HackDefinition(id, displayName, key, mode));
         }
+        hacks = loaded;
         plugin.getLogger().info("Loaded " + hacks.size() + " hacks.");
     }
 
     private void loadCommandRules() {
-        commandRules.clear();
+        Map<String, CommandRule> loadedRules = new LinkedHashMap<>();
         ConfigurationSection section = hacksConfig.getConfigurationSection("command-rules");
         if (section != null) {
             for (String name : section.getKeys(false)) {
                 String mod = section.getString(name + ".mod", "");
                 String cmd = section.getString(name + ".command", "");
-                if (mod == null || mod.isBlank() || cmd == null || cmd.isBlank()) continue;
-                HackResult result;
-                try {
-                    result = HackResult.valueOf(
-                            section.getString(name + ".result", "DETECTED").toUpperCase()
-                                    .replace(" ", "_").replace("-", "_"));
-                } catch (IllegalArgumentException e) {
-                    result = HackResult.DETECTED;
-                }
-                commandRules.put(name, new CommandRule(name, mod.trim(), result, cmd));
+                if (cmd == null || cmd.isBlank()) continue;
+                if (mod == null || mod.isBlank()) mod = name;
+                HackResult result = parseResult(section.getString(name + ".result", "DETECTED"));
+                loadedRules.put(name, new CommandRule(name, mod.trim(), result, cmd.trim()));
             }
         }
-        rulesByHack.clear();
+        Map<String, List<CommandRule>> byHack = new LinkedHashMap<>();
         for (HackDefinition hack : hacks.values()) {
-            String idNorm = normalize(hack.getId());
-            String dnNorm = normalize(hack.getDisplayName());
             List<CommandRule> list = new ArrayList<>();
-            for (CommandRule rule : commandRules.values()) {
-                String modNorm = normalize(rule.getMod());
-                if (modNorm.equals(idNorm) || modNorm.equals(dnNorm)) list.add(rule);
+            for (CommandRule rule : loadedRules.values()) {
+                if (targets(rule, hack)) list.add(rule);
             }
-            rulesByHack.put(hack.getId(), list);
+            byHack.put(hack.getId(), List.copyOf(list));
         }
+        commandRules = loadedRules;
+        rulesByHack = byHack;
+    }
+
+    private HackResult parseResult(String raw) {
+        if (raw == null) return null;
+        String value = raw.trim().toUpperCase(Locale.ROOT).replace(' ', '_').replace('-', '_');
+        if (value.isEmpty() || value.equals("ANY") || value.equals("*")) return null;
+        try {
+            return HackResult.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            return HackResult.DETECTED;
+        }
+    }
+
+    private boolean targets(CommandRule rule, HackDefinition hack) {
+        String mod = normalize(rule.getMod());
+        if (mod.isEmpty() || mod.equals("*")) return true;
+        String id = normalize(hack.getId());
+        String display = normalize(hack.getDisplayName());
+        return mod.equals(id) || mod.equals(display) || mod.startsWith(id) || id.startsWith(mod);
     }
 
     private static String normalize(String s) {
-        return s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
+        return s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9*]", "");
     }
 
     private void cacheSettings() {
-        prefix                 = masterConfig.getString("prefix", "<yellow>[CheckHacks] <gray>");
-        timeoutTicks           = hacksConfig.getLong("timeout-ticks", 200);
-        betweenSignTicks       = hacksConfig.getLong("between-sign-ticks", 5);
-        doubleCheck            = hacksConfig.getBoolean("doublecheck", true);
+        prefix                   = masterConfig.getString("prefix", "<yellow>[CheckHacks] <gray>");
+        timeoutTicks             = Math.max(1L, hacksConfig.getLong("timeout-ticks", 200));
+        betweenSignTicks         = Math.max(0L, hacksConfig.getLong("between-sign-ticks", 1));
+        doubleCheck              = hacksConfig.getBoolean("doublecheck", true);
         commandIfPositiveEnabled = hacksConfig.getBoolean("command-if-positive.enabled", false);
-        positiveCommand        = hacksConfig.getString("command-if-positive.command", "");
+        positiveCommand          = hacksConfig.getString("command-if-positive.command", "");
         commandIfProtectedEnabled = hacksConfig.getBoolean("command-if-protected.enabled", false);
-        protectedCommand       = hacksConfig.getString("command-if-protected.command", "");
-        commandIfCleanEnabled  = hacksConfig.getBoolean("command-if-clean.enabled", false);
-        cleanCommand           = hacksConfig.getString("command-if-clean.command", "");
+        protectedCommand         = hacksConfig.getString("command-if-protected.command", "");
+        commandIfCleanEnabled    = hacksConfig.getBoolean("command-if-clean.enabled", false);
+        cleanCommand             = hacksConfig.getString("command-if-clean.command", "");
+
+        String mode = masterConfig.getString("alerts.default-mode", null);
+        if (mode == null) {
+            alertDefaultMode = masterConfig.getBoolean("alerts.default-enabled", true) ? AlertMode.ALL : AlertMode.OFF;
+        } else {
+            alertDefaultMode = AlertMode.parse(mode, AlertMode.ALL);
+        }
+
     }
 
-    public Map<String, HackDefinition> getHacks()     { return hacks; }
-    public HackDefinition getHack(String id)           { return hacks.get(id); }
+    public Map<String, HackDefinition> getHacks() { return hacks; }
+    public HackDefinition getHack(String id)       { return hacks.get(id); }
 
     public List<HackDefinition> getDefaultCheckHacks() { return resolveHackList("default-check-hacks"); }
     public List<HackDefinition> getJoinCheckHacks()    { return resolveHackList("auto-check-on-join.hacks"); }
@@ -165,8 +170,8 @@ public class ConfigManager {
         return result;
     }
 
-    public String getPrefix()    { return prefix; }
-    public String getLanguage()  { return masterConfig.getString("language", "en"); }
+    public String getPrefix()   { return prefix; }
+    public String getLanguage() { return masterConfig.getString("language", "en"); }
 
     public boolean isBedrockEnabled()        { return masterConfig.getBoolean("bedrock.enabled", true); }
     public List<String> getBedrockPrefixes() { return masterConfig.getStringList("bedrock.prefixes"); }
@@ -184,14 +189,15 @@ public class ConfigManager {
 
     public boolean isCommandIfPositiveEnabled() { return commandIfPositiveEnabled; }
     public String  getPositiveCommand()         { return positiveCommand; }
-
     public boolean isCommandIfProtectedEnabled() { return commandIfProtectedEnabled; }
     public String  getProtectedCommand()         { return protectedCommand; }
-
     public boolean isCommandIfCleanEnabled() { return commandIfCleanEnabled; }
     public String  getCleanCommand()         { return cleanCommand; }
 
     public boolean isDoubleCheckEnabled() { return doubleCheck; }
+    public AlertMode getAlertDefaultMode() { return alertDefaultMode; }
+
+    public List<CommandRule> getCommandRules() { return new ArrayList<>(commandRules.values()); }
 
     public List<CommandRule> getRulesForHack(String hackId) {
         return rulesByHack.getOrDefault(hackId, List.of());
@@ -204,8 +210,8 @@ public class ConfigManager {
     public boolean isMatrixEnabled()     { return hacksConfig.getBoolean("detect-flag.anticheats.matrix", true); }
     public long    getFlagCooldownHours(){ return hacksConfig.getLong("detect-flag.cooldown-hours", 24); }
 
-    public boolean isJoinCheckEnabled()  { return hacksConfig.getBoolean("auto-check-on-join.enabled", false); }
-    public boolean isOnlyFirstJoin()     { return hacksConfig.getBoolean("auto-check-on-join.only-first-join", false); }
+    public boolean isJoinCheckEnabled() { return hacksConfig.getBoolean("auto-check-on-join.enabled", false); }
+    public boolean isOnlyFirstJoin()    { return hacksConfig.getBoolean("auto-check-on-join.only-first-join", false); }
 
     public long getTimeoutTicks()     { return timeoutTicks; }
     public long getBetweenSignTicks() { return betweenSignTicks; }
@@ -214,8 +220,7 @@ public class ConfigManager {
         Map<String, String> langs = new LinkedHashMap<>();
         ConfigurationSection section = langConfig.getConfigurationSection("languages");
         if (section == null) return langs;
-        for (String key : section.getKeys(false))
-            langs.put(key, section.getString(key, ""));
+        for (String key : section.getKeys(false)) langs.put(key, section.getString(key, ""));
         return langs;
     }
 
@@ -226,5 +231,5 @@ public class ConfigManager {
     public int     getLangEmbedColor()      { return langConfig.getInt("discord.embed-color", 5763719); }
     public String  getLangDiscordMessage()  { return langConfig.getString("discord.message", ""); }
     public boolean isLangDiscordUseComponentsV2() { return langConfig.getBoolean("discord.use-components-v2", true); }
-    public int     getLangTimeoutTicks()    { return langConfig.getInt("timeout-ticks", 100); }
+    public int     getLangTimeoutTicks()    { return Math.max(1, langConfig.getInt("timeout-ticks", 100)); }
 }
